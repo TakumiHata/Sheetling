@@ -1,0 +1,6 @@
+docling
+openai
+anthropic
+openpyxl
+pandas
+python-dotenv

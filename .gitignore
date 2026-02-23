@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+
+# Data (exclude all but .gitkeep)
+data/**/*
+!data/**/.gitkeep
