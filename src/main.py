@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from src.core.docling_parser import DoclingParser
 from src.core.llm_excel_gen import LLMExcelGenerator
+from src.core.pdf_layout_extractor import PdfLayoutExtractor
 from src.utils.logger import get_logger
 
 # 環境変数の読み込み
@@ -21,6 +22,7 @@ def run_pipeline():
     
     # インスタンス生成
     parser = DoclingParser(inter_md_dir, inter_json_dir)
+    extractor = PdfLayoutExtractor(inter_json_dir)
     generator = LLMExcelGenerator(output_excel_dir)
     
     # PDFファイルの走査
@@ -34,8 +36,11 @@ def run_pipeline():
             # 1. Doclingによる解析
             md_path, json_path = parser.parse(str(pdf_path))
             
-            # 2. LLMによるExcel生成
-            excel_path = generator.generate(md_path, json_path)
+            # 2. pdfplumberによる高度なレイアウト抽出
+            layout_json_path = extractor.extract(str(pdf_path))
+            
+            # 3. LLMによるExcel生成 (Docling JSON と Layout JSON の両方を考慮する想定)
+            excel_path = generator.generate(md_path, layout_json_path)
             
             logger.info(f"Successfully processed: {pdf_path.name} -> {Path(excel_path).name}")
         except Exception as e:

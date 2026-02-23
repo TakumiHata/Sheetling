@@ -1,6 +1,7 @@
 import os
 import json
 from pathlib import Path
+from docling.document_converter import DocumentConverter
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -11,32 +12,28 @@ class DoclingParser:
         self.output_json_dir = Path(output_json_dir)
         self.output_md_dir.mkdir(parents=True, exist_ok=True)
         self.output_json_dir.mkdir(parents=True, exist_ok=True)
+        self.converter = DocumentConverter()
 
     def parse(self, pdf_path: str):
         """
-        PDFからMarkdownとJSONを抽出するモック処理。
-        実際には Docling 外部ライブラリを呼び出す。
+        PDFからMarkdownを抽出する処理。
         """
         pdf_name = Path(pdf_path).stem
-        logger.info(f"Parsing PDF: {pdf_path}")
+        logger.info(f"Parsing PDF with Docling: {pdf_path}")
         
-        # モック出力ファイルのパス
+        # Doclingによる変換実行
+        result = self.converter.convert(pdf_path)
+        
+        # Markdownとしてエクスポート
         md_path = self.output_md_dir / f"{pdf_name}.md"
-        json_path = self.output_json_dir / f"{pdf_name}.json"
-        
-        # モック内容の書き込み
-        md_content = f"# Parsed Content of {pdf_name}\n\nThis is a mock markdown output."
-        json_content = {
-            "source": pdf_path,
-            "metadata": {"title": pdf_name, "author": "Mock"},
-            "elements": []
-        }
-        
         with open(md_path, "w", encoding="utf-8") as f:
-            f.write(md_content)
-        
+            f.write(result.document.export_to_markdown())
+            
+        # JSONとしてエクスポート (Doclingのドキュメント構造をそのまま出力)
+        json_path = self.output_json_dir / f"{pdf_name}.json"
         with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(json_content, f, indent=2, ensure_ascii=False)
+            # result.document.export_to_dict() を使用
+            json.dump(result.document.export_to_dict(), f, indent=2, ensure_ascii=False)
             
         logger.info(f"Extracted data saved to {md_path} and {json_path}")
         return str(md_path), str(json_path)
