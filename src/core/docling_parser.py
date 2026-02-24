@@ -25,12 +25,12 @@ class DoclingParser:
         result = self.converter.convert(pdf_path)
         
         # Markdownとしてエクスポート
-        md_path = self.output_md_dir / f"{pdf_name}.md"
+        md_path = self.output_md_dir / f"{pdf_name}_docling.md"
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(result.document.export_to_markdown())
             
         # JSONとしてエクスポート (Doclingのドキュメント構造をそのまま出力)
-        json_path = self.output_json_dir / f"{pdf_name}.json"
+        json_path = self.output_json_dir / f"{pdf_name}_docling.json"
         with open(json_path, "w", encoding="utf-8") as f:
             # result.document.export_to_dict() を使用
             json.dump(result.document.export_to_dict(), f, indent=2, ensure_ascii=False)

@@ -5,19 +5,19 @@ from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+
 class PdfLayoutExtractor:
     def __init__(self, output_dir: str):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def extract(self, pdf_path: str):
+    def extract(self, pdf_path: str) -> dict:
         """
         pdfplumberを使用してPDFから詳細なレイアウト情報を抽出する。
+        色情報はHEX形式に正規化して辞書として返す。
         """
         logger.info(f"Extracting detailed layout from: {pdf_path}")
-        pdf_path_obj = Path(pdf_path)
-        pdf_name = pdf_path_obj.stem
-        
+
         layout_data = {
             "source": str(pdf_path),
             "pages": []
@@ -26,18 +26,18 @@ class PdfLayoutExtractor:
         with pdfplumber.open(pdf_path) as pdf:
             for i, page in enumerate(pdf.pages):
                 logger.info(f"Processing page {i+1}/{len(pdf.pages)}")
-                
+
                 page_data = {
                     "page_number": i + 1,
                     "width": float(page.width),
                     "height": float(page.height),
-                    "chars": [],
-                    "lines": [],
+                    "words": [],
                     "rects": [],
-                    "words": []
+                    "lines": [],
+                    "chars": []
                 }
 
-                # 単語情報の抽出 (座標維持のため重要)
+                # 単語情報の抽出（座標維持のため重要）
                 for word in page.extract_words():
                     page_data["words"].append({
                         "text": word["text"],
@@ -47,7 +47,33 @@ class PdfLayoutExtractor:
                         "bottom": float(word["bottom"]),
                     })
 
-                # 文字情報の抽出
+                # 長方形情報の抽出（背景色・ボーダー）
+                for rect in page.rects:
+                    fill_color = self._to_hex(rect.get("non_stroking_color"))
+                    stroke_color = self._to_hex(rect.get("stroking_color"))
+                    page_data["rects"].append({
+                        "x0": float(rect["x0"]),
+                        "top": float(rect["top"]),
+                        "x1": float(rect["x1"]),
+                        "bottom": float(rect["bottom"]),
+                        "fill_color": fill_color,
+                        "stroke_color": stroke_color,
+                        "stroke_width": float(rect.get("width", 0) or 0),
+                    })
+
+                # 直線情報の抽出（罫線）
+                for line in page.lines:
+                    stroke_color = self._to_hex(line.get("stroking_color"))
+                    page_data["lines"].append({
+                        "x0": float(line["x0"]),
+                        "top": float(line["top"]),
+                        "x1": float(line["x1"]),
+                        "bottom": float(line["bottom"]),
+                        "stroke_width": float(line.get("width", 0) or 0),
+                        "stroke_color": stroke_color,
+                    })
+
+                # 文字情報の抽出（フォントサイズ・色）
                 for char in page.chars:
                     page_data["chars"].append({
                         "text": char["text"],
@@ -57,39 +83,48 @@ class PdfLayoutExtractor:
                         "bottom": float(char["bottom"]),
                         "size": float(char["size"]),
                         "fontname": char["fontname"],
-                        "stroking_color": char.get("stroking_color"),
-                        "non_stroking_color": char.get("non_stroking_color")
-                    })
-
-                # 直線情報の抽出
-                for line in page.lines:
-                    page_data["lines"].append({
-                        "x0": float(line["x0"]),
-                        "top": float(line["top"]),
-                        "x1": float(line["x1"]),
-                        "bottom": float(line["bottom"]),
-                        "width": float(line["width"]),
-                        "stroking_color": line.get("stroking_color"),
-                        "non_stroking_color": line.get("non_stroking_color")
-                    })
-
-                # 長方形情報の抽出
-                for rect in page.rects:
-                    page_data["rects"].append({
-                        "x0": float(rect["x0"]),
-                        "top": float(rect["top"]),
-                        "x1": float(rect["x1"]),
-                        "bottom": float(rect["bottom"]),
-                        "width": float(rect["width"]),
-                        "stroking_color": rect.get("stroking_color"),
-                        "non_stroking_color": rect.get("non_stroking_color")
+                        "color": self._to_hex(char.get("non_stroking_color")),
                     })
 
                 layout_data["pages"].append(page_data)
 
-        output_path = self.output_dir / f"{pdf_name}_layout.json"
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(layout_data, f, indent=2, ensure_ascii=False)
+        logger.info(f"Layout extraction complete: {len(layout_data['pages'])} page(s)")
+        return layout_data
 
-        logger.info(f"Detailed layout saved to: {output_path}")
-        return str(output_path)
+    def _to_hex(self, color) -> str | None:
+        """
+        pdfplumberの色値（[R, G, B] 0.0-1.0 or 0-255、またはグレースケール）を
+        '#RRGGBB' 形式のHEX文字列に変換する。
+        """
+        if color is None:
+            return None
+
+        try:
+            # グレースケール（単一値）
+            if isinstance(color, (int, float)):
+                v = int(color * 255) if color <= 1.0 else int(color)
+                return "#{:02X}{:02X}{:02X}".format(v, v, v)
+
+            # RGB配列
+            if isinstance(color, (list, tuple)):
+                if len(color) == 1:
+                    # グレースケール配列 [0.5]
+                    v = int(color[0] * 255) if color[0] <= 1.0 else int(color[0])
+                    return "#{:02X}{:02X}{:02X}".format(v, v, v)
+                elif len(color) == 3:
+                    if all(isinstance(x, (float, int)) and 0 <= x <= 1.0 for x in color):
+                        rgb = [int(x * 255) for x in color]
+                    else:
+                        rgb = [int(x) for x in color]
+                    return "#{:02X}{:02X}{:02X}".format(rgb[0], rgb[1], rgb[2])
+                elif len(color) == 4:
+                    # CMYK → RGB（簡易変換）
+                    c, m, y, k = color
+                    r = int(255 * (1 - c) * (1 - k))
+                    g = int(255 * (1 - m) * (1 - k))
+                    b = int(255 * (1 - y) * (1 - k))
+                    return "#{:02X}{:02X}{:02X}".format(r, g, b)
+
+            return None
+        except (ValueError, TypeError):
+            return None
