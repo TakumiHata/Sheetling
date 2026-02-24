@@ -33,8 +33,19 @@ class PdfLayoutExtractor:
                     "height": float(page.height),
                     "chars": [],
                     "lines": [],
-                    "rects": []
+                    "rects": [],
+                    "words": []
                 }
+
+                # 単語情報の抽出 (座標維持のため重要)
+                for word in page.extract_words():
+                    page_data["words"].append({
+                        "text": word["text"],
+                        "x0": float(word["x0"]),
+                        "top": float(word["top"]),
+                        "x1": float(word["x1"]),
+                        "bottom": float(word["bottom"]),
+                    })
 
                 # 文字情報の抽出
                 for char in page.chars:
