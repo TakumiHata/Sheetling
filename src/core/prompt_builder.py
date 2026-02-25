@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from src.core.placement_generator import PlacementGenerator, format_placement_commands
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -59,24 +60,41 @@ class PromptBuilder:
             grid_cols = page_info.get("grid_cols", 60)
             grid_rows = page_info.get("grid_rows", 85)
 
-        # セルサイズの計算（grid_unitの1.3倍で余裕を持たせる）
+        # セルサイズの計算（grid_unitの1.8倍で余裕を持たせる）
+        # 検証結果: 10ptグリッドで列幅≈2.5、行高≈18.0が最適
         # fitToPageで自動スケーリングされるため、少し大きめでOK
-        scale_factor = 1.3
-        row_height = round(grid_unit_pt * scale_factor, 1)  # 10pt → 13pt
+        scale_factor = 1.8
+        row_height = round(grid_unit_pt * scale_factor, 1)  # 10pt → 18pt
 
         # A4幅に比例した列幅を計算
         a4_printable_px = 720
         col_px = (a4_printable_px / grid_cols) * scale_factor
-        col_width = round(max((col_px - 5) / 7, 0.5), 1)
+        col_width = round(max((col_px - 5) / 7, 1.0), 1)
+
+        # テーブル構造サマリーの生成
+        table_summary = self._compute_table_structure(compressed_json)
+
+        # 配置命令リストの生成
+        placement_gen = PlacementGenerator()
+        placement_result = placement_gen.generate(compressed_json)
+        placement_commands = format_placement_commands(placement_result)
+
+        if placement_result.warnings:
+            for w in placement_result.warnings:
+                logger.warning(f"配置命令: {w}")
 
         prompt = template.replace("{{MARKDOWN_CONTENT}}", md_content)
         prompt = prompt.replace("{{JSON_CONTENT}}", json_content)
         prompt = prompt.replace("{{GRID_UNIT_PT}}", str(grid_unit_pt))
         prompt = prompt.replace("{{ROW_HEIGHT}}", str(row_height))
         prompt = prompt.replace("{{COL_WIDTH}}", str(col_width))
+        prompt = prompt.replace("{{GRID_COLS}}", str(grid_cols))
+        prompt = prompt.replace("{{GRID_ROWS}}", str(grid_rows))
         prompt = prompt.replace("{{PAGE_COUNT}}", str(page_count))
         prompt = prompt.replace("{{PDF_NAME}}", pdf_name)
         prompt = prompt.replace("{{OUTPUT_FILENAME}}", f"{pdf_name}.xlsx")
+        prompt = prompt.replace("{{TABLE_STRUCTURE_SUMMARY}}", table_summary)
+        prompt = prompt.replace("{{PLACEMENT_COMMANDS}}", placement_commands)
 
         # ファイル出力
         output_path = self.output_dir / f"{pdf_name}_prompt.txt"
@@ -93,6 +111,100 @@ class PromptBuilder:
             return self._builtin_template()
 
         return self.template_path.read_text(encoding="utf-8")
+
+    def _compute_table_structure(self, json_data: dict) -> str:
+        """
+        JSONのline要素からテーブルの列・行境界を自動検出し、
+        LLMが直接使える構造サマリーを生成する。
+        """
+        summaries = []
+
+        for page_data in json_data.get("pages", []):
+            elements = page_data.get("elements", [])
+
+            # line要素を抽出
+            lines = [e for e in elements if e.get("type") == "line"]
+            if not lines:
+                continue
+
+            # 縦線と横線を分類（grid_bboxの半開区間に基づく）
+            v_cols = set()  # 縦線の列位置
+            h_rows = set()  # 横線の行位置
+            all_rows = set()
+            all_cols = set()
+
+            for line in lines:
+                bbox = line.get("grid_bbox", {})
+                rs = bbox.get("row_start", 0)
+                re = bbox.get("row_end", 0)
+                cs = bbox.get("col_start", 0)
+                ce = bbox.get("col_end", 0)
+
+                all_rows.update([rs, re])
+                all_cols.update([cs, ce])
+
+                # 縦線: 列幅が1（半開区間で ce - cs == 1）
+                if ce - cs <= 1 and re - rs > 1:
+                    v_cols.add(cs)
+                # 横線: 行幅が1（半開区間で re - rs == 1）
+                elif re - rs <= 1 and ce - cs > 1:
+                    h_rows.add(rs)
+
+            if not v_cols or not h_rows:
+                continue
+
+            v_cols_sorted = sorted(v_cols)
+            h_rows_sorted = sorted(h_rows)
+
+            # テーブル領域の特定
+            table_row_min = h_rows_sorted[0]
+            table_row_max = h_rows_sorted[-1]
+            table_col_min = v_cols_sorted[0]
+            table_col_max = v_cols_sorted[-1]
+
+            summary = f"### ページ {page_data.get('page', {}).get('page_number', '?')}\n\n"
+            summary += f"テーブル領域: 行 {table_row_min}〜{table_row_max}, 列 {table_col_min}〜{table_col_max}\n\n"
+
+            # 列構造の計算（縦線の間がデータ列）
+            summary += "**列構造（place_cellのc1〜c2に使用）:**\n"
+            for i in range(len(v_cols_sorted) - 1):
+                left_border = v_cols_sorted[i]
+                right_border = v_cols_sorted[i + 1]
+                # 左の縦線の次の列 〜 右の縦線の前の列
+                data_col_start = left_border + 1
+                data_col_end = right_border - 1
+                if data_col_start <= data_col_end:
+                    col_label = chr(ord('A') + i)
+                    summary += f"- 列{col_label}: col {data_col_start}〜{data_col_end}（縦線 {left_border} と {right_border} の間）\n"
+
+            summary += "\n"
+
+            # 行構造の計算（横線の間がデータ行）
+            summary += "**行構造（place_cellのr1〜r2に使用）:**\n"
+            for i in range(len(h_rows_sorted) - 1):
+                top_border = h_rows_sorted[i]
+                bottom_border = h_rows_sorted[i + 1]
+                data_row_start = top_border + 1
+                data_row_end = bottom_border - 1
+                if data_row_start <= data_row_end:
+                    summary += f"- 行{i+1}: row {data_row_start}〜{data_row_end}（横線 {top_border} と {bottom_border} の間）\n"
+
+            summary += "\n"
+
+            # 罫線描画のためのガイド
+            summary += "**罫線の描画方法:**\n"
+            summary += f"- 縦線位置: {v_cols_sorted}\n"
+            summary += f"- 横線位置: {h_rows_sorted}\n"
+            summary += "- 罫線はplace_cellを使わず、直接 `ws.cell(row=r, column=c).border = ...` で設定すること\n"
+            summary += f"- 縦方向: 行 {table_row_min}〜{table_row_max} で各縦線位置にborder_leftを設定\n"
+            summary += f"- 横方向: 列 {table_col_min}〜{table_col_max} で各横線位置にborder_topを設定\n"
+
+            summaries.append(summary)
+
+        if not summaries:
+            return "テーブル構造が検出されませんでした。JSONのgrid_bboxを参考に配置してください。"
+
+        return "\n".join(summaries)
 
     def _compress_json(self, json_data: dict) -> dict:
         """
