@@ -22,13 +22,13 @@ def run_pipeline():
 
     # パス設定
     input_dir = Path("data/01_input_pdf")
-    inter_md_dir = "data/02_inter_md"
-    inter_json_dir = "data/03_inter_json"
-    output_dir = "data/04_output_excel"
+    md_dir = "data/02_markdown"
+    json_dir = "data/03_layout_json"
+    prompt_dir = "data/04_prompt"
 
     # インスタンス生成
-    analyzer = HybridAnalyzer(inter_md_dir, inter_json_dir)
-    prompt_builder = PromptBuilder(output_dir)
+    analyzer = HybridAnalyzer(md_dir, json_dir)
+    prompt_builder = PromptBuilder(prompt_dir)
 
     # PDFファイルの走査
     pdf_files = list(input_dir.glob("*.pdf"))
