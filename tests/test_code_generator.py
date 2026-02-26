@@ -7,6 +7,7 @@ from src.core.placement_generator import (
     PlacementCommand,
     PlacementResult,
     TableStructure,
+    LineElement,
 )
 
 
@@ -41,6 +42,14 @@ class TestCodeGeneration:
                     table_col_min=5,
                     table_col_max=31,
                 )
+            ],
+            line_elements=[
+                LineElement(row_start=37, row_end=37, col_start=5, col_end=31, orientation="horizontal"),
+                LineElement(row_start=39, row_end=39, col_start=5, col_end=31, orientation="horizontal"),
+                LineElement(row_start=41, row_end=41, col_start=5, col_end=31, orientation="horizontal"),
+                LineElement(row_start=37, row_end=41, col_start=5, col_end=5, orientation="vertical"),
+                LineElement(row_start=37, row_end=41, col_start=7, col_end=7, orientation="vertical"),
+                LineElement(row_start=37, row_end=41, col_start=31, col_end=31, orientation="vertical"),
             ],
         )
 
@@ -77,8 +86,8 @@ class TestCodeGeneration:
         assert '御見積書' in code
         assert 'No.' in code
 
-    def test_contains_draw_table_borders(self):
-        """生成コードに draw_table_borders 呼び出しが含まれること"""
+    def test_contains_draw_line(self):
+        """生成コードに draw_line 呼び出しが含まれること"""
         gen = CodeGenerator()
         result = self._make_simple_result()
         code = gen.generate(
@@ -89,7 +98,10 @@ class TestCodeGeneration:
             output_filename="test.xlsx",
             pdf_name="test",
         )
-        assert "draw_table_borders(ws" in code
+        assert 'draw_line(ws, "horizontal"' in code
+        assert 'draw_line(ws, "vertical"' in code
+        # draw_table_bordersは廃止
+        assert 'draw_table_borders' not in code
 
     def test_contains_grid_setup(self):
         """生成コードにグリッド設定が含まれること"""
@@ -207,7 +219,7 @@ class TestIntegrationWithRealData:
         # 基本検証
         compile(code, "mitsumori_gen.py", "exec")
         assert "place_cell(ws," in code
-        assert "draw_table_borders(ws" in code
+        assert 'draw_line(ws, "horizontal"' in code or 'draw_line(ws, "vertical"' in code
         assert 'wb.save("mitsumori.xlsx")' in code
 
         # テキスト内容が含まれていること

@@ -45,10 +45,21 @@ class TableStructure:
 
 
 @dataclass
+class LineElement:
+    """line要素の元座標を保持するデータクラス（罫線描画用）"""
+    row_start: int
+    row_end: int
+    col_start: int
+    col_end: int
+    orientation: str  # "horizontal" or "vertical"
+
+
+@dataclass
 class PlacementResult:
     """配置命令リスト生成の結果"""
     commands: list[PlacementCommand] = field(default_factory=list)
     table_structures: list[TableStructure] = field(default_factory=list)
+    line_elements: list[LineElement] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
 
@@ -84,11 +95,15 @@ class PlacementGenerator:
             table_struct = self._detect_table_structure(elements)
             result.table_structures.append(table_struct)
 
-            # Step 2: rect要素の配置命令生成
+            # Step 2: line要素の元座標を収集（罫線描画用）
+            line_elems = self._collect_line_elements(elements)
+            result.line_elements.extend(line_elems)
+
+            # Step 3: rect要素の配置命令生成
             rect_commands = self._process_rects(elements)
             result.commands.extend(rect_commands)
 
-            # Step 3-5: text要素の配置命令生成
+            # Step 4-6: text要素の配置命令生成
             text_commands = self._process_texts(elements, table_struct)
             result.commands.extend(text_commands)
 
@@ -101,6 +116,47 @@ class PlacementGenerator:
             f"{len(result.commands)}件の命令, "
             f"{len(result.warnings)}件の警告"
         )
+
+        return result
+
+    def _collect_line_elements(self, elements: list) -> list[LineElement]:
+        """line要素の元座標を収集する（罫線描画用）。
+
+        _detect_table_structure とは別に、各lineの向き・範囲をそのまま保持する。
+        CodeGenerator がこの情報を使って draw_line を個別に生成する。
+        """
+        result = []
+        lines = [e for e in elements if e.get("type") == "line"]
+        seen = set()  # 重複排除
+
+        for line in lines:
+            bbox = line.get("grid_bbox", {})
+            rs = bbox.get("row_start", 0)
+            re = bbox.get("row_end", 0)
+            cs = bbox.get("col_start", 0)
+            ce = bbox.get("col_end", 0)
+
+            # 縦線: 列幅が1以下で行の高さがある
+            if ce - cs <= 1 and re - rs > 1:
+                orientation = "vertical"
+            # 横線: 行幅が1以下で列の幅がある
+            elif re - rs <= 1 and ce - cs > 1:
+                orientation = "horizontal"
+            else:
+                continue
+
+            key = (rs, re, cs, ce, orientation)
+            if key in seen:
+                continue
+            seen.add(key)
+
+            result.append(LineElement(
+                row_start=rs,
+                row_end=re,
+                col_start=cs,
+                col_end=ce,
+                orientation=orientation,
+            ))
 
         return result
 

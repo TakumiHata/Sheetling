@@ -15,11 +15,11 @@ class CodeGenerator:
     配置命令リストから完全な Python スクリプトを生成する。
 
     生成されるスクリプトは以下を含む:
-    - place_cell / draw_table_borders 関数定義
+    - place_cell / draw_line 関数定義
     - グリッド設定（列幅・行高の均一設定）
     - rect 要素の背景色設定
     - text 要素の配置（テーブル内・外）
-    - テーブル罫線の描画
+    - 罫線の個別描画（各line要素の元座標を忠実に再現）
     - 印刷設定（A4, fitToPage）
     """
 
@@ -66,8 +66,8 @@ class CodeGenerator:
         lines.append('')
         lines.append('')
 
-        # --- draw_table_borders 関数 ---
-        lines.append(self._draw_table_borders_function())
+        # --- draw_line 関数 ---
+        lines.append(self._draw_line_function())
         lines.append('')
         lines.append('')
 
@@ -115,20 +115,22 @@ class CodeGenerator:
                 )
             lines.append('')
 
-        # --- 4. テーブル罫線 ---
-        for ts in placement_result.table_structures:
-            if ts.v_cols and ts.h_rows:
-                lines.append('    # --- 4. テーブル罫線（place_cellを使わないこと） ---')
-                lines.append(
-                    f'    draw_table_borders(ws, '
-                    f'v_cols={ts.v_cols}, '
-                    f'h_rows={ts.h_rows}, '
-                    f'row_min={ts.table_row_min}, '
-                    f'row_max={ts.table_row_max}, '
-                    f'col_min={ts.table_col_min}, '
-                    f'col_max={ts.table_col_max})'
-                )
-                lines.append('')
+        # --- 4. 罫線（各line要素の元座標を個別描画） ---
+        if placement_result.line_elements:
+            lines.append('    # --- 4. 罫線（元PDF上のline座標を忠実に再現） ---')
+            lines.append('    side_thin = Side(border_style="thin", color="000000")')
+            for le in placement_result.line_elements:
+                if le.orientation == "horizontal":
+                    lines.append(
+                        f'    draw_line(ws, "horizontal", row={le.row_start}, '
+                        f'col_start={le.col_start}, col_end={le.col_end}, side=side_thin)'
+                    )
+                else:
+                    lines.append(
+                        f'    draw_line(ws, "vertical", col={le.col_start}, '
+                        f'row_start={le.row_start}, row_end={le.row_end}, side=side_thin)'
+                    )
+            lines.append('')
 
         # --- 5. 印刷設定 ---
         lines.append('    # --- 5. 印刷設定（必須） ---')
@@ -151,7 +153,7 @@ class CodeGenerator:
         # 生成コードの文法チェック
         try:
             compile(code, f"{pdf_name}_gen.py", "exec")
-            logger.info(f"コード生成完了: {len(text_cmds)}件のtext配置, {len(rect_cmds)}件のrect配置")
+            logger.info(f"コード生成完了: {len(text_cmds)}件のtext配置, {len(rect_cmds)}件のrect配置, {len(placement_result.line_elements)}件の罫線")
         except SyntaxError as e:
             logger.error(f"生成コードにSyntaxError: {e}")
 
@@ -186,30 +188,25 @@ class CodeGenerator:
         ws.merge_cells(start_row=r1, start_column=c1, end_row=r2, end_column=c2)'''
 
     @staticmethod
-    def _draw_table_borders_function() -> str:
-        """draw_table_borders 関数のソースコードを返す。"""
-        return '''def draw_table_borders(ws, v_cols, h_rows, row_min, row_max, col_min, col_max):
-    """テーブルの罫線を描画する。place_cellとの競合を避けるため直接cell.borderを設定する。"""
-    side_thin = Side(border_style="thin", color="000000")
-    # 縦線
-    for c in v_cols:
-        for r in range(row_min, row_max + 1):
-            cell = ws.cell(row=r, column=c)
+    def _draw_line_function() -> str:
+        """draw_line 関数のソースコードを返す。"""
+        return '''def draw_line(ws, orientation, row=None, col=None, row_start=None, row_end=None, col_start=None, col_end=None, side=None):
+    """1本の罫線を描画する。横線=top border, 縦線=left border。"""
+    if side is None:
+        side = Side(border_style="thin", color="000000")
+    if orientation == "horizontal" and row is not None:
+        for c in range(col_start, col_end + 1):
+            cell = ws.cell(row=row, column=c)
             existing = cell.border
             cell.border = Border(
-                left=side_thin,
-                right=existing.right,
-                top=existing.top,
-                bottom=existing.bottom
+                left=existing.left, right=existing.right,
+                top=side, bottom=existing.bottom
             )
-    # 横線
-    for r in h_rows:
-        for c in range(col_min, col_max + 1):
-            cell = ws.cell(row=r, column=c)
+    elif orientation == "vertical" and col is not None:
+        for r in range(row_start, row_end + 1):
+            cell = ws.cell(row=r, column=col)
             existing = cell.border
             cell.border = Border(
-                left=existing.left,
-                right=existing.right,
-                top=side_thin,
-                bottom=existing.bottom
+                left=side, right=existing.right,
+                top=existing.top, bottom=existing.bottom
             )'''
