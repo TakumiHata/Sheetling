@@ -240,27 +240,40 @@ class PlacementGenerator:
         )
 
     def _snap_to_table(self, elem: dict, table: TableStructure) -> PlacementCommand | None:
-        """テーブル内のtext要素を列構造・行構造にスナップする。"""
+        """テーブル内のtext要素を列構造・行構造にスナップする。
+
+        bboxの中心点を使ってスナップ先を決定し、r1==r2, c1/c2を同一列区間に
+        収めることで、隣接行・列へのまたがりを防止する。
+        """
         bbox = elem.get("grid_bbox", {})
         text = elem.get("text", "")
         font_size = elem.get("font_size", 10.0)
 
         col_start = bbox.get("col_start", 0)
+        col_end = bbox.get("col_end", col_start + 1)
         row_start = bbox.get("row_start", 0)
+        row_end = bbox.get("row_end", row_start + 1)
 
-        # 列スナップ: col_start が含まれる列区間を探す
+        # 中心点を計算（半開区間なのでcol_end/row_endはそのまま使う）
+        col_center = (col_start + col_end) / 2.0
+        row_center = (row_start + row_end) / 2.0
+
+        # 列スナップ: 中心点が含まれる列区間を探す（整数変換して検索）
         snapped_c1, snapped_c2 = self._find_column_range(col_start, table)
         if snapped_c1 is None:
-            # 列境界と一致しない場合は最近傍の列にスナップ
-            snapped_c1, snapped_c2 = self._nearest_column_range(col_start, table)
+            # col_startで見つからない場合、中心点で再検索
+            snapped_c1, snapped_c2 = self._find_column_range(int(col_center), table)
+        if snapped_c1 is None:
+            snapped_c1, snapped_c2 = self._nearest_column_range(int(col_center), table)
             if snapped_c1 is None:
                 logger.warning(f"テーブル内text '{text}' の列スナップに失敗 (col={col_start})")
                 return self._convert_outside_text(elem)
 
-        # 行スナップ: row_start が含まれる行区間を探す
-        snapped_r1, snapped_r2 = self._find_row_range(row_start, table)
+        # 行スナップ: 中心点が含まれる行区間を探す
+        snapped_r1, snapped_r2 = self._find_row_range(int(row_center), table)
         if snapped_r1 is None:
-            snapped_r1, snapped_r2 = self._nearest_row_range(row_start, table)
+            # 中心点で見つからない場合、最近傍を使用
+            snapped_r1, snapped_r2 = self._nearest_row_range(int(row_center), table)
             if snapped_r1 is None:
                 logger.warning(f"テーブル内text '{text}' の行スナップに失敗 (row={row_start})")
                 return self._convert_outside_text(elem)
@@ -277,7 +290,7 @@ class PlacementGenerator:
             font_size=font_size,
             font_bold=font_size >= 11.0,
             alignment=alignment,
-            comment=f"table text (snapped from row={row_start}, col={col_start})",
+            comment=f"table text (snapped from row={row_start}, col={col_start}, center=({row_center:.0f},{col_center:.0f}))",
         )
 
     def _convert_outside_text(self, elem: dict) -> PlacementCommand:

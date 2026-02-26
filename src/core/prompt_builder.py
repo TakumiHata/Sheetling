@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
-from src.core.placement_generator import PlacementGenerator, format_placement_commands
+from src.core.placement_generator import PlacementGenerator
+from src.core.code_generator import CodeGenerator
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -42,15 +43,11 @@ class PromptBuilder:
 
         # JSON圧縮: 冗長な情報を除外
         compressed_json = self._compress_json(json_data)
-        json_content = json.dumps(compressed_json, indent=2, ensure_ascii=False)
 
         # グリッド単位の取得
         grid_unit_pt = 10.0
         if json_data.get("pages") and json_data["pages"][0].get("page"):
             grid_unit_pt = json_data["pages"][0]["page"].get("grid_unit_pt", 10.0)
-
-        # テンプレートへの埋め込み
-        page_count = len(json_data.get("pages", []))
 
         # グリッド列数・行数の取得
         grid_cols = 60
@@ -61,47 +58,62 @@ class PromptBuilder:
             grid_rows = page_info.get("grid_rows", 85)
 
         # セルサイズの計算（grid_unitの1.8倍で余裕を持たせる）
-        # 検証結果: 10ptグリッドで列幅≈2.5、行高≈18.0が最適
-        # fitToPageで自動スケーリングされるため、少し大きめでOK
         scale_factor = 1.8
-        row_height = round(grid_unit_pt * scale_factor, 1)  # 10pt → 18pt
+        row_height = round(grid_unit_pt * scale_factor, 1)
 
         # A4幅に比例した列幅を計算
         a4_printable_px = 720
         col_px = (a4_printable_px / grid_cols) * scale_factor
         col_width = round(max((col_px - 5) / 7, 1.0), 1)
 
-        # テーブル構造サマリーの生成
-        table_summary = self._compute_table_structure(compressed_json)
+        # ページ数
+        page_count = len(json_data.get("pages", []))
+        output_filename = f"{pdf_name}.xlsx"
 
         # 配置命令リストの生成
         placement_gen = PlacementGenerator()
         placement_result = placement_gen.generate(compressed_json)
-        placement_commands = format_placement_commands(placement_result)
 
         if placement_result.warnings:
             for w in placement_result.warnings:
                 logger.warning(f"配置命令: {w}")
 
+        # 完全なPythonコードの生成
+        code_gen = CodeGenerator()
+        generated_code = code_gen.generate(
+            placement_result=placement_result,
+            grid_cols=grid_cols,
+            grid_rows=grid_rows,
+            col_width=col_width,
+            row_height=row_height,
+            page_count=page_count,
+            output_filename=output_filename,
+            pdf_name=pdf_name,
+        )
+
+        # テーブル構造サマリーの生成
+        table_summary = self._compute_table_structure(compressed_json)
+
+        # テンプレートへの埋め込み
         prompt = template.replace("{{MARKDOWN_CONTENT}}", md_content)
-        prompt = prompt.replace("{{JSON_CONTENT}}", json_content)
-        prompt = prompt.replace("{{GRID_UNIT_PT}}", str(grid_unit_pt))
-        prompt = prompt.replace("{{ROW_HEIGHT}}", str(row_height))
-        prompt = prompt.replace("{{COL_WIDTH}}", str(col_width))
-        prompt = prompt.replace("{{GRID_COLS}}", str(grid_cols))
-        prompt = prompt.replace("{{GRID_ROWS}}", str(grid_rows))
-        prompt = prompt.replace("{{PAGE_COUNT}}", str(page_count))
-        prompt = prompt.replace("{{PDF_NAME}}", pdf_name)
-        prompt = prompt.replace("{{OUTPUT_FILENAME}}", f"{pdf_name}.xlsx")
+        prompt = prompt.replace("{{GENERATED_CODE}}", generated_code)
         prompt = prompt.replace("{{TABLE_STRUCTURE_SUMMARY}}", table_summary)
-        prompt = prompt.replace("{{PLACEMENT_COMMANDS}}", placement_commands)
+        prompt = prompt.replace("{{PDF_NAME}}", pdf_name)
+        prompt = prompt.replace("{{OUTPUT_FILENAME}}", output_filename)
+        prompt = prompt.replace("{{PAGE_COUNT}}", str(page_count))
 
         # ファイル出力
         output_path = self.output_dir / f"{pdf_name}_prompt.txt"
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(prompt)
 
+        # 生成コードも別ファイルとして保存（そのまま実行可能）
+        code_path = self.output_dir / f"{pdf_name}_gen.py"
+        with open(code_path, "w", encoding="utf-8") as f:
+            f.write(generated_code)
+
         logger.info(f"Prompt saved to: {output_path}")
+        logger.info(f"Generated code saved to: {code_path}")
         return str(output_path)
 
     def _load_template(self) -> str:
@@ -274,12 +286,12 @@ class PromptBuilder:
 {{MARKDOWN_CONTENT}}
 ```
 
-## JSON（座標・色彩・物理レイアウト）
-```json
-{{JSON_CONTENT}}
+## 生成済みPythonコード（事前計算済み）
+```python
+{{GENERATED_CODE}}
 ```
 
 ## 指示
-上記のMarkdownとJSONを基に、openpyxlを使用して方眼Excel（{{GRID_UNIT_PT}}pt単位）を
-生成するPythonコードを出力してください。ファイル名は `{{OUTPUT_FILENAME}}` です。
+上記の生成済みコードをレビューし、Markdownのテキストが漏れていないか確認してください。
+漏れがあれば追加し、最終版のPythonコードのみを出力してください。
 """
