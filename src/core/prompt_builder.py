@@ -57,14 +57,15 @@ class PromptBuilder:
             grid_cols = page_info.get("grid_cols", 70)
             grid_rows = page_info.get("grid_rows", 99)
 
-        # セルサイズの計算（5ptグリッドに最適化）
+        # セルサイズの計算（3mm/8.5ptグリッドに最適化）
+        # Excelの行高さはポイント単位、列幅は文字数単位（1文字≒7ピクセル、パディング5ピクセル）
         scale_factor = 1.0
         row_height = round(grid_unit_pt * scale_factor, 1)
 
-        # A4幅に比例した列幅を計算
-        a4_printable_px = 720
-        col_px = (a4_printable_px / grid_cols) * scale_factor
-        col_width = round(max((col_px - 5) / 7, 0.5), 2)
+        # grid_unit_ptから直接正方形になるように列幅を計算 ( A4幅への強制スケーリングを廃止 )
+        # 1 pt = 4/3 px (標準96DPI)
+        col_px = grid_unit_pt * (96 / 72) * scale_factor
+        col_width = round(max((col_px - 5) / 7, 0.1), 2)
 
         # ページ数
         page_count = len(json_data.get("pages", []))
