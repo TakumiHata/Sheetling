@@ -49,28 +49,25 @@ class PdfLayoutExtractor:
 
                 # 長方形情報の抽出（背景色・ボーダー）
                 for rect in page.rects:
-                    fill_color = self._to_hex(rect.get("non_stroking_color"))
-                    stroke_color = self._to_hex(rect.get("stroking_color"))
                     page_data["rects"].append({
                         "x0": float(rect["x0"]),
                         "top": float(rect["top"]),
                         "x1": float(rect["x1"]),
                         "bottom": float(rect["bottom"]),
-                        "fill_color": fill_color,
-                        "stroke_color": stroke_color,
+                        "fill_color": None,
+                        "stroke_color": None,
                         "stroke_width": float(rect.get("width", 0) or 0),
                     })
 
                 # 直線情報の抽出（罫線）
                 for line in page.lines:
-                    stroke_color = self._to_hex(line.get("stroking_color"))
                     page_data["lines"].append({
                         "x0": float(line["x0"]),
                         "top": float(line["top"]),
                         "x1": float(line["x1"]),
                         "bottom": float(line["bottom"]),
                         "stroke_width": float(line.get("width", 0) or 0),
-                        "stroke_color": stroke_color,
+                        "stroke_color": None,
                     })
 
                 # 文字情報の抽出（フォントサイズ・色）
@@ -83,7 +80,6 @@ class PdfLayoutExtractor:
                         "bottom": float(char["bottom"]),
                         "size": float(char["size"]),
                         "fontname": char["fontname"],
-                        "color": self._to_hex(char.get("non_stroking_color")),
                     })
 
                 layout_data["pages"].append(page_data)

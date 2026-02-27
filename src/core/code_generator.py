@@ -86,17 +86,9 @@ class CodeGenerator:
         lines.append(f'        ws.row_dimensions[row_idx].height = {row_height}')
         lines.append('')
 
-        # --- 2. rect 要素 ---
-        rect_cmds = [c for c in placement_result.commands if c.category == "rect"]
-        if rect_cmds:
-            lines.append('    # --- 2. rect要素（背景色） ---')
-            for cmd in rect_cmds:
-                fill = cmd.fill_color.replace("#", "") if cmd.fill_color else "FFFFFF"
-                lines.append(
-                    f'    place_cell(ws, {cmd.r1}, {cmd.c1}, {cmd.r2}, {cmd.c2}, '
-                    f'fill=PatternFill(start_color="{fill}", end_color="{fill}", fill_type="solid"))'
-                )
-            lines.append('')
+        # --- 2. rect要素は色彩情報を除外したため、スキップ ---
+        lines.append('    # --- 2. rect要素（色彩情報除外のためスキップ） ---')
+        lines.append('')
 
         # --- 3. text 要素 ---
         text_cmds = [c for c in placement_result.commands if c.category in ("text_outside", "text_table")]
@@ -153,7 +145,7 @@ class CodeGenerator:
         # 生成コードの文法チェック
         try:
             compile(code, f"{pdf_name}_gen.py", "exec")
-            logger.info(f"コード生成完了: {len(text_cmds)}件のtext配置, {len(rect_cmds)}件のrect配置, {len(placement_result.line_elements)}件の罫線")
+            logger.info(f"コード生成完了: {len(text_cmds)}件のtext配置, {len(placement_result.line_elements)}件の罫線")
         except SyntaxError as e:
             logger.error(f"生成コードにSyntaxError: {e}")
 

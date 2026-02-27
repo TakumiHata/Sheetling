@@ -50,21 +50,21 @@ class PromptBuilder:
             grid_unit_pt = json_data["pages"][0]["page"].get("grid_unit_pt", 10.0)
 
         # グリッド列数・行数の取得
-        grid_cols = 60
-        grid_rows = 85
+        grid_cols = 120
+        grid_rows = 170
         if json_data.get("pages") and json_data["pages"][0].get("page"):
             page_info = json_data["pages"][0]["page"]
-            grid_cols = page_info.get("grid_cols", 60)
-            grid_rows = page_info.get("grid_rows", 85)
+            grid_cols = page_info.get("grid_cols", 120)
+            grid_rows = page_info.get("grid_rows", 170)
 
-        # セルサイズの計算（grid_unitの1.8倍で余裕を持たせる）
-        scale_factor = 1.8
+        # セルサイズの計算（5ptグリッドに最適化）
+        scale_factor = 1.0
         row_height = round(grid_unit_pt * scale_factor, 1)
 
         # A4幅に比例した列幅を計算
         a4_printable_px = 720
         col_px = (a4_printable_px / grid_cols) * scale_factor
-        col_width = round(max((col_px - 5) / 7, 1.0), 1)
+        col_width = round(max((col_px - 5) / 7, 0.5), 2)
 
         # ページ数
         page_count = len(json_data.get("pages", []))
@@ -246,10 +246,6 @@ class PromptBuilder:
                 # スタイル情報の圧縮
                 style = elem.get("style", {})
                 compressed_style = {}
-                if style.get("fill_color"):
-                    compressed_style["fill_color"] = style["fill_color"]
-                if style.get("stroke_color"):
-                    compressed_style["stroke_color"] = style["stroke_color"]
                 if style.get("stroke_width") and style["stroke_width"] > 0:
                     compressed_style["stroke_width"] = style["stroke_width"]
 

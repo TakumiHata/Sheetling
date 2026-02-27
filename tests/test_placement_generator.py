@@ -267,10 +267,6 @@ class TestIntegration:
         # 基本的な検証
         assert len(result.commands) > 0, "配置命令が1件以上生成されること"
 
-        # rect命令が存在すること
-        rect_cmds = [c for c in result.commands if c.category == "rect"]
-        assert len(rect_cmds) >= 1, "rect命令が1件以上あること"
-
         # text命令が存在すること
         text_cmds = [c for c in result.commands if c.category in ("text_outside", "text_table")]
         assert len(text_cmds) >= 10, "text命令が10件以上あること"

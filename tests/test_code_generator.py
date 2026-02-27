@@ -80,9 +80,10 @@ class TestCodeGeneration:
             output_filename="test.xlsx",
             pdf_name="test",
         )
-        assert "place_cell(ws, 4, 22, 7, 38" in code  # rect
         assert "place_cell(ws, 4, 25, 7, 35" in code  # text_outside
         assert "place_cell(ws, 38, 6, 38, 6" in code  # text_table
+        # rectは色彩情報除外のためスキップ
+        assert "place_cell(ws, 4, 22, 7, 38" not in code
         assert '御見積書' in code
         assert 'No.' in code
 
@@ -174,11 +175,11 @@ class TestCodeGeneration:
             output_filename="test.xlsx",
             pdf_name="test",
         )
-        # main()内のplace_cell呼び出し数 = 3 (rect + text_outside + text_table)
-        # 関数定義内のplace_cellは除外
+        # main()内のplace_cell呼び出し数 = 2 (text_outside + text_table)
+        # rectは色彩情報除外のためスキップ
         main_section = code.split("def main():")[1]
         call_count = main_section.count("place_cell(ws,")
-        assert call_count == 3
+        assert call_count == 2
 
 
 class TestIntegrationWithRealData:
