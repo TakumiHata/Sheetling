@@ -50,12 +50,12 @@ class PromptBuilder:
             grid_unit_pt = json_data["pages"][0]["page"].get("grid_unit_pt", 10.0)
 
         # グリッド列数・行数の取得
-        grid_cols = 120
-        grid_rows = 170
+        grid_cols = 70
+        grid_rows = 99
         if json_data.get("pages") and json_data["pages"][0].get("page"):
             page_info = json_data["pages"][0]["page"]
-            grid_cols = page_info.get("grid_cols", 120)
-            grid_rows = page_info.get("grid_rows", 170)
+            grid_cols = page_info.get("grid_cols", 70)
+            grid_rows = page_info.get("grid_rows", 99)
 
         # セルサイズの計算（5ptグリッドに最適化）
         scale_factor = 1.0

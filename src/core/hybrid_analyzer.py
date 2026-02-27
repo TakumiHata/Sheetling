@@ -14,7 +14,7 @@ class HybridAnalyzer:
     指示書のJSONスキーマに準拠した構造化データを出力する。
     """
 
-    def __init__(self, inter_md_dir: str, inter_json_dir: str, grid_size: float = 5.0):
+    def __init__(self, inter_md_dir: str, inter_json_dir: str, grid_size: float = 8.5):
         self.inter_md_dir = Path(inter_md_dir)
         self.inter_json_dir = Path(inter_json_dir)
 
@@ -22,7 +22,7 @@ class HybridAnalyzer:
         self.mid_parser = MarkItDownParser(str(self.inter_md_dir))
 
         # グリッド設定 (ポイント単位: 1pt = 1/72 inch)
-        # 5pt ≒ 1.75mm。高精細な方眼サイズ。
+        # 8.5pt ≒ 3mm。セルが小さすぎない適度な方眼サイズ。
         self.grid_size = grid_size
 
     def analyze(self, pdf_path: str) -> dict:
