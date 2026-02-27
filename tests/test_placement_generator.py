@@ -21,7 +21,6 @@ class TestHalfOpenToClosedConversion:
                 "elements": [{
                     "type": "rect",
                     "grid_bbox": {"col_start": 22, "row_start": 4, "col_end": 39, "row_end": 8},
-                    "style": {"fill_color": "#F2F2F2"},
                 }]
             }]
         }
@@ -34,7 +33,6 @@ class TestHalfOpenToClosedConversion:
         assert cmd.c1 == 22
         assert cmd.r2 == 7  # row_end - 1
         assert cmd.c2 == 38  # col_end - 1
-        assert cmd.fill_color == "#F2F2F2"
 
     def test_text_outside_conversion(self):
         """テーブル外text要素の座標変換が正しいこと"""
@@ -209,7 +207,6 @@ class TestFormatPlacementCommands:
             commands=[
                 PlacementCommand(
                     category="rect", r1=4, c1=22, r2=7, c2=38,
-                    fill_color="#F2F2F2",
                 ),
                 PlacementCommand(
                     category="text_outside", r1=4, c1=25, r2=7, c2=35,

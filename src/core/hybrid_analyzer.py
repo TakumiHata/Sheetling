@@ -71,7 +71,7 @@ class HybridAnalyzer:
               "type": "rect" | "text" | "line",
               "bbox": { "x0", "y0", "x1", "y1" },
               "grid_bbox": { "col_start", "row_start", "col_end", "row_end" },
-              "style": { "fill_color", "stroke_color", "stroke_width", "border" },
+              "style": { "stroke_width", "border" },
               "text": str | null,
               "font_size": float | null
             }]
@@ -112,8 +112,6 @@ class HybridAnalyzer:
                     "bbox": bbox,
                     "grid_bbox": grid_bbox,
                     "style": {
-                        "fill_color": None,
-                        "stroke_color": None,
                         "stroke_width": rect.get("stroke_width", 0),
                         "border": border,
                     },
@@ -132,8 +130,6 @@ class HybridAnalyzer:
                     "bbox": bbox,
                     "grid_bbox": grid_bbox,
                     "style": {
-                        "fill_color": None,
-                        "stroke_color": None,
                         "stroke_width": line.get("stroke_width", 0),
                         "border": self._detect_border_from_line(line),
                     },
@@ -173,10 +169,7 @@ class HybridAnalyzer:
 
     def _detect_border_from_rect(self, rect: dict) -> dict:
         """rectのstroke情報からborderの有無を推定する。"""
-        has_stroke = (
-            rect.get("stroke_color") is not None
-            and rect.get("stroke_width", 0) > 0
-        )
+        has_stroke = rect.get("stroke_width", 0) > 0
         return {
             "top": has_stroke,
             "right": has_stroke,
@@ -268,8 +261,6 @@ class HybridAnalyzer:
             "bbox": bbox,
             "grid_bbox": grid_bbox,
             "style": {
-                "fill_color": None,
-                "stroke_color": None,
                 "stroke_width": 0,
                 "border": {"top": False, "right": False, "bottom": False, "left": False},
             },

@@ -54,8 +54,6 @@ class PdfLayoutExtractor:
                         "top": float(rect["top"]),
                         "x1": float(rect["x1"]),
                         "bottom": float(rect["bottom"]),
-                        "fill_color": None,
-                        "stroke_color": None,
                         "stroke_width": float(rect.get("width", 0) or 0),
                     })
 
@@ -67,7 +65,6 @@ class PdfLayoutExtractor:
                         "x1": float(line["x1"]),
                         "bottom": float(line["bottom"]),
                         "stroke_width": float(line.get("width", 0) or 0),
-                        "stroke_color": None,
                     })
 
                 # 文字情報の抽出（フォントサイズ・色）
@@ -86,41 +83,3 @@ class PdfLayoutExtractor:
 
         logger.info(f"Layout extraction complete: {len(layout_data['pages'])} page(s)")
         return layout_data
-
-    def _to_hex(self, color) -> str | None:
-        """
-        pdfplumberの色値（[R, G, B] 0.0-1.0 or 0-255、またはグレースケール）を
-        '#RRGGBB' 形式のHEX文字列に変換する。
-        """
-        if color is None:
-            return None
-
-        try:
-            # グレースケール（単一値）
-            if isinstance(color, (int, float)):
-                v = int(color * 255) if color <= 1.0 else int(color)
-                return "#{:02X}{:02X}{:02X}".format(v, v, v)
-
-            # RGB配列
-            if isinstance(color, (list, tuple)):
-                if len(color) == 1:
-                    # グレースケール配列 [0.5]
-                    v = int(color[0] * 255) if color[0] <= 1.0 else int(color[0])
-                    return "#{:02X}{:02X}{:02X}".format(v, v, v)
-                elif len(color) == 3:
-                    if all(isinstance(x, (float, int)) and 0 <= x <= 1.0 for x in color):
-                        rgb = [int(x * 255) for x in color]
-                    else:
-                        rgb = [int(x) for x in color]
-                    return "#{:02X}{:02X}{:02X}".format(rgb[0], rgb[1], rgb[2])
-                elif len(color) == 4:
-                    # CMYK → RGB（簡易変換）
-                    c, m, y, k = color
-                    r = int(255 * (1 - c) * (1 - k))
-                    g = int(255 * (1 - m) * (1 - k))
-                    b = int(255 * (1 - y) * (1 - k))
-                    return "#{:02X}{:02X}{:02X}".format(r, g, b)
-
-            return None
-        except (ValueError, TypeError):
-            return None

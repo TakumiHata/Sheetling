@@ -20,7 +20,6 @@ class TestCodeGeneration:
             commands=[
                 PlacementCommand(
                     category="rect", r1=4, c1=22, r2=7, c2=38,
-                    fill_color="#F2F2F2",
                 ),
                 PlacementCommand(
                     category="text_outside", r1=4, c1=25, r2=7, c2=35,

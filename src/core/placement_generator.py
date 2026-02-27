@@ -23,7 +23,6 @@ class PlacementCommand:
     font_size: float = 10.0
     font_bold: bool = False
     alignment: str = "left"  # "left", "center", "right"
-    fill_color: str | None = None
     comment: str = ""  # デバッグ用コメント
 
 
@@ -227,9 +226,6 @@ class PlacementGenerator:
             if elem.get("type") != "rect":
                 continue
             bbox = elem.get("grid_bbox", {})
-            fill_color = elem.get("style", {}).get("fill_color")
-            if not fill_color:
-                continue  # 背景色がないrectは無視
 
             cmd = PlacementCommand(
                 category="rect",
@@ -237,8 +233,7 @@ class PlacementGenerator:
                 c1=bbox["col_start"],
                 r2=bbox["row_end"] - 1,  # 半開→閉
                 c2=bbox["col_end"] - 1,  # 半開→閉
-                fill_color=fill_color,
-                comment=f"rect fill={fill_color}",
+                comment=f"rect",
             )
             commands.append(cmd)
         return commands
@@ -516,7 +511,6 @@ class PlacementGenerator:
                     font_size=adjust.font_size,
                     font_bold=adjust.font_bold,
                     alignment=adjust.alignment,
-                    fill_color=adjust.fill_color,
                     comment=f"{adjust.comment} (overlap resolved: c1 {adjust.c1}→{new_c1})",
                 )
 
@@ -532,7 +526,6 @@ class PlacementGenerator:
                     font_size=adjust.font_size,
                     font_bold=adjust.font_bold,
                     alignment=adjust.alignment,
-                    fill_color=adjust.fill_color,
                     comment=f"{adjust.comment} (overlap resolved: r1 {adjust.r1}→{new_r1})",
                 )
 
@@ -557,10 +550,8 @@ def format_placement_commands(result: PlacementResult) -> str:
         lines.append("以下の `place_cell` 呼び出しを「--- 2. rect要素 ---」セクションにそのまま記述してください。")
         lines.append("")
         for i, cmd in enumerate(rect_cmds, 1):
-            fill = cmd.fill_color.replace("#", "") if cmd.fill_color else "FFFFFF"
             lines.append(
-                f'{i}. `place_cell(ws, {cmd.r1}, {cmd.c1}, {cmd.r2}, {cmd.c2}, '
-                f'fill=PatternFill(start_color="{fill}", end_color="{fill}", fill_type="solid"))`'
+                f'{i}. `place_cell(ws, {cmd.r1}, {cmd.c1}, {cmd.r2}, {cmd.c2})`'
             )
         lines.append("")
 
