@@ -109,7 +109,7 @@ class TestCodeGeneration:
         result = self._make_simple_result()
         code = gen.generate(
             placement_result=result,
-            grid_cols=60, grid_rows=85,
+            grid_cols=60, grid_rows=88,
             col_width=2.4, row_height=18.0,
             page_count=1,
             output_filename="test.xlsx",
@@ -118,7 +118,7 @@ class TestCodeGeneration:
         assert "width = 2.4" in code
         assert "height = 18.0" in code
         assert "range(1, 60 + 1)" in code
-        assert "range(1, 85 + 1)" in code
+        assert "range(1, 88 + 1)" in code
 
     def test_contains_print_setup(self):
         """生成コードに印刷設定が含まれること"""

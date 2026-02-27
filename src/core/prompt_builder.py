@@ -50,13 +50,13 @@ class PromptBuilder:
             grid_unit_pt = json_data["pages"][0]["page"].get("grid_unit_pt", 10.0)
 
         # グリッド列数・行数の取得
-        # 3mm方眼(11.3px)の場合、A4印刷可能幅(約720px)に収まる最大列数は63列。縦は約93行。
-        grid_cols = 63
-        grid_rows = 93
+        # 12px方眼(約3.17mm)の場合、A4印刷可能幅(約720px)に収まる最大列数は60列。縦は約88行。
+        grid_cols = 60
+        grid_rows = 88
         if json_data.get("pages") and json_data["pages"][0].get("page"):
             page_info = json_data["pages"][0]["page"]
-            grid_cols = page_info.get("grid_cols", 63)
-            grid_rows = page_info.get("grid_rows", 93)
+            grid_cols = page_info.get("grid_cols", 60)
+            grid_rows = page_info.get("grid_rows", 88)
 
         # セルサイズの計算（3mm/8.5ptグリッドに最適化）
         # Excelの行高さはポイント単位、列幅は文字数単位（1文字≒7ピクセル、パディング5ピクセル）
