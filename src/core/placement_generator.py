@@ -329,6 +329,10 @@ class PlacementGenerator:
                 logger.warning(f"テーブル内text '{text}' の行スナップに失敗 (row={row_start})")
                 return self._convert_outside_text(elem)
 
+        # 高さ不足対策: 行幅が1行(snapped_r1 == snapped_r2)の場合、文字が見切れるのを防ぐため結合を+1拡張する
+        if snapped_r1 == snapped_r2:
+            snapped_r2 += 1
+
         alignment = self._guess_alignment(text, font_size)
 
         return PlacementCommand(
@@ -352,17 +356,25 @@ class PlacementGenerator:
 
         alignment = self._guess_alignment(text, font_size)
 
+        cmd_options = {
+            "r1": bbox.get("row_start", 0),
+            "c1": bbox.get("col_start", 0),
+            "r2": bbox.get("row_end", 1) - 1,
+            "c2": bbox.get("col_end", 1) - 1,
+        }
+
+        # 高さ不足対策: 外側のテキストでも1行のみ結合されている場合は+1拡張する
+        if cmd_options["r1"] == cmd_options["r2"]:
+            cmd_options["r2"] += 1
+
         return PlacementCommand(
             category="text_outside",
-            r1=bbox["row_start"],
-            c1=bbox["col_start"],
-            r2=bbox["row_end"] - 1,  # 半開→閉
-            c2=bbox["col_end"] - 1,  # 半開→閉
             value=text,
             font_size=font_size,
             font_bold=font_size >= 18.0,
             alignment=alignment,
             comment=f"outside text",
+            **cmd_options
         )
 
     def _find_column_range(self, col: int, table: TableStructure) -> tuple[int | None, int | None]:

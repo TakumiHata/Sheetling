@@ -126,7 +126,7 @@ class TestTableSnapping:
         assert cmd.c1 == 6
         assert cmd.c2 == 6
         assert cmd.r1 == 38
-        assert cmd.r2 == 38
+        assert cmd.r2 == 39
 
     def test_snap_data_value(self):
         """データ行の値が正しい列・行にスナップされること"""
