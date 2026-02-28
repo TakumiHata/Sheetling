@@ -50,23 +50,30 @@ class PromptBuilder:
             grid_unit_pt = json_data["pages"][0]["page"].get("grid_unit_pt", 10.0)
 
         # グリッド列数・行数の取得
-        # 12px方眼(約3.17mm)の場合、A4印刷可能幅(約720px)に収まる最大列数は60列。縦は約88行。
-        grid_cols = 60
-        grid_rows = 88
+        # 4.96ptを用いた場合、A4幅(595pt)に収まる最大列数は約120列。縦は約176行。
+        grid_cols = 120
+        grid_rows = 176
         if json_data.get("pages") and json_data["pages"][0].get("page"):
             page_info = json_data["pages"][0]["page"]
-            grid_cols = page_info.get("grid_cols", 60)
-            grid_rows = page_info.get("grid_rows", 88)
+            grid_cols = page_info.get("grid_cols", 120)
+            grid_rows = page_info.get("grid_rows", 176)
 
-        # セルサイズの計算（3mm/8.5ptグリッドに最適化）
-        # Excelの行高さはポイント単位、列幅は文字数単位（1文字≒7ピクセル、パディング5ピクセル）
-        scale_factor = 1.0
-        row_height = round(grid_unit_pt * scale_factor, 1)
+        # セルサイズの計算（正方形に固定してA4へのスケーリングを行う）
+        # 1.5倍サイズ（約24px角の正方形）のアスペクト比に復元
+        # 1 px = 0.75 pt -> 24px * 0.75 = 18.0 pt
+        # Excel列幅 W = (24px - 5) / 7 = 2.71 文字
+        # ※Google Sheetsでは少し縦長に変換されるが、ターゲットがExcelのみのためこの値を優先する
+        fixed_row_height_pt = 18.0
+        fixed_col_width_excel = 2.71
 
-        # grid_unit_ptから直接正方形になるように列幅を計算 ( A4幅への強制スケーリングを廃止 )
-        # 1 pt = 4/3 px (標準96DPI)
-        col_px = grid_unit_pt * (96 / 72) * scale_factor
-        col_width = round(max((col_px - 5) / 7, 0.1), 2)
+        # 実際の出力セルサイズは固定
+        row_height = fixed_row_height_pt
+        col_width = fixed_col_width_excel
+
+        # scale_factor は、元の pdf の grid_unit_pt（10.0pt等）が
+        # Excel上での fixed_row_height_pt (12.0pt) になった場合の比率として計算
+        # これによりフォントサイズ等も等倍より少し大きく（または小さく）スケールされる
+        scale_factor = fixed_row_height_pt / grid_unit_pt
 
         # ページ数
         page_count = len(json_data.get("pages", []))
@@ -91,6 +98,7 @@ class PromptBuilder:
             page_count=page_count,
             output_filename=output_filename,
             pdf_name=pdf_name,
+            scale_factor=scale_factor,
         )
 
         # テーブル構造サマリーの生成
