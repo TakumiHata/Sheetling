@@ -1,11 +1,146 @@
 import json
 import math
+import re
 from pathlib import Path
-from src.core.pdf_layout_extractor import PdfLayoutExtractor
-from src.core.markitdown_parser import MarkItDownParser
+import pdfplumber
+from markitdown import MarkItDown
+from src.core.config import config
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+class MarkItDownParser:
+    def __init__(self, output_dir: str):
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.md = MarkItDown()
+
+    def parse(self, pdf_path: str) -> str:
+        """
+        MarkItDownを使用してPDFからテキスト情報を高精度に抽出する。
+        NaN/Unnamed等のノイズを除去した「クリーンなMD」を出力する。
+        """
+        logger.info(f"Parsing PDF with MarkItDown: {pdf_path}")
+        pdf_name = Path(pdf_path).stem
+
+        try:
+            result = self.md.convert(str(pdf_path))
+            cleaned = self._clean_markdown(result.text_content)
+
+            output_path = self.output_dir / f"{pdf_name}.md"
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(cleaned)
+
+            logger.info(f"MarkItDown extraction saved to: {output_path}")
+            return str(output_path)
+        except Exception as e:
+            logger.error(f"MarkItDown parsing failed: {e}")
+            raise
+
+    def _clean_markdown(self, text: str) -> str:
+        """
+        MarkItDown出力からノイズを除去する。
+        - NaN, Unnamed 系のプレースホルダーを除去
+        - 過剰な空行を整理
+        """
+        # NaN / Unnamed / nan を除去（テーブルセル内）
+        text = re.sub(r'\bNaN\b', '', text)
+        text = re.sub(r'\bnan\b', '', text)
+        text = re.sub(r'Unnamed:\s*\d+', '', text)
+        text = re.sub(r'Unnamed', '', text)
+
+        # テーブル行の中身が全て空（| | | |）になった行を除去
+        text = re.sub(r'^\|[\s|]*\|$', '', text, flags=re.MULTILINE)
+
+        # 3行以上の連続空行を2行に圧縮
+        text = re.sub(r'\n{3,}', '\n\n', text)
+
+        return text.strip() + '\n'
+
+
+class PdfLayoutExtractor:
+    def __init__(self, output_dir: str):
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
+    def extract(self, pdf_path: str) -> dict:
+        """
+        pdfplumberを使用してPDFから詳細なレイアウト情報を抽出する。
+        色情報はHEX形式に正規化して辞書として返す。
+        """
+        logger.info(f"Extracting detailed layout from: {pdf_path}")
+
+        layout_data = {
+            "source": str(pdf_path),
+            "pages": []
+        }
+
+        with pdfplumber.open(pdf_path) as pdf:
+            current_y_offset = 0.0
+
+            for i, page in enumerate(pdf.pages):
+                logger.info(f"Processing page {i+1}/{len(pdf.pages)}")
+
+                page_data = {
+                    "page_number": i + 1,
+                    "width": float(page.width),
+                    "height": float(page.height),
+                    "words": [],
+                    "rects": [],
+                    "lines": [],
+                    "chars": []
+                }
+
+                # 単語情報の抽出（座標維持のため重要）
+                for word in page.extract_words():
+                    page_data["words"].append({
+                        "text": word["text"],
+                        "x0": float(word["x0"]),
+                        "top": float(word["top"]) + current_y_offset,
+                        "x1": float(word["x1"]),
+                        "bottom": float(word["bottom"]) + current_y_offset,
+                    })
+
+                # 長方形情報の抽出（背景色・ボーダー）
+                for rect in page.rects:
+                    page_data["rects"].append({
+                        "x0": float(rect["x0"]),
+                        "top": float(rect["top"]) + current_y_offset,
+                        "x1": float(rect["x1"]),
+                        "bottom": float(rect["bottom"]) + current_y_offset,
+                        "stroke_width": float(rect.get("width", 0) or 0),
+                    })
+
+                # 直線情報の抽出（罫線）
+                for line in page.lines:
+                    page_data["lines"].append({
+                        "x0": float(line["x0"]),
+                        "top": float(line["top"]) + current_y_offset,
+                        "x1": float(line["x1"]),
+                        "bottom": float(line["bottom"]) + current_y_offset,
+                        "stroke_width": float(line.get("width", 0) or 0),
+                    })
+
+                # 文字情報の抽出（フォントサイズ・色）
+                for char in page.chars:
+                    page_data["chars"].append({
+                        "text": char["text"],
+                        "x0": float(char["x0"]),
+                        "top": float(char["top"]) + current_y_offset,
+                        "x1": float(char["x1"]),
+                        "bottom": float(char["bottom"]) + current_y_offset,
+                        "size": float(char["size"]),
+                        "fontname": char["fontname"],
+                    })
+
+                layout_data["pages"].append(page_data)
+                
+                # 次のページ用に現在のページの高さ分を加算
+                current_y_offset += float(page.height)
+
+        logger.info(f"Layout extraction complete: {len(layout_data['pages'])} page(s)")
+        return layout_data
 
 
 class HybridAnalyzer:
@@ -21,7 +156,6 @@ class HybridAnalyzer:
         self.pdf_extractor = PdfLayoutExtractor(str(self.inter_json_dir))
         self.mid_parser = MarkItDownParser(str(self.inter_md_dir))
 
-        from src.core.config import config
         self.grid_size = grid_size if grid_size is not None else config.grid.unit_pt
 
     def analyze(self, pdf_path: str) -> dict:
@@ -60,22 +194,6 @@ class HybridAnalyzer:
     def _build_schema_json(self, pdf_name: str, layout_data: dict) -> dict:
         """
         pdfplumberの生データを指示書のJSONスキーマに変換する。
-
-        出力スキーマ:
-        {
-          "pdf_name": str,
-          "pages": [{
-            "page": { "width_pt", "height_pt", "grid_unit_pt", "grid_cols", "grid_rows" },
-            "elements": [{
-              "type": "rect" | "text" | "line",
-              "bbox": { "x0", "y0", "x1", "y1" },
-              "grid_bbox": { "col_start", "row_start", "col_end", "row_end" },
-              "style": { "stroke_width", "border" },
-              "text": str | null,
-              "font_size": float | null
-            }]
-          }]
-        }
         """
         output = {
             "pdf_name": pdf_name,
@@ -201,10 +319,6 @@ class HybridAnalyzer:
     def _group_words_to_text_elements(self, words: list, chars: list) -> list:
         """
         pdfplumberの単語リストを、行単位でグループ化してtext要素に変換する。
-
-        1. Y座標（top）で行グループ化（誤差3pt以内を同一行）
-        2. 各行内でX座標でソートし、近接する単語を統合
-        3. chars情報からフォントサイズを推定
         """
         if not words:
             return []
@@ -277,8 +391,6 @@ class HybridAnalyzer:
     def _build_font_size_map(self, chars: list) -> dict:
         """
         charsリストからY座標帯ごとのフォントサイズマップを構築する。
-        key: (Y帯の中心をgrid_sizeでスナップした値)
-        value: 最頻出フォントサイズ
         """
         if not chars:
             return {}
@@ -292,7 +404,6 @@ class HybridAnalyzer:
 
         result = {}
         for band_key, sizes in band_sizes.items():
-            # 最頻値を使用
             from collections import Counter
             counter = Counter(round(s, 1) for s in sizes)
             most_common = counter.most_common(1)[0][0]

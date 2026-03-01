@@ -1,9 +1,8 @@
 import json
 from pathlib import Path
-from src.core.hybrid_analyzer import HybridAnalyzer
-from src.core.placement_generator import PlacementGenerator, format_table_structure_summary
-from src.core.code_generator import CodeGenerator
-from src.core.prompt_builder import PromptBuilder
+from src.core.extractor import HybridAnalyzer
+from src.core.placement import PlacementGenerator, format_table_structure_summary
+from src.core.generator import CodeGenerator, PromptBuilder
 from src.core.config import config
 from src.utils.logger import get_logger
 
