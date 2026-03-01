@@ -14,16 +14,15 @@ class HybridAnalyzer:
     指示書のJSONスキーマに準拠した構造化データを出力する。
     """
 
-    def __init__(self, inter_md_dir: str, inter_json_dir: str, grid_size: float = 4.96):
+    def __init__(self, inter_md_dir: str, inter_json_dir: str, grid_size: float = None):
         self.inter_md_dir = Path(inter_md_dir)
         self.inter_json_dir = Path(inter_json_dir)
 
         self.pdf_extractor = PdfLayoutExtractor(str(self.inter_json_dir))
         self.mid_parser = MarkItDownParser(str(self.inter_md_dir))
 
-        # グリッド設定 (ポイント単位: 1pt = 1/72 inch)
-        # 4.96pt ≒ 1.75mm (A4幅595ptに対して約120列となるサイズ)
-        self.grid_size = grid_size
+        from src.core.config import config
+        self.grid_size = grid_size if grid_size is not None else config.grid.unit_pt
 
     def analyze(self, pdf_path: str) -> dict:
         """

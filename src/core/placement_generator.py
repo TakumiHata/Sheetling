@@ -638,3 +638,54 @@ def format_placement_commands(result: PlacementResult) -> str:
         lines.append("")
 
     return "\n".join(lines)
+
+
+def format_table_structure_summary(result: PlacementResult) -> str:
+    """
+    PlacementResult の table_structures から、LLMが直接使える構造サマリーを生成する。
+    """
+    summaries = []
+
+    for idx, ts in enumerate(result.table_structures):
+        # 縦線と横線がない場合はテーブル領域なし
+        if not ts.v_cols or not ts.h_rows:
+            continue
+
+        # ページは便宜上(idx+1)とする。実際のページ番号が必要な場合は引数を追加して対応するが、
+        # ここではテーブル領域サマリーとして割り切る。
+        summary = f"### テーブル構造 {idx + 1}\n\n"
+        summary += f"テーブル領域: 行 {ts.table_row_min}〜{ts.table_row_max}, 列 {ts.table_col_min}〜{ts.table_col_max}\n\n"
+
+        # 列構造
+        summary += "**列構造（place_cellのc1〜c2に使用）:**\n"
+        for i, (col_start, col_end) in enumerate(ts.col_ranges):
+            col_label = chr(ord('A') + i)
+            # v_cols から境界を取得
+            left_border = ts.v_cols[i] if i < len(ts.v_cols) else "?"
+            right_border = ts.v_cols[i+1] if i + 1 < len(ts.v_cols) else "?"
+            summary += f"- 列{col_label}: col {col_start}〜{col_end}（縦線 {left_border} と {right_border} の間）\n"
+        summary += "\n"
+
+        # 行構造
+        summary += "**行構造（place_cellのr1〜r2に使用）:**\n"
+        for i, (row_start, row_end) in enumerate(ts.row_ranges):
+            top_border = ts.h_rows[i] if i < len(ts.h_rows) else "?"
+            bottom_border = ts.h_rows[i+1] if i + 1 < len(ts.h_rows) else "?"
+            summary += f"- 行{i+1}: row {row_start}〜{row_end}（横線 {top_border} と {bottom_border} の間）\n"
+        summary += "\n"
+
+        # 罫線描画のためのガイド
+        summary += "**罫線の描画方法:**\n"
+        summary += f"- 縦線位置: {ts.v_cols}\n"
+        summary += f"- 横線位置: {ts.h_rows}\n"
+        summary += "- 罫線はplace_cellを使わず、直接 `ws.cell(row=r, column=c).border = ...` で設定すること\n"
+        summary += f"- 縦方向: 行 {ts.table_row_min}〜{ts.table_row_max} で各縦線位置にborder_leftを設定\n"
+        summary += f"- 横方向: 列 {ts.table_col_min}〜{ts.table_col_max} で各横線位置にborder_topを設定\n"
+
+        summaries.append(summary)
+
+    if not summaries:
+        return "テーブル構造が検出されませんでした。JSONのgrid_bboxを参考に配置してください。"
+
+    return "\n".join(summaries)
+
