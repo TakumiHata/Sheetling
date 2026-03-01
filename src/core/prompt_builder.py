@@ -53,10 +53,16 @@ class PromptBuilder:
         # 4.96ptを用いた場合、A4幅(595pt)に収まる最大列数は約120列。縦は約176行。
         grid_cols = 120
         grid_rows = 176
+        
+        page_breaks = json_data.get("page_breaks", [])
+
         if json_data.get("pages") and json_data["pages"][0].get("page"):
             page_info = json_data["pages"][0]["page"]
             grid_cols = page_info.get("grid_cols", 120)
             grid_rows = page_info.get("grid_rows", 176)
+            
+        if page_breaks:
+            grid_rows = page_breaks[-1]
 
         # セルサイズの計算（正方形に固定してA4へのスケーリングを行う）
         # 1.5倍サイズ（約24px角の正方形）のアスペクト比に復元
@@ -99,6 +105,7 @@ class PromptBuilder:
             output_filename=output_filename,
             pdf_name=pdf_name,
             scale_factor=scale_factor,
+            page_breaks=page_breaks,
         )
 
         # テーブル構造サマリーの生成
@@ -237,6 +244,7 @@ class PromptBuilder:
         """
         compressed = {
             "pdf_name": json_data.get("pdf_name"),
+            "page_breaks": json_data.get("page_breaks", []),
             "pages": []
         }
 

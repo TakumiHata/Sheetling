@@ -33,6 +33,7 @@ class CodeGenerator:
         output_filename: str,
         pdf_name: str,
         scale_factor: float = 1.0,
+        page_breaks: list = None,
     ) -> str:
         """
         配置命令リストから完全な Python スクリプトを生成する。
@@ -50,14 +51,32 @@ class CodeGenerator:
                     "align": cmd.alignment or "left"
                 })
 
+        # 実際の使用範囲（最大行・列）を計算して印刷範囲を最適化する
+        max_r = 1
+        max_c = 1
+        for cmd in text_cmds:
+            max_r = max(max_r, cmd["r2"])
+            max_c = max(max_c, cmd["c2"])
+        
+        for le in placement_result.line_elements:
+            if le.orientation == "horizontal":
+                max_r = max(max_r, le.row_start)
+                max_c = max(max_c, le.col_end)
+            else:
+                max_r = max(max_r, le.row_end)
+                max_c = max(max_c, le.col_start)
+
         # Jinja2 コンテキスト変数の用意
         context = {
             "pdf_name": pdf_name,
             "grid_cols": grid_cols,
             "grid_rows": grid_rows,
+            "print_max_col": max_c,
+            "print_max_row": max_r,
             "col_width": col_width,
             "row_height": row_height,
             "page_count": page_count,
+            "page_breaks": page_breaks or [],
             "output_filename": output_filename.replace('\\', '\\\\'),
             "text_cmds": text_cmds,
             "line_elements": placement_result.line_elements

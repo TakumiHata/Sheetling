@@ -66,7 +66,7 @@ def main():
     # --- 3. text要素（テキスト・フォント・配置） ---
     {% if text_cmds %}
     {% for cmd in text_cmds %}
-    place_cell(ws, {{ cmd.r1 }}, {{ cmd.c1 }}, {{ cmd.r2 }}, {{ cmd.c2 }}, value="{{ cmd.escaped_value }}", font=Font(name="Meiryo", size={{ cmd.scaled_font_size }}{{ cmd.bold_str }}), alignment=Alignment(horizontal="{{ cmd.align }}", vertical="center", wrap_text=True))
+    place_cell(ws, {{ cmd.r1 }}, {{ cmd.c1 }}, {{ cmd.r2 }}, {{ cmd.c2 }}, value="{{ cmd.escaped_value }}", font=Font(name="Meiryo", size={{ cmd.scaled_font_size }}{{ cmd.bold_str }}), alignment=Alignment(horizontal="{{ cmd.align }}", vertical="center", wrap_text=False))
     {% endfor %}
     {% endif %}
 
@@ -92,10 +92,19 @@ def main():
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = {{ page_count }}
     # 印刷範囲（Print Area）を明示的に指定することで、右側が余る現象を防止する
-    ws.print_area = f"A1:{get_column_letter({{ grid_cols }})}{{ grid_rows }}"
+    ws.print_area = f"A1:{get_column_letter({{ print_max_col }})}{{ print_max_row }}"
     ws.print_options.horizontalCentered = True
+
+    # 改ページ指定（最後のページは不要）
+    from openpyxl.worksheet.pagebreak import Break
+    {% if page_breaks %}
+    {% for break_row in page_breaks[:-1] %}
+    ws.row_breaks.append(Break(id={{ break_row }}))
+    {% endfor %}
+    {% endif %}
+
     ws.cell(row=1, column=1, value=" ").font = Font(color="FFFFFF")
-    ws.cell(row={{ grid_rows }}, column={{ grid_cols }}, value=" ").font = Font(color="FFFFFF")
+    ws.cell(row={{ print_max_row }}, column={{ print_max_col }}, value=" ").font = Font(color="FFFFFF")
 
     wb.save("{{ output_filename }}")
     print("Saved: {{ output_filename }}")

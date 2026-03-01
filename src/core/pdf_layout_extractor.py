@@ -24,6 +24,8 @@ class PdfLayoutExtractor:
         }
 
         with pdfplumber.open(pdf_path) as pdf:
+            current_y_offset = 0.0
+
             for i, page in enumerate(pdf.pages):
                 logger.info(f"Processing page {i+1}/{len(pdf.pages)}")
 
@@ -42,18 +44,18 @@ class PdfLayoutExtractor:
                     page_data["words"].append({
                         "text": word["text"],
                         "x0": float(word["x0"]),
-                        "top": float(word["top"]),
+                        "top": float(word["top"]) + current_y_offset,
                         "x1": float(word["x1"]),
-                        "bottom": float(word["bottom"]),
+                        "bottom": float(word["bottom"]) + current_y_offset,
                     })
 
                 # 長方形情報の抽出（背景色・ボーダー）
                 for rect in page.rects:
                     page_data["rects"].append({
                         "x0": float(rect["x0"]),
-                        "top": float(rect["top"]),
+                        "top": float(rect["top"]) + current_y_offset,
                         "x1": float(rect["x1"]),
-                        "bottom": float(rect["bottom"]),
+                        "bottom": float(rect["bottom"]) + current_y_offset,
                         "stroke_width": float(rect.get("width", 0) or 0),
                     })
 
@@ -61,9 +63,9 @@ class PdfLayoutExtractor:
                 for line in page.lines:
                     page_data["lines"].append({
                         "x0": float(line["x0"]),
-                        "top": float(line["top"]),
+                        "top": float(line["top"]) + current_y_offset,
                         "x1": float(line["x1"]),
-                        "bottom": float(line["bottom"]),
+                        "bottom": float(line["bottom"]) + current_y_offset,
                         "stroke_width": float(line.get("width", 0) or 0),
                     })
 
@@ -72,14 +74,17 @@ class PdfLayoutExtractor:
                     page_data["chars"].append({
                         "text": char["text"],
                         "x0": float(char["x0"]),
-                        "top": float(char["top"]),
+                        "top": float(char["top"]) + current_y_offset,
                         "x1": float(char["x1"]),
-                        "bottom": float(char["bottom"]),
+                        "bottom": float(char["bottom"]) + current_y_offset,
                         "size": float(char["size"]),
                         "fontname": char["fontname"],
                     })
 
                 layout_data["pages"].append(page_data)
+                
+                # 次のページ用に現在のページの高さ分を加算
+                current_y_offset += float(page.height)
 
         logger.info(f"Layout extraction complete: {len(layout_data['pages'])} page(s)")
         return layout_data

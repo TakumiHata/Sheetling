@@ -80,14 +80,21 @@ class HybridAnalyzer:
         """
         output = {
             "pdf_name": pdf_name,
+            "page_breaks": [],
             "pages": []
         }
+
+        current_total_height = 0.0
 
         for page_data in layout_data["pages"]:
             width = page_data["width"]
             height = page_data["height"]
             grid_cols = math.ceil(width / self.grid_size)
             grid_rows = math.ceil(height / self.grid_size)
+
+            current_total_height += height
+            page_break_row = math.ceil(current_total_height / self.grid_size)
+            output["page_breaks"].append(page_break_row)
 
             page_output = {
                 "page": {
