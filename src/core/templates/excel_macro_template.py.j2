@@ -66,7 +66,7 @@ def main():
     # --- 3. text要素（テキスト・フォント・配置） ---
     {% if text_cmds %}
     {% for cmd in text_cmds %}
-    place_cell(ws, {{ cmd.r1 }}, {{ cmd.c1 }}, {{ cmd.r2 }}, {{ cmd.c2 }}, value="{{ cmd.escaped_value }}", font=Font(name="Meiryo", size={{ cmd.scaled_font_size }}{{ cmd.bold_str }}), alignment=Alignment(horizontal="{{ cmd.align }}", vertical="center", wrap_text=False))
+    place_cell(ws, {{ cmd.r1 }}, {{ cmd.c1 }}, {{ cmd.r2 }}, {{ cmd.c2 }}, value="{{ cmd.escaped_value }}", font=Font(name="Meiryo", size={{ cmd.scaled_font_size }}{{ cmd.bold_str }}), alignment=Alignment(horizontal="{{ cmd.align }}", vertical="center", wrap_text=False, shrink_to_fit=True))
     {% endfor %}
     {% endif %}
 
@@ -84,7 +84,8 @@ def main():
 
     # --- 5. 印刷設定（必須） ---
     from openpyxl.worksheet.page import PageMargins
-    ws.sheet_view.zoomScale = 35  # セル基準が24px角のため、扱いやすい表示倍率に調整
+    # デフォルトのビュー設定（倍率）
+    ws.sheet_view.zoomScale = 200  # 実寸A4サイズセルが小さいため、作業用の表示倍率を拡大
     ws.page_margins = PageMargins(left=0, right=0, top=0, bottom=0, header=0, footer=0)
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.page_setup.paperSize = 9  # A4

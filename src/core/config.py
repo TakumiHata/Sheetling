@@ -12,9 +12,9 @@ class GridConfig:
 @dataclass
 class ExcelConfig:
     """生成するExcelファイルの設定"""
-    # 24px角相当（1px = 0.75pt -> 18.0pt）
-    row_height_pt: float = 18.0
-    col_width_chars: float = 2.71
+    # A4実寸サイズに合わせたセルサイズ（スケーリング倍率1.0を基準にする）
+    row_height_pt: float = 4.96
+    col_width_chars: float = 0.75
 
 
 @dataclass
