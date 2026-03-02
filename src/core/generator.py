@@ -7,7 +7,7 @@ from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-TEMPLATE_DIR = Path(__file__).parent / "templates"
+TEMPLATE_DIR = Path(__file__).parent.parent.parent / "templates"
 
 
 class CodeGenerator:
