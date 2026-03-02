@@ -6,13 +6,3 @@ __pycache__/
 # Environment
 .env
 
-# Data (exclude all but .gitkeep)
-!data/**/.gitkeep
-!data/01_input_pdf
-!data/02_markdown
-!data/03_layout_json
-!data/04_prompt
-data/01_input_pdf/*
-data/02_markdown/*
-data/03_layout_json/*
-data/04_prompt/*

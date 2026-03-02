@@ -20,13 +20,11 @@ def run_pipeline():
     logger.info("=" * 60)
 
     # パス設定
-    input_dir = Path("data/01_input_pdf")
-    md_dir = "data/02_markdown"
-    json_dir = "data/03_layout_json"
-    prompt_dir = "data/04_prompt"
+    input_dir = Path("data/in")
+    output_base_dir = "data/out"
 
     # インスタンス生成
-    pipeline = SheetlingPipeline(md_dir, json_dir, prompt_dir)
+    pipeline = SheetlingPipeline(output_base_dir)
 
     # PDFファイルの走査
     pdf_files = list(input_dir.glob("*.pdf"))

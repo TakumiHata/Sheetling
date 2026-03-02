@@ -15,16 +15,14 @@ class SheetlingPipeline:
     一連のパイプライン処理を統括するクラス。
     """
 
-    def __init__(self, md_dir: str, json_dir: str, prompt_dir: str):
-        self.md_dir = Path(md_dir)
-        self.json_dir = Path(json_dir)
-        self.prompt_dir = Path(prompt_dir)
+    def __init__(self, output_base_dir: str):
+        self.output_base_dir = Path(output_base_dir)
 
         # Core components
-        self.analyzer = HybridAnalyzer(str(self.md_dir), str(self.json_dir))
+        self.analyzer = HybridAnalyzer()
         self.placement_gen = PlacementGenerator()
         self.code_gen = CodeGenerator()
-        self.prompt_builder = PromptBuilder(str(self.prompt_dir))
+        self.prompt_builder = PromptBuilder()
 
     def run(self, pdf_path: str) -> dict:
         """
@@ -32,9 +30,13 @@ class SheetlingPipeline:
         """
         logger.info(f"--- Processing: {Path(pdf_path).name} ---")
         pdf_name = Path(pdf_path).stem
+        
+        # 出力先ディレクトリの作成 (data/out/<pdf_name>/)
+        out_dir = self.output_base_dir / pdf_name
+        out_dir.mkdir(parents=True, exist_ok=True)
 
         # Phase 1-2: ハイブリッド解析（MD + JSON）
-        analyze_result = self.analyzer.analyze(pdf_path)
+        analyze_result = self.analyzer.analyze(pdf_path, out_dir)
         md_path = analyze_result["md_path"]
         json_path = analyze_result["json_path"]
 
@@ -102,6 +104,7 @@ class SheetlingPipeline:
             pdf_name=pdf_name,
             output_filename=output_filename,
             page_count=page_count,
+            out_dir=out_dir,
         )
 
         logger.info(f"✅ Successfully processed: {Path(pdf_path).name}")

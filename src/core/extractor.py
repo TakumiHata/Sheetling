@@ -11,12 +11,10 @@ logger = get_logger(__name__)
 
 
 class MarkItDownParser:
-    def __init__(self, output_dir: str):
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self):
         self.md = MarkItDown()
 
-    def parse(self, pdf_path: str) -> str:
+    def parse(self, pdf_path: str, out_dir: Path) -> str:
         """
         MarkItDownを使用してPDFからテキスト情報を高精度に抽出する。
         NaN/Unnamed等のノイズを除去した「クリーンなMD」を出力する。
@@ -28,7 +26,7 @@ class MarkItDownParser:
             result = self.md.convert(str(pdf_path))
             cleaned = self._clean_markdown(result.text_content)
 
-            output_path = self.output_dir / f"{pdf_name}.md"
+            output_path = out_dir / f"{pdf_name}.md"
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(cleaned)
 
@@ -60,9 +58,8 @@ class MarkItDownParser:
 
 
 class PdfLayoutExtractor:
-    def __init__(self, output_dir: str):
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self):
+        pass
 
     def extract(self, pdf_path: str) -> dict:
         """
@@ -149,16 +146,13 @@ class HybridAnalyzer:
     指示書のJSONスキーマに準拠した構造化データを出力する。
     """
 
-    def __init__(self, inter_md_dir: str, inter_json_dir: str, grid_size: float = None):
-        self.inter_md_dir = Path(inter_md_dir)
-        self.inter_json_dir = Path(inter_json_dir)
-
-        self.pdf_extractor = PdfLayoutExtractor(str(self.inter_json_dir))
-        self.mid_parser = MarkItDownParser(str(self.inter_md_dir))
+    def __init__(self, grid_size: float = None):
+        self.pdf_extractor = PdfLayoutExtractor()
+        self.mid_parser = MarkItDownParser()
 
         self.grid_size = grid_size if grid_size is not None else config.grid.unit_pt
 
-    def analyze(self, pdf_path: str) -> dict:
+    def analyze(self, pdf_path: str, out_dir: Path) -> dict:
         """
         MarkItDown + pdfplumber でPDFを解析し、指示書スキーマに準拠したJSONを出力する。
 
@@ -169,7 +163,7 @@ class HybridAnalyzer:
         pdf_name = Path(pdf_path).stem
 
         # Phase 1: MarkItDown でテキスト抽出（最優先テキストソース）
-        mid_md_path = self.mid_parser.parse(pdf_path)
+        mid_md_path = self.mid_parser.parse(pdf_path, out_dir)
         logger.info(f"Phase 1 complete: MarkItDown MD -> {mid_md_path}")
 
         # Phase 2: pdfplumber で座標・色彩・幾何学情報を抽出
@@ -180,7 +174,7 @@ class HybridAnalyzer:
         output_data = self._build_schema_json(pdf_name, layout_data)
 
         # 出力
-        output_json_path = self.inter_json_dir / f"{pdf_name}.json"
+        output_json_path = out_dir / f"{pdf_name}.json"
         with open(output_json_path, "w", encoding="utf-8") as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
 

@@ -114,9 +114,7 @@ class PromptBuilder:
     LLMに渡す完全なプロンプトテキストを生成する。
     """
 
-    def __init__(self, output_dir: str, template_path: str = "templates/excel_gen_prompt.md"):
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, template_path: str = "templates/excel_gen_prompt.md"):
         self.template_path = Path(template_path)
 
     def build(
@@ -127,6 +125,7 @@ class PromptBuilder:
         pdf_name: str,
         output_filename: str,
         page_count: int,
+        out_dir: Path,
     ) -> str:
         logger.info(f"Building prompt for: {pdf_name}")
         template = self._load_template()
@@ -138,11 +137,11 @@ class PromptBuilder:
         prompt = prompt.replace("{{OUTPUT_FILENAME}}", output_filename)
         prompt = prompt.replace("{{PAGE_COUNT}}", str(page_count))
 
-        output_path = self.output_dir / f"{pdf_name}_prompt.txt"
+        output_path = out_dir / f"{pdf_name}_prompt.txt"
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(prompt)
 
-        code_path = self.output_dir / f"{pdf_name}_gen.py"
+        code_path = out_dir / f"{pdf_name}_gen.py"
         with open(code_path, "w", encoding="utf-8") as f:
             f.write(generated_code)
 
