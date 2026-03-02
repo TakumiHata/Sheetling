@@ -1,11 +1,7 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 from src.core.pipeline import SheetlingPipeline
 from src.utils.logger import get_logger
-
-# 環境変数の読み込み
-load_dotenv()
 
 logger = get_logger(__name__)
 
