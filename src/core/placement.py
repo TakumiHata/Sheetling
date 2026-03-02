@@ -23,7 +23,6 @@ class PlacementCommand:
     font_size: float = 10.0
     font_bold: bool = False
     alignment: str = "left"  # "left", "center", "right"
-    fill_color: str | None = None
     comment: str = ""  # デバッグ用コメント
 
 
@@ -227,9 +226,6 @@ class PlacementGenerator:
             if elem.get("type") != "rect":
                 continue
             bbox = elem.get("grid_bbox", {})
-            fill_color = elem.get("style", {}).get("fill_color")
-            if not fill_color:
-                continue  # 背景色がないrectは無視
 
             cmd = PlacementCommand(
                 category="rect",
@@ -237,8 +233,7 @@ class PlacementGenerator:
                 c1=bbox["col_start"],
                 r2=bbox["row_end"] - 1,  # 半開→閉
                 c2=bbox["col_end"] - 1,  # 半開→閉
-                fill_color=fill_color,
-                comment=f"rect fill={fill_color}",
+                comment=f"rect",
             )
             commands.append(cmd)
         return commands
@@ -334,6 +329,10 @@ class PlacementGenerator:
                 logger.warning(f"テーブル内text '{text}' の行スナップに失敗 (row={row_start})")
                 return self._convert_outside_text(elem)
 
+        # 高さ不足対策: 行幅が1行(snapped_r1 == snapped_r2)の場合、文字が見切れるのを防ぐため結合を+1拡張する
+        if snapped_r1 == snapped_r2:
+            snapped_r2 += 1
+
         alignment = self._guess_alignment(text, font_size)
 
         return PlacementCommand(
@@ -357,17 +356,25 @@ class PlacementGenerator:
 
         alignment = self._guess_alignment(text, font_size)
 
+        cmd_options = {
+            "r1": bbox.get("row_start", 0),
+            "c1": bbox.get("col_start", 0),
+            "r2": bbox.get("row_end", 1) - 1,
+            "c2": bbox.get("col_end", 1) - 1,
+        }
+
+        # 高さ不足対策: 外側のテキストでも1行のみ結合されている場合は+1拡張する
+        if cmd_options["r1"] == cmd_options["r2"]:
+            cmd_options["r2"] += 1
+
         return PlacementCommand(
             category="text_outside",
-            r1=bbox["row_start"],
-            c1=bbox["col_start"],
-            r2=bbox["row_end"] - 1,  # 半開→閉
-            c2=bbox["col_end"] - 1,  # 半開→閉
             value=text,
             font_size=font_size,
             font_bold=font_size >= 18.0,
             alignment=alignment,
             comment=f"outside text",
+            **cmd_options
         )
 
     def _find_column_range(self, col: int, table: TableStructure) -> tuple[int | None, int | None]:
@@ -516,7 +523,6 @@ class PlacementGenerator:
                     font_size=adjust.font_size,
                     font_bold=adjust.font_bold,
                     alignment=adjust.alignment,
-                    fill_color=adjust.fill_color,
                     comment=f"{adjust.comment} (overlap resolved: c1 {adjust.c1}→{new_c1})",
                 )
 
@@ -532,7 +538,6 @@ class PlacementGenerator:
                     font_size=adjust.font_size,
                     font_bold=adjust.font_bold,
                     alignment=adjust.alignment,
-                    fill_color=adjust.fill_color,
                     comment=f"{adjust.comment} (overlap resolved: r1 {adjust.r1}→{new_r1})",
                 )
 
@@ -557,10 +562,8 @@ def format_placement_commands(result: PlacementResult) -> str:
         lines.append("以下の `place_cell` 呼び出しを「--- 2. rect要素 ---」セクションにそのまま記述してください。")
         lines.append("")
         for i, cmd in enumerate(rect_cmds, 1):
-            fill = cmd.fill_color.replace("#", "") if cmd.fill_color else "FFFFFF"
             lines.append(
-                f'{i}. `place_cell(ws, {cmd.r1}, {cmd.c1}, {cmd.r2}, {cmd.c2}, '
-                f'fill=PatternFill(start_color="{fill}", end_color="{fill}", fill_type="solid"))`'
+                f'{i}. `place_cell(ws, {cmd.r1}, {cmd.c1}, {cmd.r2}, {cmd.c2})`'
             )
         lines.append("")
 
@@ -635,3 +638,54 @@ def format_placement_commands(result: PlacementResult) -> str:
         lines.append("")
 
     return "\n".join(lines)
+
+
+def format_table_structure_summary(result: PlacementResult) -> str:
+    """
+    PlacementResult の table_structures から、LLMが直接使える構造サマリーを生成する。
+    """
+    summaries = []
+
+    for idx, ts in enumerate(result.table_structures):
+        # 縦線と横線がない場合はテーブル領域なし
+        if not ts.v_cols or not ts.h_rows:
+            continue
+
+        # ページは便宜上(idx+1)とする。実際のページ番号が必要な場合は引数を追加して対応するが、
+        # ここではテーブル領域サマリーとして割り切る。
+        summary = f"### テーブル構造 {idx + 1}\n\n"
+        summary += f"テーブル領域: 行 {ts.table_row_min}〜{ts.table_row_max}, 列 {ts.table_col_min}〜{ts.table_col_max}\n\n"
+
+        # 列構造
+        summary += "**列構造（place_cellのc1〜c2に使用）:**\n"
+        for i, (col_start, col_end) in enumerate(ts.col_ranges):
+            col_label = chr(ord('A') + i)
+            # v_cols から境界を取得
+            left_border = ts.v_cols[i] if i < len(ts.v_cols) else "?"
+            right_border = ts.v_cols[i+1] if i + 1 < len(ts.v_cols) else "?"
+            summary += f"- 列{col_label}: col {col_start}〜{col_end}（縦線 {left_border} と {right_border} の間）\n"
+        summary += "\n"
+
+        # 行構造
+        summary += "**行構造（place_cellのr1〜r2に使用）:**\n"
+        for i, (row_start, row_end) in enumerate(ts.row_ranges):
+            top_border = ts.h_rows[i] if i < len(ts.h_rows) else "?"
+            bottom_border = ts.h_rows[i+1] if i + 1 < len(ts.h_rows) else "?"
+            summary += f"- 行{i+1}: row {row_start}〜{row_end}（横線 {top_border} と {bottom_border} の間）\n"
+        summary += "\n"
+
+        # 罫線描画のためのガイド
+        summary += "**罫線の描画方法:**\n"
+        summary += f"- 縦線位置: {ts.v_cols}\n"
+        summary += f"- 横線位置: {ts.h_rows}\n"
+        summary += "- 罫線はplace_cellを使わず、直接 `ws.cell(row=r, column=c).border = ...` で設定すること\n"
+        summary += f"- 縦方向: 行 {ts.table_row_min}〜{ts.table_row_max} で各縦線位置にborder_leftを設定\n"
+        summary += f"- 横方向: 列 {ts.table_col_min}〜{ts.table_col_max} で各横線位置にborder_topを設定\n"
+
+        summaries.append(summary)
+
+    if not summaries:
+        return "テーブル構造が検出されませんでした。JSONのgrid_bboxを参考に配置してください。"
+
+    return "\n".join(summaries)
+

@@ -6,7 +6,5 @@ services:
       - ./data:/app/data
       - ./templates:/app/templates
       - ./tests:/app/tests
-    env_file:
-      - .env
     tty: true
     stdin_open: true

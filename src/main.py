@@ -1,12 +1,7 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv
-from src.core.hybrid_analyzer import HybridAnalyzer
-from src.core.prompt_builder import PromptBuilder
+from src.core.pipeline import SheetlingPipeline
 from src.utils.logger import get_logger
-
-# 環境変数の読み込み
-load_dotenv()
 
 logger = get_logger(__name__)
 
@@ -21,14 +16,11 @@ def run_pipeline():
     logger.info("=" * 60)
 
     # パス設定
-    input_dir = Path("data/01_input_pdf")
-    md_dir = "data/02_markdown"
-    json_dir = "data/03_layout_json"
-    prompt_dir = "data/04_prompt"
+    input_dir = Path("data/in")
+    output_base_dir = "data/out"
 
     # インスタンス生成
-    analyzer = HybridAnalyzer(md_dir, json_dir)
-    prompt_builder = PromptBuilder(prompt_dir)
+    pipeline = SheetlingPipeline(output_base_dir)
 
     # PDFファイルの走査
     pdf_files = list(input_dir.glob("*.pdf"))
@@ -40,23 +32,7 @@ def run_pipeline():
 
     for pdf_path in pdf_files:
         try:
-            logger.info(f"--- Processing: {pdf_path.name} ---")
-            pdf_name = pdf_path.stem
-
-            # Phase 1-4: ハイブリッド解析（MarkItDown + pdfplumber + Docling → 統合JSON）
-            result = analyzer.analyze(str(pdf_path))
-
-            # Phase 5: プロンプト生成（MD + JSON → 固定テンプレートに埋め込み）
-            prompt_path = prompt_builder.build(
-                md_path=result["md_path"],
-                json_path=result["json_path"],
-                pdf_name=pdf_name,
-            )
-
-            logger.info(f"✅ Successfully processed: {pdf_path.name}")
-            logger.info(f"   MD:     {result['md_path']}")
-            logger.info(f"   JSON:   {result['json_path']}")
-            logger.info(f"   Prompt: {prompt_path}")
+            result = pipeline.run(str(pdf_path))
             logger.info("")
 
         except Exception as e:

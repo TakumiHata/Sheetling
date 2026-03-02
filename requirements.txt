@@ -1,5 +1,6 @@
-docling
 openpyxl
 python-dotenv
 pdfplumber
 markitdown
+jinja2
+ruff
