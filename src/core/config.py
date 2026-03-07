@@ -14,7 +14,7 @@ class ExcelConfig:
     """生成するExcelファイルの設定"""
     # A4実寸サイズに合わせたセルサイズ（スケーリング倍率1.0を基準にする）
     row_height_pt: float = 4.96
-    col_width_chars: float = 0.75
+    col_width_chars: float = 0.94  # 4.96ptに対応する列幅（文字単位）
 
 
 @dataclass

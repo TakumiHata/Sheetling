@@ -1,418 +1,195 @@
+"""
+PDFからテキスト・座標・フォント・色情報を抽出するモジュール。
+pdfplumber を使用し、A4方眼Excel変換に必要なレイアウト情報をJSON/Markdownで出力する。
+"""
+
 import json
-import math
-import re
 from pathlib import Path
+from collections import OrderedDict
+
 import pdfplumber
-from markitdown import MarkItDown
+
 from src.core.config import config
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class MarkItDownParser:
+class PdfExtractor:
+    """pdfplumberを使用してPDFからレイアウト情報を抽出する"""
+
     def __init__(self):
-        self.md = MarkItDown()
+        self.grid_unit = config.grid.unit_pt
 
-    def parse(self, pdf_path: str, out_dir: Path) -> str:
+    def extract(self, pdf_path: str, out_dir: Path) -> dict:
         """
-        MarkItDownを使用してPDFからテキスト情報を高精度に抽出する。
-        NaN/Unnamed等のノイズを除去した「クリーンなMD」を出力する。
-        """
-        logger.info(f"Parsing PDF with MarkItDown: {pdf_path}")
-        pdf_name = Path(pdf_path).stem
-
-        try:
-            result = self.md.convert(str(pdf_path))
-            cleaned = self._clean_markdown(result.text_content)
-
-            output_path = out_dir / f"{pdf_name}.md"
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(cleaned)
-
-            logger.info(f"MarkItDown extraction saved to: {output_path}")
-            return str(output_path)
-        except Exception as e:
-            logger.error(f"MarkItDown parsing failed: {e}")
-            raise
-
-    def _clean_markdown(self, text: str) -> str:
-        """
-        MarkItDown出力からノイズを除去する。
-        - NaN, Unnamed 系のプレースホルダーを除去
-        - 過剰な空行を整理
-        """
-        # NaN / Unnamed / nan を除去（テーブルセル内）
-        text = re.sub(r'\bNaN\b', '', text)
-        text = re.sub(r'\bnan\b', '', text)
-        text = re.sub(r'Unnamed:\s*\d+', '', text)
-        text = re.sub(r'Unnamed', '', text)
-
-        # テーブル行の中身が全て空（| | | |）になった行を除去
-        text = re.sub(r'^\|[\s|]*\|$', '', text, flags=re.MULTILINE)
-
-        # 3行以上の連続空行を2行に圧縮
-        text = re.sub(r'\n{3,}', '\n\n', text)
-
-        return text.strip() + '\n'
-
-
-class PdfLayoutExtractor:
-    def __init__(self):
-        pass
-
-    def extract(self, pdf_path: str) -> dict:
-        """
-        pdfplumberを使用してPDFから詳細なレイアウト情報を抽出する。
-        色情報はHEX形式に正規化して辞書として返す。
-        """
-        logger.info(f"Extracting detailed layout from: {pdf_path}")
-
-        layout_data = {
-            "source": str(pdf_path),
-            "pages": []
-        }
-
-        with pdfplumber.open(pdf_path) as pdf:
-            current_y_offset = 0.0
-
-            for i, page in enumerate(pdf.pages):
-                logger.info(f"Processing page {i+1}/{len(pdf.pages)}")
-
-                page_data = {
-                    "page_number": i + 1,
-                    "width": float(page.width),
-                    "height": float(page.height),
-                    "words": [],
-                    "rects": [],
-                    "lines": [],
-                    "chars": []
-                }
-
-                # 単語情報の抽出（座標維持のため重要）
-                for word in page.extract_words():
-                    page_data["words"].append({
-                        "text": word["text"],
-                        "x0": float(word["x0"]),
-                        "top": float(word["top"]) + current_y_offset,
-                        "x1": float(word["x1"]),
-                        "bottom": float(word["bottom"]) + current_y_offset,
-                    })
-
-                # 長方形情報の抽出（背景色・ボーダー）
-                for rect in page.rects:
-                    page_data["rects"].append({
-                        "x0": float(rect["x0"]),
-                        "top": float(rect["top"]) + current_y_offset,
-                        "x1": float(rect["x1"]),
-                        "bottom": float(rect["bottom"]) + current_y_offset,
-                        "stroke_width": float(rect.get("width", 0) or 0),
-                    })
-
-                # 直線情報の抽出（罫線）
-                for line in page.lines:
-                    page_data["lines"].append({
-                        "x0": float(line["x0"]),
-                        "top": float(line["top"]) + current_y_offset,
-                        "x1": float(line["x1"]),
-                        "bottom": float(line["bottom"]) + current_y_offset,
-                        "stroke_width": float(line.get("width", 0) or 0),
-                    })
-
-                # 文字情報の抽出（フォントサイズ・色）
-                for char in page.chars:
-                    page_data["chars"].append({
-                        "text": char["text"],
-                        "x0": float(char["x0"]),
-                        "top": float(char["top"]) + current_y_offset,
-                        "x1": float(char["x1"]),
-                        "bottom": float(char["bottom"]) + current_y_offset,
-                        "size": float(char["size"]),
-                        "fontname": char["fontname"],
-                    })
-
-                layout_data["pages"].append(page_data)
-                
-                # 次のページ用に現在のページの高さ分を加算
-                current_y_offset += float(page.height)
-
-        logger.info(f"Layout extraction complete: {len(layout_data['pages'])} page(s)")
-        return layout_data
-
-
-class HybridAnalyzer:
-    """
-    MarkItDown（テキスト抽出）と pdfplumber（座標・色彩・レイアウト）の結果を統合し、
-    指示書のJSONスキーマに準拠した構造化データを出力する。
-    """
-
-    def __init__(self, grid_size: float = None):
-        self.pdf_extractor = PdfLayoutExtractor()
-        self.mid_parser = MarkItDownParser()
-
-        self.grid_size = grid_size if grid_size is not None else config.grid.unit_pt
-
-    def analyze(self, pdf_path: str, out_dir: Path) -> dict:
-        """
-        MarkItDown + pdfplumber でPDFを解析し、指示書スキーマに準拠したJSONを出力する。
+        PDFを解析し、テキスト・座標・フォント・色・罫線情報を抽出する。
 
         Returns:
-            dict with keys: json_path, md_path
+            dict with keys: json_path, md_path, fonts, colors
         """
-        logger.info(f"Starting hybrid analysis for: {pdf_path}")
+        logger.info(f"Starting PDF extraction for: {pdf_path}")
         pdf_name = Path(pdf_path).stem
 
-        # Phase 1: MarkItDown でテキスト抽出（最優先テキストソース）
-        mid_md_path = self.mid_parser.parse(pdf_path, out_dir)
-        logger.info(f"Phase 1 complete: MarkItDown MD -> {mid_md_path}")
+        all_pages = []
+        all_fonts = OrderedDict()   # fontname -> {size, color} のユニーク集合
+        all_colors = OrderedDict()  # color値のユニーク集合
 
-        # Phase 2: pdfplumber で座標・色彩・幾何学情報を抽出
-        layout_data = self.pdf_extractor.extract(pdf_path)
-        logger.info(f"Phase 2 complete: pdfplumber layout extracted")
+        with pdfplumber.open(pdf_path) as pdf:
+            for page_idx, page in enumerate(pdf.pages):
+                page_data = self._extract_page(page, page_idx + 1)
+                all_pages.append(page_data)
 
-        # Phase 3: 統合・正規化 → 指示書スキーマ準拠JSON
-        output_data = self._build_schema_json(pdf_name, layout_data)
+                # フォント・色情報を収集
+                for elem in page_data["elements"]:
+                    font_key = f"{elem.get('fontname', 'unknown')}_{elem.get('size', 0)}"
+                    if font_key not in all_fonts:
+                        all_fonts[font_key] = {
+                            "fontname": elem.get("fontname", "unknown"),
+                            "size": elem.get("size", 0),
+                        }
+                    color = elem.get("color")
+                    if color and str(color) not in all_colors:
+                        all_colors[str(color)] = color
 
-        # 出力
-        output_json_path = out_dir / f"{pdf_name}.json"
-        with open(output_json_path, "w", encoding="utf-8") as f:
-            json.dump(output_data, f, indent=2, ensure_ascii=False)
+        extracted = {
+            "source": pdf_name,
+            "pages": all_pages,
+        }
 
-        logger.info(f"Integrated JSON saved to: {output_json_path}")
+        # JSON出力
+        json_path = out_dir / f"{pdf_name}.json"
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(extracted, f, indent=2, ensure_ascii=False)
+        logger.info(f"Extraction JSON saved to: {json_path}")
+
+        # Markdown出力
+        md_content = self._to_markdown(extracted)
+        md_path = out_dir / f"{pdf_name}.md"
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(md_content)
+        logger.info(f"Extraction MD saved to: {md_path}")
 
         return {
-            "json_path": str(output_json_path),
-            "md_path": mid_md_path,
+            "json_path": str(json_path),
+            "md_path": str(md_path),
+            "fonts": list(all_fonts.values()),
+            "colors": list(all_colors.values()),
         }
 
-    def _build_schema_json(self, pdf_name: str, layout_data: dict) -> dict:
-        """
-        pdfplumberの生データを指示書のJSONスキーマに変換する。
-        """
-        output = {
-            "pdf_name": pdf_name,
-            "page_breaks": [],
-            "pages": []
+    def _extract_page(self, page, page_number: int) -> dict:
+        """1ページ分のテキスト・罫線情報を抽出する"""
+        page_data = {
+            "page_number": page_number,
+            "width": float(page.width),
+            "height": float(page.height),
+            "elements": [],
+            "lines": [],
+            "rects": [],
         }
 
-        current_total_height = 0.0
-
-        for page_data in layout_data["pages"]:
-            width = page_data["width"]
-            height = page_data["height"]
-            grid_cols = math.ceil(width / self.grid_size)
-            grid_rows = math.ceil(height / self.grid_size)
-
-            current_total_height += height
-            page_break_row = math.ceil(current_total_height / self.grid_size)
-            output["page_breaks"].append(page_break_row)
-
-            page_output = {
-                "page": {
-                    "page_number": page_data["page_number"],
-                    "width_pt": width,
-                    "height_pt": height,
-                    "grid_unit_pt": self.grid_size,
-                    "grid_cols": grid_cols,
-                    "grid_rows": grid_rows,
-                },
-                "elements": []
+        # テキスト要素（文字単位 → ワード単位で集約）
+        words = page.extract_words(
+            keep_blank_chars=True,
+            extra_attrs=["fontname", "size", "stroking_color", "non_stroking_color"],
+        )
+        for word in words:
+            elem = {
+                "text": word["text"],
+                "x0": round(float(word["x0"]), 2),
+                "top": round(float(word["top"]), 2),
+                "x1": round(float(word["x1"]), 2),
+                "bottom": round(float(word["bottom"]), 2),
+                "fontname": word.get("fontname", "unknown"),
+                "size": round(float(word.get("size", 0)), 2),
             }
+            # 色情報の取得（non_stroking_color = テキスト塗り色）
+            color = word.get("non_stroking_color")
+            if color is not None:
+                elem["color"] = self._normalize_color(color)
+            page_data["elements"].append(elem)
 
-            # --- rects（背景ボックス）→ type: "rect" ---
-            for rect in page_data.get("rects", []):
-                bbox = self._make_bbox(rect)
-                grid_bbox = self._to_grid_bbox(bbox)
-                border = self._detect_border_from_rect(rect)
+        # 罫線情報
+        if page.lines:
+            for line in page.lines:
+                page_data["lines"].append({
+                    "x0": round(float(line["x0"]), 2),
+                    "top": round(float(line["top"]), 2),
+                    "x1": round(float(line["x1"]), 2),
+                    "bottom": round(float(line["bottom"]), 2),
+                    "linewidth": round(float(line.get("linewidth", 0)), 2),
+                })
 
-                elem = {
-                    "type": "rect",
-                    "bbox": bbox,
-                    "grid_bbox": grid_bbox,
-                    "style": {
-                        "stroke_width": rect.get("stroke_width", 0),
-                        "border": border,
-                    },
-                    "text": None,
-                    "font_size": None,
-                }
-                page_output["elements"].append(elem)
+        # 矩形情報
+        if page.rects:
+            for rect in page.rects:
+                page_data["rects"].append({
+                    "x0": round(float(rect["x0"]), 2),
+                    "top": round(float(rect["top"]), 2),
+                    "x1": round(float(rect["x1"]), 2),
+                    "bottom": round(float(rect["bottom"]), 2),
+                    "linewidth": round(float(rect.get("linewidth", 0)), 2),
+                })
 
-            # --- lines（罫線）→ type: "line" ---
-            for line in page_data.get("lines", []):
-                bbox = self._make_bbox(line)
-                grid_bbox = self._to_grid_bbox(bbox)
+        return page_data
 
-                elem = {
-                    "type": "line",
-                    "bbox": bbox,
-                    "grid_bbox": grid_bbox,
-                    "style": {
-                        "stroke_width": line.get("stroke_width", 0),
-                        "border": self._detect_border_from_line(line),
-                    },
-                    "text": None,
-                    "font_size": None,
-                }
-                page_output["elements"].append(elem)
+    def _normalize_color(self, color) -> str:
+        """色情報を統一的な16進カラーコードに変換する"""
+        if color is None:
+            return "#000000"
 
-            # --- words（テキスト）→ グループ化して type: "text" ---
-            text_elements = self._group_words_to_text_elements(
-                page_data.get("words", []),
-                page_data.get("chars", []),
-            )
-            page_output["elements"].extend(text_elements)
+        if isinstance(color, (int, float)):
+            # グレースケール (0.0=黒, 1.0=白)
+            val = int(round(float(color) * 255))
+            return f"#{val:02X}{val:02X}{val:02X}"
 
-            output["pages"].append(page_output)
+        if isinstance(color, (list, tuple)):
+            if len(color) == 1:
+                # グレースケール
+                val = int(round(float(color[0]) * 255))
+                return f"#{val:02X}{val:02X}{val:02X}"
+            elif len(color) == 3:
+                # RGB
+                r = int(round(float(color[0]) * 255))
+                g = int(round(float(color[1]) * 255))
+                b = int(round(float(color[2]) * 255))
+                return f"#{r:02X}{g:02X}{b:02X}"
+            elif len(color) == 4:
+                # CMYK → RGB変換
+                c, m, y, k = [float(v) for v in color]
+                r = int(round(255 * (1 - c) * (1 - k)))
+                g = int(round(255 * (1 - m) * (1 - k)))
+                b = int(round(255 * (1 - y) * (1 - k)))
+                return f"#{r:02X}{g:02X}{b:02X}"
 
-        return output
+        return "#000000"
 
-    def _make_bbox(self, obj: dict) -> dict:
-        """pdfplumberオブジェクトからbbox辞書を生成する。"""
-        return {
-            "x0": round(obj["x0"], 2),
-            "y0": round(obj["top"], 2),
-            "x1": round(obj["x1"], 2),
-            "y1": round(obj["bottom"], 2),
-        }
+    def _to_markdown(self, extracted: dict) -> str:
+        """抽出結果を人間可読なMarkdown形式に変換する"""
+        lines = [f"# {extracted['source']}\n"]
 
-    def _to_grid_bbox(self, bbox: dict) -> dict:
-        """bbox (points) をグリッドインデックスに変換（スナップ）。"""
-        return {
-            "col_start": int(math.floor(bbox["x0"] / self.grid_size)),
-            "row_start": int(math.floor(bbox["y0"] / self.grid_size)),
-            "col_end": int(math.ceil(bbox["x1"] / self.grid_size)),
-            "row_end": int(math.ceil(bbox["y1"] / self.grid_size)),
-        }
+        for page in extracted["pages"]:
+            lines.append(f"## Page {page['page_number']} ({page['width']}pt × {page['height']}pt)\n")
+            lines.append("### テキスト要素\n")
+            for elem in page["elements"]:
+                lines.append(
+                    f"- `{elem['text']}` @ ({elem['x0']}, {elem['top']}) - ({elem['x1']}, {elem['bottom']}) "
+                    f"font={elem['fontname']} size={elem['size']}"
+                )
+            if page["lines"]:
+                lines.append("\n### 罫線\n")
+                for line in page["lines"]:
+                    lines.append(
+                        f"- ({line['x0']}, {line['top']}) → ({line['x1']}, {line['bottom']}) "
+                        f"width={line['linewidth']}"
+                    )
+            if page["rects"]:
+                lines.append("\n### 矩形\n")
+                for rect in page["rects"]:
+                    lines.append(
+                        f"- ({rect['x0']}, {rect['top']}) → ({rect['x1']}, {rect['bottom']}) "
+                        f"width={rect['linewidth']}"
+                    )
+            lines.append("")
 
-    def _detect_border_from_rect(self, rect: dict) -> dict:
-        """rectのstroke情報からborderの有無を推定する。"""
-        has_stroke = rect.get("stroke_width", 0) > 0
-        return {
-            "top": has_stroke,
-            "right": has_stroke,
-            "bottom": has_stroke,
-            "left": has_stroke,
-        }
-
-    def _detect_border_from_line(self, line: dict) -> dict:
-        """lineの方向（水平/垂直）からborderの向きを推定する。"""
-        x0, y0 = line["x0"], line["top"]
-        x1, y1 = line["x1"], line["bottom"]
-
-        is_horizontal = abs(y1 - y0) < 1.0
-        is_vertical = abs(x1 - x0) < 1.0
-
-        return {
-            "top": is_horizontal,
-            "right": is_vertical,
-            "bottom": is_horizontal,
-            "left": is_vertical,
-        }
-
-    def _group_words_to_text_elements(self, words: list, chars: list) -> list:
-        """
-        pdfplumberの単語リストを、行単位でグループ化してtext要素に変換する。
-        """
-        if not words:
-            return []
-
-        # charsからフォントサイズマップを構築（座標 → サイズ）
-        font_size_map = self._build_font_size_map(chars)
-
-        elements = []
-
-        # 1. topでソート → 行グループ化
-        sorted_words = sorted(words, key=lambda w: w["top"])
-        lines = []
-        current_line = [sorted_words[0]]
-
-        for i in range(1, len(sorted_words)):
-            if abs(sorted_words[i]["top"] - current_line[-1]["top"]) < 3.0:
-                current_line.append(sorted_words[i])
-            else:
-                lines.append(current_line)
-                current_line = [sorted_words[i]]
-        lines.append(current_line)
-
-        # 2. 各行内でx0ソート → 近接テキスト統合
-        for line_words in lines:
-            sorted_line = sorted(line_words, key=lambda w: w["x0"])
-            if not sorted_line:
-                continue
-
-            current_group = [sorted_line[0]]
-            for i in range(1, len(sorted_line)):
-                prev = sorted_line[i - 1]
-                curr = sorted_line[i]
-
-                # 5pt以内の間隔 → 同一テキストブロック
-                if (curr["x0"] - prev["x1"]) < 5.0:
-                    current_group.append(curr)
-                else:
-                    elements.append(self._words_to_element(current_group, font_size_map))
-                    current_group = [curr]
-            elements.append(self._words_to_element(current_group, font_size_map))
-
-        return elements
-
-    def _words_to_element(self, group: list, font_size_map: dict) -> dict:
-        """単語グループをtext要素に変換する。"""
-        text = "".join(w["text"] for w in group)
-        bbox = {
-            "x0": round(min(w["x0"] for w in group), 2),
-            "y0": round(min(w["top"] for w in group), 2),
-            "x1": round(max(w["x1"] for w in group), 2),
-            "y1": round(max(w["bottom"] for w in group), 2),
-        }
-        grid_bbox = self._to_grid_bbox(bbox)
-
-        # フォントサイズの推定（最頻値）
-        font_size = self._estimate_font_size(bbox, font_size_map)
-
-        return {
-            "type": "text",
-            "bbox": bbox,
-            "grid_bbox": grid_bbox,
-            "style": {
-                "stroke_width": 0,
-                "border": {"top": False, "right": False, "bottom": False, "left": False},
-            },
-            "text": text,
-            "font_size": font_size,
-        }
-
-    def _build_font_size_map(self, chars: list) -> dict:
-        """
-        charsリストからY座標帯ごとのフォントサイズマップを構築する。
-        """
-        if not chars:
-            return {}
-
-        band_sizes: dict[int, list[float]] = {}
-        for char in chars:
-            band_key = int(char["top"] / self.grid_size)
-            if band_key not in band_sizes:
-                band_sizes[band_key] = []
-            band_sizes[band_key].append(char["size"])
-
-        result = {}
-        for band_key, sizes in band_sizes.items():
-            from collections import Counter
-            counter = Counter(round(s, 1) for s in sizes)
-            most_common = counter.most_common(1)[0][0]
-            result[band_key] = most_common
-
-        return result
-
-    def _estimate_font_size(self, bbox: dict, font_size_map: dict) -> float | None:
-        """bboxの位置から対応するフォントサイズを推定する。"""
-        if not font_size_map:
-            return None
-
-        band_key = int(bbox["y0"] / self.grid_size)
-        # 近傍のバンドも探索
-        for offset in [0, -1, 1]:
-            if (band_key + offset) in font_size_map:
-                return font_size_map[band_key + offset]
-        return None
+        return "\n".join(lines)

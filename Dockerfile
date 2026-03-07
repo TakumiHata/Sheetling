@@ -1,9 +1,8 @@
 FROM python:3.11-slim
 
-# システムの依存関係をインストール
-RUN apt-get update && apt-get install -y \
-    libgl1 \
-    libglib2.0-0 \
+# 日本語フォント（PDF画像化時のフォールバック用）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -12,8 +11,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ソースコードをコピー（開発時はマウントされるがパスとして必要）
+# ソースコードをコピー
 COPY . .
 
-# アプリケーションの実行（デフォルトでは tty で待機させるため空にするか tail などを指定）
 CMD ["tail", "-f", "/dev/null"]
