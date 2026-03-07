@@ -37,20 +37,48 @@ start_row = math.floor(top / 4.96) + 1
 end_row   = math.ceil(bottom / 4.96)
 ```
 
+# ★最重要ルール: テキスト要素の全件出力
+- 入力JSONの `elements` に含まれる**すべてのテキスト要素を漏れなく**コードに含めてください。
+- 省略・要約・サンプル化は**絶対に禁止**です。
+- 入力に80個のテキスト要素があれば、出力コードにも80個すべてが含まれている必要があります。
+- テキストが1文字（スペースのみ含む）であっても省略しないでください。
+- 実装パターンとして、全テキスト要素をリスト（辞書のリスト）で定義し、
+  forループで一括処理する方式を推奨します:
+
+```python
+elements = [
+    {"text": "...", "x0": ..., "top": ..., "x1": ..., "bottom": ..., "size": ..., "fontname": "...", "color": "..."},
+    # ... すべての要素を列挙 ...
+]
+for el in elements:
+    sr = math.floor(el["top"] / 4.96) + 1
+    sc = math.floor(el["x0"] / 4.96) + 1
+    cell = ws.cell(row=sr, column=sc)
+    cell.value = el["text"]
+    cell.font = Font(name=el["fontname"], size=el["size"])
+    cell.alignment = Alignment(vertical='center')
+```
+
+# ★セル結合は禁止
+- `ws.merge_cells()` は**絶対に使用しないでください**。
+- セル結合は後工程で人が手作業で行います。
+- テキストは座標から算出した左上セル `(start_row, start_col)` にのみ配置してください。
+
 # 利用可能なライブラリ
 以下のopenpyxlのクラスを積極的に活用してください:
 - `openpyxl.styles.Font` — フォント名・サイズ・太字・色
 - `openpyxl.styles.Alignment` — 水平/垂直配置・折り返し
 - `openpyxl.styles.PatternFill` — セル背景色
 - `openpyxl.styles.Border`, `Side` — 罫線
-- `ws.merge_cells()` — セル結合
 
-# 注意事項
+# 罫線データの処理
+- 罫線データ（lines, rects）もすべて漏れなく処理してください。
+- テキスト要素と同様にリスト化してforループで処理してください。
+
+# スタイルの注意事項
 - テキストの色が `#000000` (黒) 以外の場合、`Font(color="RRGGBB")` で色を設定してください
   （先頭の# は除く）。
-- フォントサイズが抽出データに含まれる場合、もとのサイズを反映させてください。
-- 罫線データ（lines, rects）がある場合、対応するセル範囲にBorder設定を追加してください。
-- セル結合で競合しないように、大きい要素（見出し等）から順に処理してください。
+- フォントサイズは元のサイズを反映させてください。
 - `math` モジュールのインポートは関数内で行ってください。
 
 
