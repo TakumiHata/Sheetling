@@ -10,7 +10,6 @@ import os
 import traceback
 
 import openpyxl
-from openpyxl.drawing.image import Image as XlImage
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
@@ -21,7 +20,7 @@ logger = get_logger(__name__)
 
 
 class Executor:
-    """AI出力のPythonコードを実行し、3シート構成のExcelを生成する"""
+    """AI出力のPythonコードを実行し、2シート構成のExcelを生成する"""
 
     def __init__(self):
         self.col_width = config.excel.col_width_chars
@@ -35,17 +34,15 @@ class Executor:
         output_xlsx_path: str,
         fonts: list[dict],
         colors: list,
-        image_paths: list[str],
     ) -> str:
         """
-        AI生成のPythonソースを実行し、3シートExcelを出力する。
+        AI生成のPythonソースを実行し、2シートExcelを出力する。
 
         Args:
             gen_py_path: AI出力の .py ファイルパス
             output_xlsx_path: 出力する .xlsx ファイルパス
             fonts: 抽出されたフォント情報のリスト
             colors: 抽出されたカラー情報のリスト
-            image_paths: PDFから変換されたPNG画像のパスリスト
 
         Returns:
             出力されたExcelファイルパス
@@ -62,13 +59,10 @@ class Executor:
         # --- 2シート目: フォント・カラー情報の一覧 ---
         self._create_info_sheet(wb, fonts, colors)
 
-        # --- 3シート目: PDF画像の添付 ---
-        self._create_image_sheet(wb, image_paths)
-
         # 保存
         os.makedirs(os.path.dirname(os.path.abspath(output_xlsx_path)), exist_ok=True)
         wb.save(output_xlsx_path)
-        logger.info(f"✅ 3-sheet Excel saved: {output_xlsx_path}")
+        logger.info(f"✅ 2-sheet Excel saved: {output_xlsx_path}")
 
         return output_xlsx_path
 
@@ -215,39 +209,3 @@ class Executor:
         ws.column_dimensions["A"].width = 8
         ws.column_dimensions["B"].width = 30
         ws.column_dimensions["C"].width = 15
-
-    def _create_image_sheet(self, wb, image_paths: list[str]):
-        """3シート目: PDF画像を添付する"""
-        ws = wb.create_sheet(title="PDF画像")
-
-        if not image_paths:
-            ws["A1"] = "画像の変換に失敗したか、PDFが空です。"
-            return
-
-        current_row = 1
-        for i, img_path in enumerate(image_paths):
-            if not os.path.exists(img_path):
-                ws.cell(row=current_row, column=1, value=f"Page {i + 1}: 画像ファイルが見つかりません")
-                current_row += 2
-                continue
-
-            # ページラベル
-            ws.cell(row=current_row, column=1, value=f"Page {i + 1}")
-            ws.cell(row=current_row, column=1).font = Font(bold=True, size=12)
-            current_row += 1
-
-            try:
-                img = XlImage(img_path)
-                # A4に収まるサイズに調整（幅を600px程度に）
-                if img.width > 600:
-                    ratio = 600 / img.width
-                    img.width = 600
-                    img.height = int(img.height * ratio)
-
-                ws.add_image(img, f"A{current_row}")
-                # 画像の高さに応じて行を飛ばす（概算：1行≒15px）
-                rows_needed = max(1, int(img.height / 15))
-                current_row += rows_needed + 2
-            except Exception as e:
-                ws.cell(row=current_row, column=1, value=f"Page {i + 1}: 画像の添付に失敗: {e}")
-                current_row += 2

@@ -1,7 +1,7 @@
 """
 Sheetling エントリポイント。
-Phase 1: PDF → 解析 → プロンプト生成（常に実行）
-Phase 3: AI出力Pythonソース → 実行 → 3シートExcel生成
+Phase 1: PDFデータ抽出 → プロンプト出力
+Phase 3: AI出力Pythonソース → 実行 → 2シートExcel生成
 """
 
 from pathlib import Path

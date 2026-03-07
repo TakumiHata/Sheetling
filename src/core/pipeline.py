@@ -8,7 +8,6 @@ import json
 from pathlib import Path
 
 from src.core.extractor import PdfExtractor
-from src.core.image_converter import ImageConverter
 from src.core.executor import Executor
 from src.core.prompts import get_system_prompt
 from src.core.config import config
@@ -26,7 +25,6 @@ class SheetlingPipeline:
     def __init__(self, output_base_dir: str):
         self.output_base_dir = Path(output_base_dir)
         self.extractor = PdfExtractor()
-        self.image_converter = ImageConverter()
         self.executor = Executor()
 
     def generate_prompts(self, pdf_path: str) -> dict:
@@ -40,22 +38,14 @@ class SheetlingPipeline:
         out_dir = self.output_base_dir / pdf_name
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        # pdfplumber でテキスト・座標・フォント・色情報を抽出
+        # PDFから情報（テキスト・フォント・カラー等）を抽出
         extract_result = self.extractor.extract(pdf_path, out_dir)
 
-        # PDF → 画像変換（3シート目用）
-        try:
-            image_paths = self.image_converter.convert(pdf_path, out_dir)
-        except Exception as e:
-            logger.warning(f"PDF→画像変換に失敗（3シート目は空になります）: {e}")
-            image_paths = []
-
-        # Phase3の描画処理で必要なフォント・色・画像パスをメタデータとして保存
+        # Phase3の描画処理で必要なフォント・色情報をメタデータとして保存
         meta_path = out_dir / f"{pdf_name}_meta.json"
         meta = {
             "fonts": extract_result["fonts"],
             "colors": extract_result["colors"],
-            "image_paths": image_paths,
         }
         
         with open(meta_path, "w", encoding="utf-8") as f:
@@ -93,7 +83,7 @@ class SheetlingPipeline:
 
     def render_excel(self, pdf_name: str, gen_py_path: str) -> str:
         """
-        Phase 3: AI出力のPythonソースを実行し、3シートExcelを生成する。
+        Phase 3: AI出力のPythonソースを実行し、2シートExcelを生成する。
         """
         logger.info(f"--- [Phase 3] Excel生成: {pdf_name} ---")
         out_dir = self.output_base_dir / pdf_name
@@ -101,27 +91,24 @@ class SheetlingPipeline:
 
         output_xlsx_path = out_dir / f"{pdf_name}.xlsx"
 
-        # メタデータを読み込み（Phase1で保存したフォント・色・画像パス情報）
+        # メタデータを読み込み（Phase1で保存したフォント・色情報）
         meta_path = out_dir / f"{pdf_name}_meta.json"
         if meta_path.exists():
             with open(meta_path, "r", encoding="utf-8") as f:
                 meta = json.load(f)
             fonts = meta.get("fonts", [])
             colors = meta.get("colors", [])
-            image_paths = meta.get("image_paths", [])
         else:
             logger.warning(f"メタデータが見つかりません: {meta_path}")
             fonts = []
             colors = []
-            image_paths = []
 
-        # Executor で3シートExcel生成
+        # Executor で2シートExcel生成
         result_path = self.executor.execute(
             gen_py_path=gen_py_path,
             output_xlsx_path=str(output_xlsx_path),
             fonts=fonts,
             colors=colors,
-            image_paths=image_paths,
         )
 
         logger.info(f"✅ Phase 3 完了: {result_path}")
