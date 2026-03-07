@@ -107,16 +107,17 @@ class Executor:
         """AI生成のPythonコードを読み込んで実行する"""
         logger.info(f"Loading generated code: {gen_py_path}")
 
+        # AIが生成したコードを文字列として読み込む
         with open(gen_py_path, "r", encoding="utf-8") as f:
             code = f.read()
 
-        # コードを実行するための名前空間を用意
+        # 動的実行のための独立した名前空間を用意する
         exec_globals = {
             "__builtins__": __builtins__,
         }
 
         try:
-            # コードをコンパイル・実行して `generate` 関数を取得
+            # コード文字列をコンパイルし、用意した名前空間上で実行する
             exec(compile(code, gen_py_path, "exec"), exec_globals)
 
             if "generate" not in exec_globals:
@@ -132,8 +133,7 @@ class Executor:
             logger.error(f"❌ AI generated code execution failed: {e}")
             logger.error(traceback.format_exc())
 
-            # エラーメッセージを方眼の極小セルでも見えるように表示する
-            # 先頭数行の行高さを拡大してエラーメッセージを表示
+            # エラー発生時に内容がわかるよう、最初の数行分だけセルの高さを広げる
             ws.row_dimensions[1].height = 30
             ws.row_dimensions[2].height = 20
             ws.row_dimensions[3].height = 60
@@ -148,7 +148,7 @@ class Executor:
             ws["A3"].font = Font(size=10)
             ws["A3"].alignment = Alignment(wrap_text=True)
 
-            # エラー内容が見えるようにA列を広げる
+            # エラー内容が見えるようにA列のみ幅を拡大
             ws.column_dimensions["A"].width = 80
 
     def _create_info_sheet(self, wb, fonts: list[dict], colors: list):

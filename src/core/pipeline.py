@@ -36,6 +36,7 @@ class SheetlingPipeline:
         logger.info(f"--- [Phase 1] PDF解析 & プロンプト生成: {Path(pdf_path).name} ---")
         pdf_name = Path(pdf_path).stem
 
+        # 出力先のディレクトリを作成（既に存在する場合はそのまま使用）
         out_dir = self.output_base_dir / pdf_name
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -49,13 +50,14 @@ class SheetlingPipeline:
             logger.warning(f"PDF→画像変換に失敗（3シート目は空になります）: {e}")
             image_paths = []
 
-        # 画像パスを記録しておく（Phase3で使用）
+        # Phase3の描画処理で必要なフォント・色・画像パスをメタデータとして保存
         meta_path = out_dir / f"{pdf_name}_meta.json"
         meta = {
             "fonts": extract_result["fonts"],
             "colors": extract_result["colors"],
             "image_paths": image_paths,
         }
+        
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta, f, indent=2, ensure_ascii=False)
 
@@ -63,7 +65,7 @@ class SheetlingPipeline:
         with open(extract_result["json_path"], "r", encoding="utf-8") as f:
             extracted_json = json.load(f)
 
-        # プロンプトを作成して保存
+        # プロンプトのテンプレートに抽出データを埋め込む
         system_prompt = get_system_prompt()
         prompt_text = (
             f"{system_prompt}\n\n"

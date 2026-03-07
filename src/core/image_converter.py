@@ -27,14 +27,16 @@ class ImageConverter:
         logger.info(f"Converting PDF to images: {pdf_path}")
         pdf_name = Path(pdf_path).stem
 
+        # PDFドキュメントを開く
         doc = fitz.open(pdf_path)
         image_paths = []
 
-        # DPIに応じたズーム倍率を計算（デフォルト72dpi基準）
+        # PyMuPDFのデフォルト(72dpi)に対する倍率を計算して解像度を調整する
         zoom = self.dpi / 72.0
         matrix = fitz.Matrix(zoom, zoom)
 
         for i, page in enumerate(doc):
+            # ページを指定した解像度の画像データに変換
             pix = page.get_pixmap(matrix=matrix)
             img_path = out_dir / f"{pdf_name}_page{i + 1}.png"
             pix.save(str(img_path))

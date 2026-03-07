@@ -24,16 +24,20 @@ def run_pipeline():
     input_dir = Path("data/in")
     output_base_dir = Path("data/out")
 
+    # パイプラインを初期化
     pipeline = SheetlingPipeline(str(output_base_dir))
 
-    # 入力PDFの走査
+    # 指定ディレクトリ内のPDFファイルをすべて取得
     pdf_files = list(input_dir.glob("*.pdf"))
     if not pdf_files:
         logger.warning(f"No PDF files found in {input_dir}. Please place PDF files to process.")
         return
 
     for pdf_path in pdf_files:
+        # 拡張子を除いたベースのファイル名を取得
         pdf_name = pdf_path.stem
+        
+        # 出力ディレクトリと、AI生成Pythonコードの保存先パスを定義
         out_dir = output_base_dir / pdf_name
         gen_py_path = out_dir / f"{pdf_name}_gen.py"
 

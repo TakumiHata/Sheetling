@@ -19,6 +19,7 @@ class PdfExtractor:
     """pdfplumberを使用してPDFからレイアウト情報を抽出する"""
 
     def __init__(self):
+        # 設定ファイルから基準となる方眼のサイズ(pt)を取得
         self.grid_unit = config.grid.unit_pt
 
     def extract(self, pdf_path: str, out_dir: Path) -> dict:
@@ -32,15 +33,17 @@ class PdfExtractor:
         pdf_name = Path(pdf_path).stem
 
         all_pages = []
-        all_fonts = OrderedDict()   # fontname -> {size, color} のユニーク集合
-        all_colors = OrderedDict()  # color値のユニーク集合
+        # フォントとカラーの情報を重複なしで保持、挿入順序を維持するためにOrderedDictを使用
+        all_fonts = OrderedDict()
+        all_colors = OrderedDict()
 
         with pdfplumber.open(pdf_path) as pdf:
             for page_idx, page in enumerate(pdf.pages):
+                # 各ページ内のテキスト要素と罫線を抽出
                 page_data = self._extract_page(page, page_idx + 1)
                 all_pages.append(page_data)
 
-                # フォント・色情報を収集
+                # 抽出した要素からフォント名とサイズの組み合わせ、カラーコードを抽出し一覧化する
                 for elem in page_data["elements"]:
                     font_key = f"{elem.get('fontname', 'unknown')}_{elem.get('size', 0)}"
                     if font_key not in all_fonts:
@@ -134,12 +137,12 @@ class PdfExtractor:
         return page_data
 
     def _normalize_color(self, color) -> str:
-        """色情報を統一的な16進カラーコードに変換する"""
+        """色情報を統一的な16進カラーコード(#RRGGBB)に変換する"""
         if color is None:
             return "#000000"
 
+        # グレースケールの場合は単一の数値として判定
         if isinstance(color, (int, float)):
-            # グレースケール (0.0=黒, 1.0=白)
             val = int(round(float(color) * 255))
             return f"#{val:02X}{val:02X}{val:02X}"
 
