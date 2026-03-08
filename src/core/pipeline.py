@@ -43,17 +43,21 @@ class SheetlingPipeline:
 
         # Phase3の描画処理で必要なフォント・色情報をメタデータとして保存
         meta_path = out_dir / f"{pdf_name}_meta.json"
+
+        # 抽出JSONを読み込み（num_pages取得のためにmetaより先に読む）
+        with open(extract_result["json_path"], "r", encoding="utf-8") as f:
+            extracted_json = json.load(f)
+
         meta = {
             "fonts": extract_result["fonts"],
             "colors": extract_result["colors"],
+            "num_pages": len(extracted_json.get("pages", [])),
+            # 各ページの実際の高さ(pt) - executor.pyの改ページ計算に使用
+            "page_heights": extracted_json.get("page_heights", []),
         }
-        
+
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta, f, indent=2, ensure_ascii=False)
-
-        # 抽出JSONを読み込み
-        with open(extract_result["json_path"], "r", encoding="utf-8") as f:
-            extracted_json = json.load(f)
 
         # プロンプトのテンプレートに抽出データを埋め込む
         system_prompt = get_system_prompt()
@@ -103,10 +107,14 @@ class SheetlingPipeline:
                 meta = json.load(f)
             fonts = meta.get("fonts", [])
             colors = meta.get("colors", [])
+            num_pages = meta.get("num_pages", 1)
+            page_heights = meta.get("page_heights", [])
         else:
             logger.warning(f"メタデータが見つかりません: {meta_path}")
             fonts = []
             colors = []
+            num_pages = 1
+            page_heights = []
 
         # Executor で2シートExcel生成
         result_path = self.executor.execute(
@@ -114,6 +122,8 @@ class SheetlingPipeline:
             output_xlsx_path=str(output_xlsx_path),
             fonts=fonts,
             colors=colors,
+            num_pages=num_pages,
+            page_heights=page_heights,
         )
 
         logger.info(f"✅ Phase 3 完了: {result_path}")

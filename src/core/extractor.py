@@ -38,10 +38,16 @@ class PdfExtractor:
         all_colors = OrderedDict()
 
         with pdfplumber.open(pdf_path) as pdf:
+            # ページ累計高さを追跡 (実測値ベースのオフセット)
+            cumulative_y = 0.0
             for page_idx, page in enumerate(pdf.pages):
+                # ページあたりのオフセット = 前ページまでの実際の累積高さ(pt)
+                # ※ target_rows * grid_unit (818.4pt) ではなく page.height (842pt) を使う
+                y_offset = cumulative_y
                 # 各ページ内のテキスト要素と罫線を抽出
-                page_data = self._extract_page(page, page_idx + 1)
+                page_data = self._extract_page(page, page_idx + 1, y_offset)
                 all_pages.append(page_data)
+                cumulative_y += float(page.height)
 
                 # 抽出した要素からフォント名とサイズの組み合わせ、カラーコードを抽出し一覧化する
                 for elem in page_data["elements"]:
@@ -58,6 +64,8 @@ class PdfExtractor:
         extracted = {
             "source": pdf_name,
             "pages": all_pages,
+            # 各ページの実際の高さ(pt) - executor.pyがここから正確な改ページ行を計算する
+            "page_heights": [float(p["height"]) for p in all_pages],
         }
 
         # JSON出力
@@ -80,7 +88,7 @@ class PdfExtractor:
             "colors": list(all_colors.values()),
         }
 
-    def _extract_page(self, page, page_number: int) -> dict:
+    def _extract_page(self, page, page_number: int, y_offset: float) -> dict:
         """1ページ分のテキスト・罫線情報を抽出する"""
         page_data = {
             "page_number": page_number,
@@ -96,15 +104,21 @@ class PdfExtractor:
             keep_blank_chars=True,
             extra_attrs=["fontname", "size", "stroking_color", "non_stroking_color"],
         )
+        page_width = float(page.width)
+        page_height = float(page.height)
         for word in words:
             elem = {
                 "text": word["text"],
                 "x0": round(float(word["x0"]), 2),
-                "top": round(float(word["top"]), 2),
+                "top": round(float(word["top"]) + y_offset, 2),
                 "x1": round(float(word["x1"]), 2),
-                "bottom": round(float(word["bottom"]), 2),
-                "fontname": word.get("fontname", "unknown"),
+                "bottom": round(float(word["bottom"]) + y_offset, 2),
+                # PDFサブセット接頭辞（AAAAAA+）を除去してExcelで認識できるフォント名にする
+                "fontname": self._clean_fontname(word.get("fontname", "unknown")),
                 "size": round(float(word.get("size", 0)), 2),
+                # 座標正規化用：LLMがスケーリング変換に使う
+                "page_width": round(page_width, 2),
+                "page_height": round(page_height, 2),
             }
             # 色情報の取得（non_stroking_color = テキスト塗り色）
             color = word.get("non_stroking_color")
@@ -117,9 +131,9 @@ class PdfExtractor:
             for line in page.lines:
                 page_data["lines"].append({
                     "x0": round(float(line["x0"]), 2),
-                    "top": round(float(line["top"]), 2),
+                    "top": round(float(line["top"]) + y_offset, 2),
                     "x1": round(float(line["x1"]), 2),
-                    "bottom": round(float(line["bottom"]), 2),
+                    "bottom": round(float(line["bottom"]) + y_offset, 2),
                     "linewidth": round(float(line.get("linewidth", 0)), 2),
                 })
 
@@ -128,13 +142,21 @@ class PdfExtractor:
             for rect in page.rects:
                 page_data["rects"].append({
                     "x0": round(float(rect["x0"]), 2),
-                    "top": round(float(rect["top"]), 2),
+                    "top": round(float(rect["top"]) + y_offset, 2),
                     "x1": round(float(rect["x1"]), 2),
-                    "bottom": round(float(rect["bottom"]), 2),
+                    "bottom": round(float(rect["bottom"]) + y_offset, 2),
                     "linewidth": round(float(rect.get("linewidth", 0)), 2),
                 })
 
         return page_data
+
+    def _clean_fontname(self, fontname: str) -> str:
+        """PDFサブセット接頭辞（6文字 + '+' 形式）を除去し、Excelで利用可能なフォント名を返す"""
+        if "+" in fontname:
+            cleaned = fontname.split("+", 1)[1]
+            # ハイフン区切りでウェイト指定が含まれる場合も残す（例: Noto-Sans-JP-Thin）
+            return cleaned
+        return fontname
 
     def _normalize_color(self, color) -> str:
         """色情報を統一的な16進カラーコード(#RRGGBB)に変換する"""

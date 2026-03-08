@@ -12,6 +12,7 @@ import traceback
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.pagebreak import Break
 
 from src.core.config import config
 from src.utils.logger import get_logger
@@ -34,6 +35,8 @@ class Executor:
         output_xlsx_path: str,
         fonts: list[dict],
         colors: list,
+        num_pages: int = 1,
+        page_heights: list[float] = None,
     ) -> str:
         """
         AI生成のPythonソースを実行し、2シートExcelを出力する。
@@ -43,18 +46,27 @@ class Executor:
             output_xlsx_path: 出力する .xlsx ファイルパス
             fonts: 抽出されたフォント情報のリスト
             colors: 抽出されたカラー情報のリスト
+            num_pages: PDFの総ページ数（page_heightsがない場合のフォールバック）
+            page_heights: 各ページの実際高さリスト(pt)。改ページ行番号計算に使用。
 
         Returns:
             出力されたExcelファイルパス
         """
         logger.info(f"--- Executing AI-generated code: {gen_py_path} ---")
 
-        # Workbook初期化（方眼設定済み1シート目付き）
-        wb = self._create_workbook()
+        # page_heightsから総行数を計算（実際のページ高さがあればそれを使い、なければnum_pagesでフォールバック）
+        import math as _math
+        if page_heights:
+            total_rows = _math.ceil(sum(page_heights) / self.row_height)
+        else:
+            total_rows = self.max_rows * max(num_pages, 1)
+
+        # Workbook初期化（全ページ分の行高さを先に設定）
+        wb = self._create_workbook(total_rows=total_rows)
         ws = wb.active
 
         # --- 1シート目: AI生成コードの実行 ---
-        self._execute_generated_code(gen_py_path, wb, ws)
+        self._execute_generated_code(gen_py_path, wb, ws, page_heights=page_heights)
 
         # --- 2シート目: フォント・カラー情報の一覧 ---
         self._create_info_sheet(wb, fonts, colors)
@@ -66,39 +78,48 @@ class Executor:
 
         return output_xlsx_path
 
-    def _create_workbook(self) -> openpyxl.Workbook:
-        """A4方眼設定済みのWorkbookを作成する"""
+    def _create_workbook(self, total_rows: int = None) -> openpyxl.Workbook:
+        """実際の総行数に合わせた方眼設定済みWorkbookを作成する"""
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "変換結果"
 
+        # 列幅（文字幅基準）の変動を防ぐため、標準フォントを Arial 11pt に固定する
+        for s in wb._named_styles:
+            if s.name == "Normal":
+                s.font = Font(name="Arial", size=11)
+                break
+
         # ページ設定（A4）
         ws.page_setup.paperSize = ws.PAPERSIZE_A4
 
-        # 印刷余白
-        ws.page_margins.left = 0.25
-        ws.page_margins.right = 0.25
+        # 印刷余白（安全マージンのため左右を少し詰める）
+        ws.page_margins.left = 0.2
+        ws.page_margins.right = 0.2
         ws.page_margins.top = 0.75
         ws.page_margins.bottom = 0.75
         ws.page_margins.header = 0.3
         ws.page_margins.footer = 0.3
 
-        # 印刷時にA4幅いっぱいに拡大（方眼サイズはそのまま、印刷スケーリングで対応）
-        ws.page_setup.fitToWidth = 1
-        ws.page_setup.fitToHeight = 0
+        # 横幅はA4 1ページに収まるように自動縮小し、縦は内容に応じて伸ばす
         ws.sheet_properties.pageSetUpPr.fitToPage = True
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = False
 
-        # 方眼の列幅・行高さを設定
+        # 方眼の列幅を設定
         for col_idx in range(1, self.max_cols + 1):
             ws.column_dimensions[get_column_letter(col_idx)].width = self.col_width
 
-        for row_idx in range(1, self.max_rows + 1):
+        # 実際の総行数分の行高さを設定（2ページ目以降が未設定だと方眼比率が崩れる）
+        rows_to_set = total_rows if total_rows else self.max_rows
+        for row_idx in range(1, rows_to_set + 1):
             ws.row_dimensions[row_idx].height = self.row_height
 
         return wb
 
-    def _execute_generated_code(self, gen_py_path: str, wb, ws):
+    def _execute_generated_code(self, gen_py_path: str, wb, ws, page_heights: list[float] = None):
         """AI生成のPythonコードを読み込んで実行する"""
+        import math as _math
         logger.info(f"Loading generated code: {gen_py_path}")
 
         # AIが生成したコードを文字列として読み込む
@@ -122,6 +143,33 @@ class Executor:
             # generate関数を呼び出し
             exec_globals["generate"](wb, ws)
             logger.info("✅ AI generated code executed successfully (Sheet 1)")
+
+            # --- 改ページを実際のページ高さで挿入 ---
+            # 固定の target_rows ではなく、PDFの実際の page.height を累積して正確な行組みを計算する
+            if page_heights and len(page_heights) > 1:
+                cumulative_pt = 0.0
+                for ph in page_heights[:-1]:  # 最終ページの後は改ページ不要
+                    cumulative_pt += ph
+                    break_row = _math.ceil(cumulative_pt / self.row_height)
+                    ws.row_breaks.append(Break(id=break_row))
+                    logger.info(f"  改ページ at row {break_row} (cumulative {cumulative_pt:.1f}pt)")
+            else:
+                # page_heightsがない場合は従来の固定値フォールバック
+                max_row = ws.max_row
+                if max_row > self.max_rows:
+                    for r in range(self.max_rows, max_row, self.max_rows):
+                        ws.row_breaks.append(Break(id=r))
+
+            # --- 印刷範囲（Print Area）を実際のページ高さ合計から計算 ---
+            if page_heights:
+                total_print_rows = _math.ceil(sum(page_heights) / self.row_height)
+            else:
+                max_row = ws.max_row
+                total_print_rows = ((max_row - 1) // self.max_rows + 1) * self.max_rows
+            last_col_letter = get_column_letter(self.max_cols)
+            ws.print_area = f"A1:{last_col_letter}{total_print_rows}"
+            logger.info(f"✅ Set exact print area to: {ws.print_area}")
+
 
         except Exception as e:
             logger.error(f"❌ AI generated code execution failed: {e}")

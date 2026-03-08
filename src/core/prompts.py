@@ -44,15 +44,19 @@ def get_system_prompt() -> str:
     - Excelの列幅: {col_width} chars / 行高: {row_height} pt（すでに設定済み）
 
     # 座標変換
-    入力データの各テキスト要素は `(x0, top, x1, bottom)` のポイント座標を持ちます。
-    以下のようにExcelのセル位置へ変換してください:
+    入力データの各テキスト要素は `(x0, top, x1, bottom)` のポイント座標と、
+    `page_width`・`page_height`（ページの実際の大きさ）を持ちます。
+    以下のように実際のページ対角線を基準にスケーリングしてExcelのセル位置へ変換してください:
 
     ```python
     import math
-    start_col = math.floor(x0 / {unit_pt}) + 1
-    end_col   = math.ceil(x1 / {unit_pt})
-    start_row = math.floor(top / {unit_pt}) + 1
-    end_row   = math.ceil(bottom / {unit_pt})
+    # x座標: PDF幅(page_width)を列数(target_cols)=120にスケール変換
+    start_col = math.floor(x0 / page_width * {target_cols}) + 1
+    end_col   = math.ceil(x1  / page_width * {target_cols})
+    # y座標: top座標はページ内座標＋cumulative_offsetがすでに加算済み
+    #         1マス={unit_pt}ptで除算する
+    start_row = math.floor(top    / {unit_pt}) + 1
+    end_row   = math.ceil(bottom  / {unit_pt})
     ```
 
     # ★最重要ルール: テキスト要素の全件出力
@@ -65,17 +69,22 @@ def get_system_prompt() -> str:
 
     ```python
     elements = [
-        {{"text": "...", "x0": ..., "top": ..., "x1": ..., "bottom": ..., "size": ..., "fontname": "...", "color": "..."}},
+        {{"text": "...", "x0": ..., "top": ..., "x1": ..., "bottom": ..., "size": ..., "fontname": "...", "color": "...", "page_width": ..., "page_height": ...}},
         # ... すべての要素を列挙 ...
     ]
     for el in elements:
-        sr = math.floor(el["top"] / {unit_pt}) + 1
-        sc = math.floor(el["x0"] / {unit_pt}) + 1
+        sr = math.floor(el["top"]    / {unit_pt}) + 1
+        sc = math.floor(el["x0"]     / el["page_width"] * {target_cols}) + 1
         cell = ws.cell(row=sr, column=sc)
         cell.value = el["text"]
         cell.font = Font(name=el["fontname"], size=el["size"])
         cell.alignment = Alignment(vertical='center')
     ```
+
+    # フォント名の扱い
+    - 入力データの `fontname` はすでにPDFサブセット接頭辞（`AAAAAA+`）は除去済みです。
+    - そのままFontの`name`に指定してください（例: `Noto-Sans-JP-Thin`）。
+    - Excelでフォントが見つからない場合は`游ゴシック`にフォールバックしてください。
 
     # ★セル結合は禁止
     - `ws.merge_cells()` は**絶対に使用しないでください**。
