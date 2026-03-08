@@ -64,6 +64,11 @@ class SheetlingPipeline:
             f"{json.dumps(extracted_json, indent=2, ensure_ascii=False)}\n"
             f"```\n"
         )
+        
+        gen_py_path = out_dir / f"{pdf_name}_gen.py"
+        if not gen_py_path.exists():
+            with open(gen_py_path, "w", encoding="utf-8") as f:
+                f.write(f"# Auto-generated empty file for {pdf_name}. Please paste AI output here.\n")
 
         prompt_path = out_dir / f"{pdf_name}_prompt.txt"
         with open(prompt_path, "w", encoding="utf-8") as f:

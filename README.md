@@ -37,7 +37,7 @@ docker compose up -d --build
 `data/in/` にPDFファイルを配置し、以下を実行します。
 
 ```bash
-docker compose exec app python -m src.main
+docker compose exec app python -m src.extract
 ```
 
 実行後、`data/out/<pdf_name>/` に以下が生成されます:
@@ -56,7 +56,7 @@ docker compose exec app python -m src.main
 再度メインスクリプトを実行します。
 
 ```bash
-docker compose exec app python -m src.main
+docker compose exec app python -m src.generate
 ```
 
 2シート構成のExcelファイル (`<pdf_name>.xlsx`) が生成されます:

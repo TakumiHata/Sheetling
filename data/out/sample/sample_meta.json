@@ -1,0 +1,46 @@
+{
+  "fonts": [
+    {
+      "fontname": "AAAAAA+Noto-Sans-JP-Thin",
+      "size": 34.8
+    },
+    {
+      "fontname": "AAAAAA+Noto-Sans-JP-Thin",
+      "size": 21.75
+    },
+    {
+      "fontname": "BAAAAA+SegoeUI-Semibold",
+      "size": 21.75
+    },
+    {
+      "fontname": "CAAAAA+Noto-Sans-JP-Thin",
+      "size": 21.75
+    },
+    {
+      "fontname": "DAAAAA+SegoeUI",
+      "size": 21.75
+    },
+    {
+      "fontname": "AAAAAA+Noto-Sans-JP-Thin",
+      "size": 28.27
+    },
+    {
+      "fontname": "BAAAAA+SegoeUI-Semibold",
+      "size": 34.8
+    },
+    {
+      "fontname": "CAAAAA+Noto-Sans-JP-Thin",
+      "size": 13.5
+    },
+    {
+      "fontname": "DAAAAA+SegoeUI",
+      "size": 18.0
+    }
+  ],
+  "colors": [
+    "#224466",
+    "#1F2328",
+    "#666666",
+    "#777777"
+  ]
+}
