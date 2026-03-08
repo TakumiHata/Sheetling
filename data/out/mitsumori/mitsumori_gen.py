@@ -1,1174 +1,186 @@
-#!/usr/bin/env python3
-"""方眼Excel生成スクリプト - mitsumori"""
+def generate(wb, ws):
+    """
+    Args:
+        wb: openpyxl.Workbook（初期化済みの方眼ワークブック）
+        ws: openpyxl.worksheet.worksheet.Worksheet（1シート目、方眼設定済み）
+    """
+    import math
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Alignment, Border, Side, Font
-from openpyxl.utils import get_column_letter
-
-
-def place_cell(
-    ws, r1, c1, r2, c2, value="", font=None, alignment=None, fill=None, border=None
-):
-    """セルに値・スタイルを設定し結合する。重複する既存結合は自動解除される。"""
-    # 重複する既存の結合範囲を自動解除
-    overlapping = [
-        mr.coord
-        for mr in ws.merged_cells.ranges
-        if mr.min_row <= r2
-        and mr.max_row >= r1
-        and mr.min_col <= c2
-        and mr.max_col >= c1
+    # テキスト要素の定義
+    elements = [
+        {"text": "見積書Ｎｏ．", "x0": 397.87, "top": 96.03, "x1": 457.87, "bottom": 106.03, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": "No.", "x0": 59.25, "top": 379.33, "x1": 75.75, "bottom": 390.33, "fontname": "MS-Mincho", "size": 11.0, "color": "000000"},
+        {"text": "摘　　要", "x0": 142.48, "top": 379.49, "x1": 186.48, "bottom": 390.49, "fontname": "MS-Mincho", "size": 11.0, "color": "000000"},
+        {"text": "数量", "x0": 317.01, "top": 379.64, "x1": 339.01, "bottom": 390.64, "fontname": "MS-Mincho", "size": 11.0, "color": "000000"},
+        {"text": "合　　計", "x0": 135.35, "top": 733.77, "x1": 179.35, "bottom": 744.77, "fontname": "MS-Mincho", "size": 11.0, "color": "000000"},
+        {"text": "備　　考", "x0": 62.95, "top": 752.46, "x1": 102.95, "bottom": 762.46, "fontname": "MS-Gothic", "size": 10.0, "color": "000000"},
+        {"text": "御見積書", "x0": 252.63, "top": 48.71, "x1": 352.63, "bottom": 73.71, "fontname": "MS-Mincho", "size": 25.0, "color": "000000"},
+        {"text": "御中", "x0": 274.99, "top": 106.64, "x1": 299.99, "bottom": 119.14, "fontname": "MS-Mincho", "size": 12.5, "color": "000000"},
+        {"text": "下記のとおり御見積申し上げます。", "x0": 71.45, "top": 150.18, "x1": 278.39, "bottom": 162.18, "fontname": "MS-Mincho", "size": 12.0, "color": "000000"},
+        {"text": "何卒ご用命の程、お願い申し上げます。", "x0": 71.45, "top": 165.18, "x1": 304.38, "bottom": 177.18, "fontname": "MS-Mincho", "size": 12.0, "color": "000000"},
+        {"text": "受渡期日:", "x0": 29.45, "top": 200.18, "x1": 86.44, "bottom": 212.18, "fontname": "MS-Mincho", "size": 12.0, "color": "000000"},
+        {"text": "取引方法:", "x0": 29.45, "top": 224.18, "x1": 86.44, "bottom": 236.18, "fontname": "MS-Mincho", "size": 12.0, "color": "000000"},
+        {"text": "有効期限:", "x0": 29.45, "top": 248.18, "x1": 86.44, "bottom": 260.18, "fontname": "MS-Mincho", "size": 12.0, "color": "000000"},
+        {"text": "合計金額：", "x0": 113.25, "top": 342.5, "x1": 198.25, "bottom": 359.5, "fontname": "MS-Mincho", "size": 17.0, "color": "000000"},
+        {"text": "貴社管理番号：", "x0": 29.45, "top": 282.05, "x1": 113.45, "bottom": 294.05, "fontname": "MS-Mincho", "size": 12.0, "color": "000000"},
+        {"text": "ワークフロー商事株式会社 ", "x0": 400.73, "top": 206.29, "x1": 538.23, "bottom": 217.29, "fontname": "MS-Gothic", "size": 11.0, "color": "000000"},
+        {"text": "東京都新宿区千代田９−９−９", "x0": 405.8, "top": 225.7, "x1": 545.8, "bottom": 235.7, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": "　　　　　　　　　　　WSビル", "x0": 405.8, "top": 238.7, "x1": 545.8, "bottom": 248.7, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": "TEL  ０３-××××−９９９９", "x0": 405.8, "top": 251.7, "x1": 545.8, "bottom": 261.7, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": "FAX  ０３-９９９９−××××", "x0": 405.8, "top": 264.7, "x1": 545.8, "bottom": 274.7, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": " ", "x0": 405.8, "top": 277.7, "x1": 410.8, "bottom": 287.7, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": "承認", "x0": 463.53, "top": 288.24, "x1": 479.53, "bottom": 296.24, "fontname": "MS-Mincho", "size": 8.0, "color": "000000"},
+        {"text": "担当営業", "x0": 507.18, "top": 288.24, "x1": 539.18, "bottom": 296.24, "fontname": "MS-Mincho", "size": 8.0, "color": "000000"},
+        {"text": "(消費税別)", "x0": 334.48, "top": 344.39, "x1": 404.48, "bottom": 358.39, "fontname": "MS-Gothic", "size": 14.0, "color": "4F4F4F"},
+        {"text": "標準価格", "x0": 360.82, "top": 379.63, "x1": 404.82, "bottom": 390.63, "fontname": "MS-Mincho", "size": 11.0, "color": "000000"},
+        {"text": "見積価格", "x0": 428.2, "top": 380.13, "x1": 472.2, "bottom": 391.13, "fontname": "MS-Mincho", "size": 11.0, "color": "000000"},
+        {"text": "合計金額", "x0": 499.16, "top": 379.63, "x1": 543.16, "bottom": 390.63, "fontname": "MS-Mincho", "size": 11.0, "color": "000000"},
+        {"text": " 1", "x0": 62.43, "top": 397.23, "x1": 70.77, "bottom": 407.23, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": " 2", "x0": 62.43, "top": 414.35, "x1": 70.77, "bottom": 424.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": " 3", "x0": 62.83, "top": 431.35, "x1": 71.17, "bottom": 441.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": " 4", "x0": 62.43, "top": 447.85, "x1": 70.77, "bottom": 457.85, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": " 5", "x0": 62.43, "top": 464.35, "x1": 70.77, "bottom": 474.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": " 6", "x0": 62.43, "top": 481.35, "x1": 70.77, "bottom": 491.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": " 7", "x0": 62.43, "top": 498.35, "x1": 70.77, "bottom": 508.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": " 8", "x0": 62.43, "top": 515.35, "x1": 70.77, "bottom": 525.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": " 9", "x0": 62.43, "top": 532.35, "x1": 70.77, "bottom": 542.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "10", "x0": 61.04, "top": 549.35, "x1": 72.16, "bottom": 559.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "11", "x0": 61.04, "top": 566.35, "x1": 72.16, "bottom": 576.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "12", "x0": 61.04, "top": 583.35, "x1": 72.16, "bottom": 593.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "13", "x0": 61.04, "top": 600.35, "x1": 72.16, "bottom": 610.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "14", "x0": 61.04, "top": 617.35, "x1": 72.16, "bottom": 627.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "15", "x0": 61.04, "top": 634.35, "x1": 72.16, "bottom": 644.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "16", "x0": 61.04, "top": 651.35, "x1": 72.16, "bottom": 661.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "17", "x0": 61.04, "top": 668.35, "x1": 72.16, "bottom": 678.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "18", "x0": 61.04, "top": 685.35, "x1": 72.16, "bottom": 695.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "19", "x0": 61.04, "top": 702.35, "x1": 72.16, "bottom": 712.35, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "20", "x0": 61.04, "top": 719.15, "x1": 72.16, "bottom": 729.15, "fontname": "Helvetica", "size": 10.0, "color": "000000"},
+        {"text": "20121119_00001", "x0": 457.66, "top": 96.6, "x1": 527.66, "bottom": 106.6, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": "作成日:", "x0": 397.87, "top": 126.93, "x1": 432.87, "bottom": 136.93, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": "・消費税は別途計上させていただきます。", "x0": 55.6, "top": 768.62, "x1": 207.6, "bottom": 776.62, "fontname": "MS-Mincho", "size": 8.0, "color": "000000"},
+        {"text": "・製品の瑕疵、無償保証期間は御購入後3ヶ月間です。", "x0": 55.6, "top": 782.62, "x1": 251.6, "bottom": 790.62, "fontname": "MS-Mincho", "size": 8.0, "color": "000000"},
+        {"text": "△△株式会社", "x0": 34.6, "top": 104.7, "x1": 109.6, "bottom": 117.2, "fontname": "MS-Mincho", "size": 12.5, "color": "000000"},
+        {"text": "2,700,000", "x0": 439.39, "top": 396.85, "x1": 478.45, "bottom": 406.85, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "500,000", "x0": 446.42, "top": 414.35, "x1": 478.45, "bottom": 424.35, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "500,000", "x0": 446.42, "top": 431.35, "x1": 478.45, "bottom": 441.35, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "\\3,700,000", "x0": 251.36, "top": 341.72, "x1": 330.72, "bottom": 359.72, "fontname": "AAAAAA+MS-PGothic", "size": 18.0, "color": "4F4F4F"},
+        {"text": "3,700,000", "x0": 514.54, "top": 733.62, "x1": 553.6, "bottom": 743.62, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "発行日から30日", "x0": 89.23, "top": 248.18, "x1": 173.24, "bottom": 260.18, "fontname": "MS-Mincho", "size": 12.0, "color": "000000"},
+        {"text": "2,700,000", "x0": 370.64, "top": 396.85, "x1": 409.7, "bottom": 406.85, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "500,000", "x0": 377.67, "top": 414.35, "x1": 409.7, "bottom": 424.35, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "500,000", "x0": 377.67, "top": 431.35, "x1": 409.7, "bottom": 441.35, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "2012年11月19日", "x0": 437.92, "top": 125.98, "x1": 507.92, "bottom": 135.98, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": "2,700,000", "x0": 514.54, "top": 396.85, "x1": 553.6, "bottom": 406.85, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "500,000", "x0": 521.57, "top": 414.35, "x1": 553.6, "bottom": 424.35, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "500,000", "x0": 521.57, "top": 431.35, "x1": 553.6, "bottom": 441.35, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "ワークフローシステム　30ユーザーライセンス", "x0": 81.1, "top": 396.85, "x1": 291.1, "bottom": 406.85, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": "初期設定費用", "x0": 81.1, "top": 414.36, "x1": 141.1, "bottom": 424.36, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": "管理者費用", "x0": 81.1, "top": 431.35, "x1": 131.1, "bottom": 441.35, "fontname": "MS-Mincho", "size": 10.0, "color": "000000"},
+        {"text": "別途御打合せ", "x0": 89.23, "top": 200.18, "x1": 161.24, "bottom": 212.18, "fontname": "MS-Mincho", "size": 12.0, "color": "000000"},
+        {"text": "別途御打合せ", "x0": 89.23, "top": 224.18, "x1": 161.24, "bottom": 236.18, "fontname": "MS-Mincho", "size": 12.0, "color": "000000"},
+        {"text": "1", "x0": 339.1, "top": 396.85, "x1": 344.1, "bottom": 406.85, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "1", "x0": 339.1, "top": 414.35, "x1": 344.1, "bottom": 424.35, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"},
+        {"text": "1", "x0": 339.1, "top": 431.35, "x1": 344.1, "bottom": 441.35, "fontname": "AAAAAA+MS-PGothic", "size": 10.0, "color": "000000"}
     ]
-    for coord in overlapping:
-        ws.unmerge_cells(coord)
-    # 左上セルに値・スタイルを設定
-    cell = ws.cell(row=r1, column=c1, value=value)
-    if font:
-        cell.font = font
-    if alignment:
-        cell.alignment = alignment
-    if fill:
-        cell.fill = fill
-    # 罫線は全セルに適用（結合後はMergedCellとなり設定不可のため）
-    if border:
-        for r in range(r1, r2 + 1):
-            for c in range(c1, c2 + 1):
-                ws.cell(row=r, column=c).border = border
-    # セル結合
-    if r2 > r1 or c2 > c1:
-        ws.merge_cells(start_row=r1, start_column=c1, end_row=r2, end_column=c2)
 
-
-def draw_line(
-    ws,
-    orientation,
-    row=None,
-    col=None,
-    row_start=None,
-    row_end=None,
-    col_start=None,
-    col_end=None,
-    side=None,
-):
-    """1本の罫線を描画する。横線=top border, 縦線=left border。"""
-    if side is None:
-        side = Side(border_style="thin", color="000000")
-    if orientation == "horizontal" and row is not None:
-        for c in range(col_start, col_end + 1):
-            cell = ws.cell(row=row, column=c)
-            existing = cell.border
-            cell.border = Border(
-                left=existing.left,
-                right=existing.right,
-                top=side,
-                bottom=existing.bottom,
-            )
-    elif orientation == "vertical" and col is not None:
-        for r in range(row_start, row_end + 1):
-            cell = ws.cell(row=r, column=col)
-            existing = cell.border
-            cell.border = Border(
-                left=side,
-                right=existing.right,
-                top=existing.top,
-                bottom=existing.bottom,
-            )
-
-
-def main():
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Sheet1"
-
-    # --- 1. グリッド設定（方眼紙） ---
-    for col_idx in range(1, 120 + 1):
-        ws.column_dimensions[get_column_letter(col_idx)].width = 0.75
-    for row_idx in range(1, 170 + 1):
-        ws.row_dimensions[row_idx].height = 4.96
-
-    # --- 2. rect要素（色彩情報除外のためスキップ） ---
-
-    # --- 3. text要素（テキスト・フォント・配置） ---
-
-    place_cell(
-        ws,
-        9,
-        50,
-        14,
-        71,
-        value="御見積書",
-        font=Font(name="Meiryo", size=25.0, bold=True),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        19,
-        80,
-        21,
-        106,
-        value="見積書Ｎｏ．20121119_00001",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        21,
-        6,
-        23,
-        22,
-        value="△△株式会社",
-        font=Font(name="Meiryo", size=12.5),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        22,
-        23,
-        23,
-        61,
-        value="御中",
-        font=Font(name="Meiryo", size=12.5, bold=True),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        25,
-        71,
-        27,
-        82,
-        value="作成日:",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        25,
-        84,
-        27,
-        89,
-        value="2012年11月19日",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        29,
-        12,
-        42,
-        14,
-        value="下記のとおり御見積申し上げます。",
-        font=Font(name="Meiryo", size=12.0, bold=True),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        33,
-        15,
-        35,
-        61,
-        value="何卒ご用命の程、お願い申し上げます。",
-        font=Font(name="Meiryo", size=12.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        40,
-        15,
-        42,
-        32,
-        value="受渡期日:別途御打合せ",
-        font=Font(name="Meiryo", size=12.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        29,
-        71,
-        42,
-        82,
-        value="ワークフロー商事株式会社",
-        font=Font(name="Meiryo", size=11.0, bold=True),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        45,
-        5,
-        47,
-        32,
-        value="取引方法:別途御打合せ",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        44,
-        71,
-        47,
-        82,
-        value="東京都新宿区千代田９−９−９",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        49,
-        101,
-        52,
-        109,
-        value="WSビル",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        50,
-        5,
-        52,
-        34,
-        value="有効期限:発行日から30日",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        49,
-        71,
-        52,
-        82,
-        value="TEL",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        49,
-        84,
-        52,
-        89,
-        value="０３-××××−９９９９",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        54,
-        71,
-        56,
-        82,
-        value="FAX",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        54,
-        84,
-        56,
-        89,
-        value="０３-９９９９−××××",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        56,
-        5,
-        59,
-        22,
-        value="貴社管理番号：",
-        font=Font(name="Meiryo", size=12.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        58,
-        91,
-        59,
-        96,
-        value="承認",
-        font=Font(name="Meiryo", size=8.0),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        58,
-        101,
-        59,
-        109,
-        value="担当営業",
-        font=Font(name="Meiryo", size=8.0),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        68,
-        16,
-        72,
-        61,
-        value="合計金額：",
-        font=Font(name="Meiryo", size=14.0, bold=True),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        68,
-        62,
-        72,
-        81,
-        value="\\3,700,000(消費税別)",
-        font=Font(name="Meiryo", size=18.0, bold=True),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        77,
-        12,
-        78,
-        14,
-        value="No.",
-        font=Font(name="Meiryo", size=11.0, bold=True),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        77,
-        16,
-        78,
-        61,
-        value="摘",
-        font=Font(name="Meiryo", size=11.0, bold=True),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        76,
-        35,
-        78,
-        37,
-        value="要",
-        font=Font(name="Meiryo", size=11.0),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        77,
-        63,
-        78,
-        69,
-        value="数量",
-        font=Font(name="Meiryo", size=11.0, bold=True),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        77,
-        71,
-        78,
-        82,
-        value="標準価格",
-        font=Font(name="Meiryo", size=11.0, bold=True),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        77,
-        84,
-        78,
-        89,
-        value="見積価格",
-        font=Font(name="Meiryo", size=11.0, bold=True),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        77,
-        101,
-        78,
-        109,
-        value="合計金額",
-        font=Font(name="Meiryo", size=11.0, bold=True),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        80,
-        12,
-        81,
-        14,
-        value="1",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        80,
-        16,
-        81,
-        61,
-        value="ワークフローシステム",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        82,
-        38,
-        82,
-        58,
-        value="30ユーザーライセンス",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        80,
-        63,
-        81,
-        69,
-        value="1",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        80,
-        71,
-        81,
-        82,
-        value="2,700,000",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        80,
-        84,
-        81,
-        89,
-        value="2,700,000",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        80,
-        101,
-        81,
-        109,
-        value="2,700,000",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        83,
-        12,
-        85,
-        14,
-        value="2",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        83,
-        16,
-        85,
-        61,
-        value="初期設定費用",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        83,
-        63,
-        85,
-        69,
-        value="1",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        83,
-        71,
-        85,
-        82,
-        value="500,000",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        83,
-        91,
-        85,
-        96,
-        value="500,000",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        83,
-        101,
-        85,
-        109,
-        value="500,000",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        87,
-        12,
-        88,
-        14,
-        value="3",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        87,
-        16,
-        88,
-        61,
-        value="管理者費用",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        87,
-        63,
-        88,
-        69,
-        value="1",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        87,
-        71,
-        88,
-        82,
-        value="500,000",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        87,
-        91,
-        88,
-        96,
-        value="500,000",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        87,
-        101,
-        88,
-        109,
-        value="500,000",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        90,
-        12,
-        91,
-        14,
-        value="4",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        93,
-        12,
-        95,
-        14,
-        value="5",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        97,
-        12,
-        98,
-        14,
-        value="6",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        100,
-        12,
-        102,
-        14,
-        value="7",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        104,
-        12,
-        105,
-        14,
-        value="8",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        107,
-        12,
-        108,
-        14,
-        value="9",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        110,
-        12,
-        112,
-        14,
-        value="10",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        114,
-        12,
-        115,
-        14,
-        value="11",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        117,
-        12,
-        119,
-        14,
-        value="12",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        121,
-        12,
-        122,
-        14,
-        value="13",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        124,
-        12,
-        126,
-        14,
-        value="14",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        128,
-        12,
-        129,
-        14,
-        value="15",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        131,
-        12,
-        132,
-        14,
-        value="16",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        134,
-        12,
-        136,
-        14,
-        value="17",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        138,
-        12,
-        139,
-        14,
-        value="18",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        141,
-        12,
-        143,
-        14,
-        value="19",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        145,
-        12,
-        146,
-        14,
-        value="20",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        148,
-        16,
-        149,
-        61,
-        value="合",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        150,
-        33,
-        150,
-        36,
-        value="計",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        148,
-        101,
-        149,
-        109,
-        value="3,700,000",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="right", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        152,
-        12,
-        153,
-        14,
-        value="備",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        152,
-        16,
-        153,
-        61,
-        value="考",
-        font=Font(name="Meiryo", size=10.0),
-        alignment=Alignment(
-            horizontal="center", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        155,
-        16,
-        163,
-        61,
-        value="・消費税は別途計上させていただきます。",
-        font=Font(name="Meiryo", size=8.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    place_cell(
-        ws,
-        157,
-        11,
-        159,
-        50,
-        value="・製品の瑕疵、無償保証期間は御購入後3ヶ月間です。",
-        font=Font(name="Meiryo", size=8.0),
-        alignment=Alignment(
-            horizontal="left", vertical="center", wrap_text=False, shrink_to_fit=True
-        ),
-    )
-
-    # --- 4. 罫線（元PDF上のline座標を忠実に再現） ---
-
-    side_thin = Side(border_style="thin", color="000000")
-
-    draw_line(ws, "horizontal", row=79, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=147, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=43, col_start=5, col_end=62, side=side_thin)
-
-    draw_line(ws, "horizontal", row=48, col_start=5, col_end=62, side=side_thin)
-
-    draw_line(ws, "horizontal", row=53, col_start=5, col_end=62, side=side_thin)
-
-    draw_line(ws, "horizontal", row=73, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=59, col_start=5, col_end=48, side=side_thin)
-
-    draw_line(ws, "horizontal", row=21, col_start=79, col_end=109, side=side_thin)
-
-    draw_line(ws, "horizontal", row=154, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=59, col_start=90, col_end=111, side=side_thin)
-
-    draw_line(ws, "horizontal", row=28, col_start=79, col_end=108, side=side_thin)
-
-    draw_line(ws, "horizontal", row=24, col_start=5, col_end=62, side=side_thin)
-
-    draw_line(ws, "vertical", col=11, row_start=76, row_end=151, side=side_thin)
-
-    draw_line(ws, "vertical", col=112, row_start=76, row_end=151, side=side_thin)
-
-    draw_line(ws, "horizontal", row=76, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=78, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "vertical", col=15, row_start=76, row_end=148, side=side_thin)
-
-    draw_line(ws, "vertical", col=62, row_start=76, row_end=148, side=side_thin)
-
-    draw_line(ws, "vertical", col=70, row_start=76, row_end=148, side=side_thin)
-
-    draw_line(ws, "vertical", col=83, row_start=76, row_end=148, side=side_thin)
-
-    draw_line(ws, "vertical", col=97, row_start=76, row_end=148, side=side_thin)
-
-    draw_line(ws, "horizontal", row=150, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=89, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=92, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=96, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=99, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=103, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=106, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=109, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=113, col_start=10, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=116, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=120, col_start=10, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=123, col_start=10, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=127, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=130, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=133, col_start=10, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=137, col_start=10, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=140, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=144, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "vertical", col=11, row_start=151, row_end=165, side=side_thin)
-
-    draw_line(ws, "horizontal", row=151, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "vertical", col=112, row_start=151, row_end=165, side=side_thin)
-
-    draw_line(ws, "horizontal", row=164, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=67, col_start=90, col_end=111, side=side_thin)
-
-    draw_line(ws, "horizontal", row=57, col_start=90, col_end=111, side=side_thin)
-
-    draw_line(ws, "vertical", col=90, row_start=57, row_end=68, side=side_thin)
-
-    draw_line(ws, "vertical", col=110, row_start=57, row_end=68, side=side_thin)
-
-    draw_line(ws, "vertical", col=100, row_start=57, row_end=68, side=side_thin)
-
-    draw_line(ws, "horizontal", row=82, col_start=11, col_end=113, side=side_thin)
-
-    draw_line(ws, "horizontal", row=86, col_start=11, col_end=113, side=side_thin)
-
-    # --- 5. 印刷設定（必須） ---
-    from openpyxl.worksheet.page import PageMargins
-
-    # デフォルトのビュー設定（倍率）
-    ws.sheet_view.zoomScale = (
-        200  # 実寸A4サイズセルが小さいため、作業用の表示倍率を拡大
-    )
-    ws.page_margins = PageMargins(left=0, right=0, top=0, bottom=0, header=0, footer=0)
-    ws.sheet_properties.pageSetUpPr.fitToPage = True
-    ws.page_setup.paperSize = 9  # A4
-    ws.page_setup.orientation = "portrait"
-    ws.page_setup.fitToWidth = 1
-    ws.page_setup.fitToHeight = 1
-    # 印刷範囲（Print Area）を明示的に指定することで、右側が余る現象を防止する
-    ws.print_area = f"A1:{get_column_letter(113)}165"
-    ws.print_options.horizontalCentered = True
-
-    # 改ページ指定（最後のページは不要）
-    from openpyxl.worksheet.pagebreak import Break
-
-    ws.cell(row=1, column=1, value=" ").font = Font(color="FFFFFF")
-    ws.cell(row=165, column=113, value=" ").font = Font(color="FFFFFF")
-
-    wb.save("mitsumori.xlsx")
-    print("Saved: mitsumori.xlsx")
-
-
-if __name__ == "__main__":
-    main()
+    # テキスト出力ループ
+    for el in elements:
+        sr = math.floor(el["top"] / 4.96) + 1
+        sc = math.floor(el["x0"] / 4.96) + 1
+        cell = ws.cell(row=sr, column=sc)
+        cell.value = el["text"]
+        cell.font = Font(name=el["fontname"], size=el["size"], color=el["color"].replace("#", ""))
+        cell.alignment = Alignment(vertical='center')
+
+    # 罫線データの定義
+    lines = [
+        {"x0": 54.6, "top": 393.2, "x1": 558.6, "bottom": 393.2, "lw": 0.5},
+        {"x0": 54.6, "top": 732.45, "x1": 558.6, "bottom": 732.45, "lw": 1.2},
+        {"x0": 27.2, "top": 216.5, "x1": 307.0, "bottom": 216.5, "lw": 0.5},
+        {"x0": 27.2, "top": 240.5, "x1": 307.0, "bottom": 240.5, "lw": 0.5},
+        {"x0": 27.2, "top": 264.5, "x1": 307.0, "bottom": 264.5, "lw": 0.5},
+        {"x0": 57.45, "top": 365.25, "x1": 557.45, "bottom": 365.25, "lw": 1.0},
+        {"x0": 27.2, "top": 297.0, "x1": 235.1, "bottom": 297.0, "lw": 0.5},
+        {"x0": 395.2, "top": 108.8, "x1": 537.2, "bottom": 108.8, "lw": 0.6},
+        {"x0": 54.6, "top": 764.55, "x1": 557.85, "bottom": 764.55, "lw": 0.7},
+        {"x0": 447.2, "top": 297.45, "x1": 547.2, "bottom": 297.45, "lw": 0.3},
+        {"x0": 395.03, "top": 139.5, "x1": 532.03, "bottom": 139.5, "lw": 0.5},
+        {"x0": 27.2, "top": 123.56, "x1": 307.0, "bottom": 123.56, "lw": 0.5},
+        {"x0": 54.6, "top": 378.2, "x1": 54.6, "bottom": 745.16, "lw": 0.5},
+        {"x0": 558.6, "top": 378.45, "x1": 558.6, "bottom": 745.16, "lw": 0.5},
+        {"x0": 54.6, "top": 378.45, "x1": 558.6, "bottom": 378.45, "lw": 0.5},
+        {"x0": 54.6, "top": 391.2, "x1": 558.6, "bottom": 391.2, "lw": 0.5},
+        {"x0": 78.6, "top": 378.2, "x1": 78.6, "bottom": 732.45, "lw": 0.5},
+        {"x0": 312.35, "top": 378.2, "x1": 312.35, "bottom": 732.45, "lw": 0.5},
+        {"x0": 349.35, "top": 378.7, "x1": 349.35, "bottom": 732.45, "lw": 0.5},
+        {"x0": 414.7, "top": 378.46, "x1": 414.7, "bottom": 732.45, "lw": 0.5},
+        {"x0": 483.45, "top": 378.71, "x1": 483.45, "bottom": 732.45, "lw": 0.5},
+        {"x0": 54.6, "top": 745.16, "x1": 558.6, "bottom": 745.16, "lw": 0.5},
+        {"x0": 54.6, "top": 444.45, "x1": 558.6, "bottom": 444.45, "lw": 0.5},
+        {"x0": 54.6, "top": 460.45, "x1": 558.6, "bottom": 460.45, "lw": 0.5},
+        {"x0": 54.6, "top": 477.45, "x1": 558.6, "bottom": 477.45, "lw": 0.5},
+        {"x0": 54.6, "top": 494.45, "x1": 558.6, "bottom": 494.45, "lw": 0.5},
+        {"x0": 54.6, "top": 511.45, "x1": 558.6, "bottom": 511.45, "lw": 0.5},
+        {"x0": 54.6, "top": 528.45, "x1": 558.6, "bottom": 528.45, "lw": 0.5},
+        {"x0": 54.6, "top": 545.45, "x1": 558.6, "bottom": 545.45, "lw": 0.5},
+        {"x0": 54.35, "top": 562.45, "x1": 558.35, "bottom": 562.45, "lw": 0.5},
+        {"x0": 54.6, "top": 579.45, "x1": 558.6, "bottom": 579.45, "lw": 0.5},
+        {"x0": 54.35, "top": 596.45, "x1": 558.35, "bottom": 596.45, "lw": 0.5},
+        {"x0": 54.35, "top": 613.45, "x1": 558.35, "bottom": 613.45, "lw": 0.5},
+        {"x0": 54.6, "top": 630.45, "x1": 558.6, "bottom": 630.45, "lw": 0.5},
+        {"x0": 54.85, "top": 647.45, "x1": 558.85, "bottom": 647.45, "lw": 0.5},
+        {"x0": 54.35, "top": 664.45, "x1": 558.35, "bottom": 664.45, "lw": 0.5},
+        {"x0": 54.35, "top": 681.45, "x1": 558.35, "bottom": 681.45, "lw": 0.5},
+        {"x0": 54.85, "top": 698.45, "x1": 558.85, "bottom": 698.45, "lw": 0.5},
+        {"x0": 54.85, "top": 715.45, "x1": 558.85, "bottom": 715.45, "lw": 0.5},
+        {"x0": 54.6, "top": 750.85, "x1": 54.6, "bottom": 815.45, "lw": 0.5},
+        {"x0": 54.6, "top": 751.15, "x1": 557.99, "bottom": 751.15, "lw": 0.5},
+        {"x0": 557.85, "top": 750.6, "x1": 557.85, "bottom": 815.45, "lw": 0.5},
+        {"x0": 54.6, "top": 815.4, "x1": 557.99, "bottom": 815.4, "lw": 0.5},
+        {"x0": 447.2, "top": 335.2, "x1": 547.2, "bottom": 335.2, "lw": 0.3},
+        {"x0": 447.2, "top": 285.7, "x1": 547.2, "bottom": 285.7, "lw": 0.3},
+        {"x0": 447.2, "top": 286.2, "x1": 447.2, "bottom": 335.7, "lw": 0.3},
+        {"x0": 547.2, "top": 285.7, "x1": 547.2, "bottom": 335.2, "lw": 0.3},
+        {"x0": 497.2, "top": 285.7, "x1": 497.2, "bottom": 335.2, "lw": 0.3},
+        {"x0": 54.6, "top": 410.45, "x1": 558.6, "bottom": 410.45, "lw": 0.5},
+        {"x0": 54.6, "top": 427.45, "x1": 558.6, "bottom": 427.45, "lw": 0.5}
+    ]
+
+    # 罫線出力ループ
+    for ln in lines:
+        sc = math.floor(ln["x0"] / 4.96) + 1
+        sr = math.floor(ln["top"] / 4.96) + 1
+        ec = math.ceil(ln["x1"] / 4.96)
+        er = math.ceil(ln["bottom"] / 4.96)
+        
+        style = 'thin' if ln["lw"] < 1.0 else 'medium'
+        side = Side(border_style=style, color="000000")
+        
+        if ln["top"] == ln["bottom"]: # 水平線
+            for c in range(sc, ec + 1):
+                cell = ws.cell(row=sr, column=c)
+                current_border = cell.border
+                cell.border = Border(top=side, left=current_border.left, right=current_border.right, bottom=current_border.bottom)
+        elif ln["x0"] == ln["x1"]: # 垂直線
+            for r in range(sr, er + 1):
+                cell = ws.cell(row=r, column=sc)
+                current_border = cell.border
+                cell.border = Border(left=side, top=current_border.top, right=current_border.right, bottom=current_border.bottom)
+
+    # 矩形データの定義と出力
+    rects = [{"x0": 225.2, "top": 44.8, "x1": 381.2, "bottom": 78.8, "lw": 0.8}]
+    for rc in rects:
+        sc = math.floor(rc["x0"] / 4.96) + 1
+        sr = math.floor(rc["top"] / 4.96) + 1
+        ec = math.ceil(rc["x1"] / 4.96)
+        er = math.ceil(rc["bottom"] / 4.96)
+        side = Side(border_style='thin', color="000000")
+        for r in range(sr, er + 1):
+            for c in range(sc, ec + 1):
+                cell = ws.cell(row=r, column=c)
+                b_top = side if r == sr else cell.border.top
+                b_bottom = side if r == er else cell.border.bottom
+                b_left = side if c == sc else cell.border.left
+                b_right = side if c == ec else cell.border.right
+                cell.border = Border(top=b_top, bottom=b_bottom, left=b_left, right=b_right)

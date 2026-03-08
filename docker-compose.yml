@@ -4,7 +4,6 @@ services:
     volumes:
       - ./src:/app/src
       - ./data:/app/data
-      - ./templates:/app/templates
       - ./tests:/app/tests
     tty: true
     stdin_open: true
