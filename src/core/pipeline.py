@@ -49,8 +49,6 @@ class SheetlingPipeline:
             extracted_json = json.load(f)
 
         meta = {
-            "fonts": extract_result["fonts"],
-            "colors": extract_result["colors"],
             "num_pages": len(extracted_json.get("pages", [])),
             # 各ページの実際の高さ(pt) - executor.pyの改ページ計算に使用
             "page_heights": extracted_json.get("page_heights", []),
@@ -60,10 +58,13 @@ class SheetlingPipeline:
             json.dump(meta, f, indent=2, ensure_ascii=False)
 
         # プロンプトのテンプレートに抽出データを埋め込む
-        system_prompt = get_system_prompt()
+        with open(extract_result["md_path"], "r", encoding="utf-8") as f:
+            md_content = f.read()
+
+        system_prompt = get_system_prompt(md_content=md_content)
         prompt_text = (
             f"{system_prompt}\n\n"
-            f"=== 以下は {pdf_name} から抽出されたレイアウトデータです ===\n"
+            f"=== 以下は {pdf_name} から抽出されたレイアウトデータ(JSON) です ===\n"
             f"```json\n"
             f"{json.dumps(extracted_json, indent=2, ensure_ascii=False)}\n"
             f"```\n"
@@ -100,28 +101,22 @@ class SheetlingPipeline:
 
         output_xlsx_path = out_dir / f"{pdf_name}.xlsx"
 
-        # メタデータを読み込み（Phase1で保存したフォント・色情報）
+        # メタデータを読み込み（Phase1で保存した情報）
         meta_path = out_dir / f"{pdf_name}_meta.json"
         if meta_path.exists():
             with open(meta_path, "r", encoding="utf-8") as f:
                 meta = json.load(f)
-            fonts = meta.get("fonts", [])
-            colors = meta.get("colors", [])
             num_pages = meta.get("num_pages", 1)
             page_heights = meta.get("page_heights", [])
         else:
             logger.warning(f"メタデータが見つかりません: {meta_path}")
-            fonts = []
-            colors = []
             num_pages = 1
             page_heights = []
 
-        # Executor で2シートExcel生成
+        # Executor でExcel生成
         result_path = self.executor.execute(
             gen_py_path=gen_py_path,
             output_xlsx_path=str(output_xlsx_path),
-            fonts=fonts,
-            colors=colors,
             num_pages=num_pages,
             page_heights=page_heights,
         )

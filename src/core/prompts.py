@@ -6,106 +6,75 @@ import textwrap
 from .config import config
 
 
-def get_system_prompt() -> str:
+def get_system_prompt(md_content: str = "") -> str:
     """AIにopenpyxlベースのPythonコードを出力させるシステムプロンプト"""
 
     unit_pt = config.grid.unit_pt
     target_cols = config.grid.target_cols
     target_rows = config.grid.target_rows
-    col_width = config.excel.col_width_chars
-    row_height = config.excel.row_height_pt
 
     prompt = f"""\
-    あなたは、PDFから抽出されたテキスト・座標・フォント・色情報を読み取り、
-    openpyxlを使ってA4方眼Excelの1シート目にレイアウトを再現するPythonコードを出力する変換エンジンです。
+    あなたは、PDFから抽出された構造化データ（テキスト・表）を読み取り、
+    openpyxlを使ってA4方眼Excelの1シート目にレイアウトを再現する Python コードを生成してください。
+
+    # コンセプト：クリーンなレイアウト再現
+    今回の目標は、PDFのレイアウトを再現しつつ、Excelとして実用的な「クリーンな見た目」を実現することです。
+    Markdownでテーブル構造として認識されていない箇所に枠線を引くことは**厳禁**です。
 
     # 出力形式
     - 出力は**Pythonコードのみ**です。解説やコメントブロック以外の文章は一切不要です。
+    - **重要 (構文エラー防止)**: `[cite: 1]` や `[cite: 24]` のような引用タグをコード内（コメント内も含む）に含めることは絶対に禁止です。
+    - **重要 (テーブル構造維持)**: 
+      1. 下記の「Markdown抽出データ」に含まれるテーブル構造（`| No. | 摘要 | ... |` 形式の部分）を**絶対的な正解**としてください。
+      2. テーブル内の各セル（No, 摘要, 数量, 単価など）は、たとえ JSON 側で同じ `c`, `cs` にまとめられてしまっているように見えても、Markdown の列構造に基づいて**必ず個別のセル**に配置してください。
+      3. 各項目の `c` (列インデックス) と `cs` (列スパン) を適切に調整し、垂直方向の整列を保ってください。
+      4. Markdown でテーブルとして認識されている箇所には、必ず外枠と内側の区切り線を引いてください。
+      5. **垂直マージの禁止**: テーブルのデータ行（空行を含む）において、垂直方向のセル結合 (`rs >= 2`) は、元データで明示的に結合されている場合を除き厳禁です。必ず1行ずつ個別に出力してください。
+
+    - **基本設計**: Excelシート全体を大きな方眼紙（{target_cols}列 x {target_rows}行以上）として扱い、各要素を適切な位置（`r`, `c`）に、適切なサイズ（`rs`, `cs`）で描画してください。
+    - **スタイル指定**: 
+      1. 位置合わせ: テキストの位置（左寄せ、中央、右寄せ）を正確に再現してください。
+      2. 罫線の描画: `Border` と `Side` を使用して、必要な箇所に枠線を引いてください。
+
+    - **重要 (要素の網羅性)**: 
+      1. JSON の `cells` に含まれるすべての要素を**1つも漏らさずに**コードに出力してください。
+      2. 特に `border` が `True` の要素は、たとえ `text` が空（""）であっても、表の枠線を再現するために**必ずすべて出力**してください。「空だから不要」と判断して省略することは**厳禁**です。
+      3. Markdown に存在するテーブル行（No. 4〜20などの空行）が JSON に含まれている場合、それらもすべて個別のセルとして描画してください。
+
     - 以下の関数シグネチャを必ず定義してください:
 
     ```python
     def generate(wb, ws):
         \"\"\"
         Args:
-            wb: openpyxl.Workbook（初期化済みの方眼ワークブック）
-            ws: openpyxl.worksheet.worksheet.Worksheet（1シート目、方眼設定済み）
+            wb: openpyxl.Workbook
+            ws: openpyxl.worksheet.worksheet.Worksheet
         \"\"\"
     ```
 
-    - この関数は呼び出し元から渡されたワークブック `wb` とワークシート `ws` に対して
-      セルへの値代入、結合、スタイル設定などを行ってください。
-    - `wb.save()` は呼び出さないでください（呼び出し元が行います）。
-    - 新しいシートの追加もしないでください（呼び出し元が管理します）。
+    # 実装手順 (最重要)
+    以下の **3段階のステップ** でコードを生成してください。
 
-    # 方眼仕様
-    - 方眼1マス: 幅・高さともに約 {unit_pt} pt
-    - 列数: {target_cols}（A4幅 595pt ÷ {unit_pt}pt）
-    - 行数: {target_rows}（A4高さ 842pt ÷ {unit_pt}pt）
-    - Excelの列幅: {col_width} chars / 行高: {row_height} pt（すでに設定済み）
+    1. **ステップ1：ベースのスタイル設定と目盛線の非表示**:
+       最初に、Excelの目盛線（Gridlines）を非表示にする設定を行い、全セルに対して共通のフォントと配置スタイルを適用してください。
+       - `ws.sheet_view.showGridLines = False` を実行して、目盛線を消してください。
+       - 背景グリッド全体に対して、一括で**罫線を引くことは禁止**です。
+       - 二重ループ を使用し、全セルに対して `alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)`, `font = Font(name="游ゴシック")` のみを設定します。
+    
+    2. **ステップ2：データの定義と書き込み (個別ボーダー適用)**:
+       入力JSONの `cells` に含まれるすべての要素をリスト化し、ループで値を書き込んでください。
+       - 各要素の `border` 属性が `True` の場合のみ、その範囲（rs, cs）のすべてのセルに対して `border = Border(...)` を個別に設定してください。
+       - **重要**: テーブル構造以外の場所に枠線を引かないよう、`border` フラグを厳格に尊重してください。
+    
+    3. **ステップ3：セル結合 (グリッドへの吸着)**:
+       最後に、`cells` のうちスパン（rs, cs）が2以上のものに対し、`ws.merge_cells(...)` を実行してください。
 
-    # 座標変換
-    入力データの各テキスト要素は `(x0, top, x1, bottom)` のポイント座標と、
-    `page_width`・`page_height`（ページの実際の大きさ）を持ちます。
-    以下のように実際のページ対角線を基準にスケーリングしてExcelのセル位置へ変換してください:
+    # Markdown抽出データ (論理構造の正解)
+    解析対象のドキュメントから抽出された Markdown は以下の通りです。
+    テーブルの列構成やセルの文字の区切りは、この Markdown を最優先で尊重してください。
 
-    ```python
-    import math
-    # x座標: PDF幅(page_width)を列数(target_cols)=120にスケール変換
-    start_col = math.floor(x0 / page_width * {target_cols}) + 1
-    end_col   = math.ceil(x1  / page_width * {target_cols})
-    # y座標: top座標はページ内座標＋cumulative_offsetがすでに加算済み
-    #         1マス={unit_pt}ptで除算する
-    start_row = math.floor(top    / {unit_pt}) + 1
-    end_row   = math.ceil(bottom  / {unit_pt})
+    ```markdown
+    {md_content}
     ```
-
-    # ★最重要ルール: テキスト要素の全件出力
-    - 入力JSONの `elements` に含まれる**すべてのテキスト要素を漏れなく**コードに含めてください。
-    - 省略・要約・サンプル化は**絶対に禁止**です。
-    - 入力に80個のテキスト要素があれば、出力コードにも80個すべてが含まれている必要があります。
-    - テキストが1文字（スペースのみ含む）であっても省略しないでください。
-    - 実装パターンとして、全テキスト要素をリスト（辞書のリスト）で定義し、
-      forループで一括処理する方式を推奨します:
-
-    ```python
-    elements = [
-        {{"text": "...", "x0": ..., "top": ..., "x1": ..., "bottom": ..., "size": ..., "fontname": "...", "color": "...", "page_width": ..., "page_height": ...}},
-        # ... すべての要素を列挙 ...
-    ]
-    for el in elements:
-        sr = math.floor(el["top"]    / {unit_pt}) + 1
-        sc = math.floor(el["x0"]     / el["page_width"] * {target_cols}) + 1
-        cell = ws.cell(row=sr, column=sc)
-        cell.value = el["text"]
-        cell.font = Font(name=el["fontname"], size=el["size"])
-        cell.alignment = Alignment(vertical='center')
-    ```
-
-    # フォント名の扱い
-    - 入力データの `fontname` はすでにPDFサブセット接頭辞（`AAAAAA+`）は除去済みです。
-    - そのままFontの`name`に指定してください（例: `Noto-Sans-JP-Thin`）。
-    - Excelでフォントが見つからない場合は`游ゴシック`にフォールバックしてください。
-
-    # ★セル結合は禁止
-    - `ws.merge_cells()` は**絶対に使用しないでください**。
-    - セル結合は後工程で人が手作業で行います。
-    - テキストは座標から算出した左上セル `(start_row, start_col)` にのみ配置してください。
-
-    # 利用可能なライブラリ
-    以下のopenpyxlのクラスを積極的に活用してください:
-    - `openpyxl.styles.Font` — フォント名・サイズ・太字・色
-    - `openpyxl.styles.Alignment` — 水平/垂直配置・折り返し
-    - `openpyxl.styles.PatternFill` — セル背景色
-    - `openpyxl.styles.Border`, `Side` — 罫線
-
-    # 罫線データの処理
-    - 罫線データ（lines, rects）もすべて漏れなく処理してください。
-    - テキスト要素と同様にリスト化してforループで処理してください。
-
-    # スタイルの注意事項
-    - テキストの色が `#000000` (黒) 以外の場合、`Font(color="RRGGBB")` で色を設定してください
-      （先頭の# は除く）。
-    - フォントサイズは元のサイズを反映させてください。
-    - `math` モジュールのインポートは関数内で行ってください。
     """
     return textwrap.dedent(prompt)
