@@ -121,7 +121,9 @@ class SheetlingPipeline:
             with open(generated_code_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
             
-            if content and not content.startswith("# Please paste"):
+            # プレースホルダーのみの場合や極端に短い場合はスキップ
+            is_placeholder = content.startswith("# Please paste") or len(content) < 50
+            if content and not is_placeholder:
                 logger.info(f"✨ 生成されたコードを実行します: {generated_code_path.name}")
                 import subprocess
                 import os
