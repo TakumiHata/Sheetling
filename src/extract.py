@@ -25,8 +25,8 @@ def run_extract():
     # パイプラインを初期化
     pipeline = SheetlingPipeline(str(output_base_dir))
 
-    # 指定ディレクトリ内のPDFファイルをすべて取得
-    pdf_files = list(input_dir.glob("*.pdf"))
+    # 指定ディレクトリおよびサブディレクトリ内のPDFファイルをすべて取得
+    pdf_files = list(input_dir.rglob("*.pdf"))
     if not pdf_files:
         logger.warning(f"No PDF files found in {input_dir}. Please place PDF files to process.")
         return
