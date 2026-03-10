@@ -1,15 +1,16 @@
 """
 Sheetling パイプライン。
-Phase1: PDF解析 → プロンプト生成
-Phase3: AI出力Pythonソース実行 → 3シートExcel生成
+新しい多段パイプライン方式:
+1. 解析 (pdfplumber)
+2. 構造化・座標計算 (LLMプロンプト生成)
+3. 描画 (openpyxl)
 """
 
 import json
 from pathlib import Path
 
-from src.core.extractor import PdfExtractor
-from src.core.executor import Executor
-from src.core.prompts import get_system_prompt
+from src.parser.pdf_extractor import extract_pdf_data
+from src.templates.prompts import CHUNKING_PROMPT, STRUCTURE_ALIGNMENT_PROMPT, GRID_MAPPING_PROMPT, COMMAND_GENERATION_PROMPT, PAGE_FIT_PROMPT, EXCEL_CODE_GEN_PROMPT
 from src.core.config import config
 from src.utils.logger import get_logger
 
@@ -19,13 +20,11 @@ logger = get_logger(__name__)
 class SheetlingPipeline:
     """
     1. PDF を解析してプロンプトを出力する (Phase 1)。
-    2. ユーザーがLLMから得たPythonソースを実行し、3シートExcelを生成する (Phase 3)。
+    2. ユーザーがLLMから得たJSONを実行し、Excel方眼紙を生成する (Phase 3)。
     """
 
     def __init__(self, output_base_dir: str):
         self.output_base_dir = Path(output_base_dir)
-        self.extractor = PdfExtractor()
-        self.executor = Executor()
 
     def generate_prompts(self, pdf_path: str) -> dict:
         """
@@ -34,97 +33,129 @@ class SheetlingPipeline:
         logger.info(f"--- [Phase 1] PDF解析 & プロンプト生成: {Path(pdf_path).name} ---")
         pdf_name = Path(pdf_path).stem
 
-        # 出力先のディレクトリを作成（既に存在する場合はそのまま使用）
+        # 出力先のディレクトリを作成
         out_dir = self.output_base_dir / pdf_name
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        # PDFから情報（テキスト・フォント・カラー等）を抽出
-        extract_result = self.extractor.extract(pdf_path, out_dir)
-
-        # Phase3の描画処理で必要なフォント・色情報をメタデータとして保存
-        meta_path = out_dir / f"{pdf_name}_meta.json"
-
-        # 抽出JSONを読み込み（num_pages取得のためにmetaより先に読む）
-        with open(extract_result["json_path"], "r", encoding="utf-8") as f:
-            extracted_json = json.load(f)
-
-        meta = {
-            "fonts": extract_result["fonts"],
-            "colors": extract_result["colors"],
-            "num_pages": len(extracted_json.get("pages", [])),
-            # 各ページの実際の高さ(pt) - executor.pyの改ページ計算に使用
-            "page_heights": extracted_json.get("page_heights", []),
-        }
-
-        with open(meta_path, "w", encoding="utf-8") as f:
-            json.dump(meta, f, indent=2, ensure_ascii=False)
-
-        # プロンプトのテンプレートに抽出データを埋め込む
-        system_prompt = get_system_prompt()
-        prompt_text = (
-            f"{system_prompt}\n\n"
-            f"=== 以下は {pdf_name} から抽出されたレイアウトデータです ===\n"
-            f"```json\n"
-            f"{json.dumps(extracted_json, indent=2, ensure_ascii=False)}\n"
-            f"```\n"
-        )
+        # PDFから情報を抽出 (markdown_content と pages)
+        extracted_data = extract_pdf_data(pdf_path)
+        markdown_str = extracted_data["markdown_content"]
         
-        gen_py_path = out_dir / f"{pdf_name}_gen.py"
-        if not gen_py_path.exists():
-            with open(gen_py_path, "w", encoding="utf-8") as f:
-                f.write(f"# Auto-generated empty file for {pdf_name}. Please paste AI output here.\n")
+        extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
+        with open(extracted_json_path, "w", encoding="utf-8") as f:
+            json.dump(extracted_data, f, indent=2, ensure_ascii=False)
 
-        prompt_path = out_dir / f"{pdf_name}_prompt.txt"
-        with open(prompt_path, "w", encoding="utf-8") as f:
-            f.write(prompt_text)
+        # 抽出データを文字列化してプロンプトに埋め込む
+        input_data_str = json.dumps(extracted_data, indent=2, ensure_ascii=False)
+        
+        # ページ情報の抽出
+        page_info = []
+        for p in extracted_data.get("pages", []):
+            page_info.append({"page_number": p.get("page_number"), "width": p.get("width"), "height": p.get("height")})
+        page_info_str = json.dumps(page_info, indent=2, ensure_ascii=False)
+        
+        # STEP 2 用の入力テンプレート文字列
+        step2_input_template = f"==== Markdown テキスト ====\n{markdown_str}\n\n==== STEP 1 (チャンク抽出) の出力結果 ====\n[ここにSTEP 1のJSON出力結果を貼り付けてください]"
+
+        prompt_1 = CHUNKING_PROMPT.format(page_info=page_info_str, input_data=input_data_str)
+        prompt_2 = STRUCTURE_ALIGNMENT_PROMPT.format(page_info=page_info_str, input_data=step2_input_template)
+        prompt_3 = GRID_MAPPING_PROMPT.format(page_info=page_info_str, input_data="[ここにSTEP 2の出力（JSON部分のみ）を貼り付けてください]")
+        prompt_4 = COMMAND_GENERATION_PROMPT.format(page_info=page_info_str, input_data="[ここにSTEP 3の出力（JSON部分のみ）を貼り付けてください]")
+        prompt_5 = PAGE_FIT_PROMPT.format(page_info=page_info_str, input_data="[ここにSTEP 4の出力（JSON部分のみ）を貼り付けてください]")
+        prompt_6 = EXCEL_CODE_GEN_PROMPT.format(page_info=page_info_str, input_data="[ここにSTEP 5の出力（JSON部分のみ）を貼り付けてください]")
+
+        # プロンプト保存用のディレクトリを作成
+        prompts_dir = out_dir / "prompts"
+        prompts_dir.mkdir(parents=True, exist_ok=True)
+
+        # プロンプトを別々のファイルとして出力
+        prompt_1_path = prompts_dir / f"{pdf_name}_prompt_step1.txt"
+        prompt_2_path = prompts_dir / f"{pdf_name}_prompt_step2.txt"
+        prompt_3_path = prompts_dir / f"{pdf_name}_prompt_step3.txt"
+        prompt_4_path = prompts_dir / f"{pdf_name}_prompt_step4.txt"
+        prompt_5_path = prompts_dir / f"{pdf_name}_prompt_step5.txt"
+        prompt_6_path = prompts_dir / f"{pdf_name}_prompt_step6.txt"
+        
+        with open(prompt_1_path, "w", encoding="utf-8") as f:
+            f.write(prompt_1)
+        with open(prompt_2_path, "w", encoding="utf-8") as f:
+            f.write(prompt_2)
+        with open(prompt_3_path, "w", encoding="utf-8") as f:
+            f.write(prompt_3)
+        with open(prompt_4_path, "w", encoding="utf-8") as f:
+            f.write(prompt_4)
+        with open(prompt_5_path, "w", encoding="utf-8") as f:
+            f.write(prompt_5)
+        with open(prompt_6_path, "w", encoding="utf-8") as f:
+            f.write(prompt_6)
+
+        # 生成コード保存用の空ファイルを作成 (STEP 6)
+        generated_code_path = out_dir / f"{pdf_name}_gen.py"
+        if not generated_code_path.exists():
+            with open(generated_code_path, "w", encoding="utf-8") as f:
+                f.write("# Please paste final AI Python code (from STEP 6) here.\n")
 
         logger.info(f"✅ Phase 1 完了: {pdf_name}")
-        logger.info(f"  プロンプト: {prompt_path}")
-        logger.info(f"  ※ プロンプトをLLMに投入し、返されたPythonコードを")
-        logger.info(f"    {out_dir / f'{pdf_name}_gen.py'} として保存してください。")
+        logger.info(f"  抽出データ: {extracted_json_path}")
+        logger.info(f"  プロンプトSTEP1〜6を出力しました")
+        logger.info(f"  ※ STEP1から順にLLMに入力し、最終的な出力結果を {generated_code_path} に保存してください。")
 
         return {
-            "md_path": extract_result["md_path"],
-            "json_path": extract_result["json_path"],
-            "prompt_path": str(prompt_path),
-            "meta_path": str(meta_path),
+            "json_path": str(extracted_json_path),
+            "prompt_step1_path": str(prompt_1_path),
+            "prompt_step6_path": str(prompt_6_path),
+            "generated_code_base_path": str(generated_code_path)
         }
 
-    def render_excel(self, pdf_name: str, gen_py_path: str) -> str:
+    def render_excel(self, pdf_name: str) -> str:
         """
-        Phase 3: AI出力のPythonソースを実行し、2シートExcelを生成する。
+        Phase 3: AI出力の生成コードを読み込み、Excel方眼紙を描画する。
         """
         logger.info(f"--- [Phase 3] Excel生成: {pdf_name} ---")
         out_dir = self.output_base_dir / pdf_name
-        out_dir.mkdir(parents=True, exist_ok=True)
-
         output_xlsx_path = out_dir / f"{pdf_name}.xlsx"
+        generated_code_path = out_dir / f"{pdf_name}_gen.py"
 
-        # メタデータを読み込み（Phase1で保存したフォント・色情報）
-        meta_path = out_dir / f"{pdf_name}_meta.json"
-        if meta_path.exists():
-            with open(meta_path, "r", encoding="utf-8") as f:
-                meta = json.load(f)
-            fonts = meta.get("fonts", [])
-            colors = meta.get("colors", [])
-            num_pages = meta.get("num_pages", 1)
-            page_heights = meta.get("page_heights", [])
+        # 生成コード (STEP 6) が存在すれば実行
+        if generated_code_path.exists():
+            with open(generated_code_path, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+            
+            if content and not content.startswith("# Please paste"):
+                logger.info(f"✨ 生成されたコードを実行します: {generated_code_path.name}")
+                import subprocess
+                import os
+                import sys
+                
+                try:
+                    env = os.environ.copy()
+                    env["PYTHONPATH"] = os.getcwd()
+                    
+                    result = subprocess.run(
+                        [sys.executable, generated_code_path.name],
+                        cwd=str(out_dir),
+                        env=env,
+                        capture_output=True,
+                        text=True
+                    )
+                    
+                    if result.returncode == 0:
+                        temp_xlsx = out_dir / "output.xlsx"
+                        if temp_xlsx.exists():
+                            temp_xlsx.replace(output_xlsx_path)
+                            logger.info(f"✅ Phase 3 完了 (コード生成経由): {output_xlsx_path}")
+                            return str(output_xlsx_path)
+                        else:
+                            logger.error("❌ 生成コードは正常終了しましたが、output.xlsx が生成されませんでした。")
+                    else:
+                        logger.error(f"❌ 生成コードの実行に失敗しました:\n{result.stderr}")
+                except Exception as e:
+                    logger.error(f"❌ 生成コード実行中に例外が発生しました: {e}")
+            else:
+                logger.warning(f"⚠️ 生成コードファイル {generated_code_path.name} が空、または未編集です。")
         else:
-            logger.warning(f"メタデータが見つかりません: {meta_path}")
-            fonts = []
-            colors = []
-            num_pages = 1
-            page_heights = []
+            logger.error(f"❌ 生成コードファイル {generated_code_path.name} が見つかりません。STEP 6 の結果を保存してください。")
 
-        # Executor で2シートExcel生成
-        result_path = self.executor.execute(
-            gen_py_path=gen_py_path,
-            output_xlsx_path=str(output_xlsx_path),
-            fonts=fonts,
-            colors=colors,
-            num_pages=num_pages,
-            page_heights=page_heights,
-        )
+        raise RuntimeError(f"Excelの生成に失敗しました ({pdf_name})")
 
-        logger.info(f"✅ Phase 3 完了: {result_path}")
-        return result_path
+
