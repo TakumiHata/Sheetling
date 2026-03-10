@@ -24,26 +24,26 @@ def run_generate():
     # パイプラインを初期化
     pipeline = SheetlingPipeline(str(output_base_dir))
 
-    # data/out 以下のフォルダをスキャンし、_gen.py があれば実行する
-    target_dirs = [d for d in output_base_dir.iterdir() if d.is_dir()]
-    if not target_dirs:
-        logger.warning(f"No target directories found in {output_base_dir}.")
+    # data/out 以下を再帰的にスキャンし、_gen.py があれば実行する
+    gen_py_files = list(output_base_dir.rglob("*_gen.py"))
+    if not gen_py_files:
+        logger.warning(f"No *_gen.py files found in any subdirectories of {output_base_dir}.")
         return
 
     generated_count = 0
-    for out_dir in target_dirs:
-        pdf_name = out_dir.name
-        gen_py_path = out_dir / f"{pdf_name}_gen.py"
-
-        if gen_py_path.exists():
-            generated_count += 1
-            try:
-                pipeline.render_excel(pdf_name, str(gen_py_path))
-            except Exception as e:
-                logger.error(f"❌ Phase 3 failed for {pdf_name}: {e}", exc_info=True)
+    for gen_py_path in gen_py_files:
+        # 親ディレクトリ名(PDF名として扱っていた部分)ではなく直接パスを渡す
+        # gen_py_path.parent の name を確認しなくても pipeline 側で特定する
+        pdf_name = gen_py_path.stem.replace("_gen", "")
+        
+        generated_count += 1
+        try:
+            pipeline.render_excel(str(gen_py_path))
+        except Exception as e:
+            logger.error(f"❌ Phase 3 failed for {pdf_name}: {e}", exc_info=True)
 
     if generated_count == 0:
-        logger.warning(f"No *_gen.py files found in any subdirectories of {output_base_dir}.")
+        logger.warning(f"No *_gen.py files were processed successfully.")
 
     logger.info("=" * 60)
     logger.info("Generation complete.")

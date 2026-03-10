@@ -35,6 +35,7 @@ class Executor:
         output_xlsx_path: str,
         num_pages: int = 1,
         page_heights: list[float] = None,
+        page_breaks: list[int] = None,
     ) -> str:
         """
         AI生成のPythonソースを実行し、Excelを出力する。
@@ -61,8 +62,8 @@ class Executor:
         wb = self._create_workbook(total_rows=total_rows)
         ws = wb.active
 
-        # AI生成コードの実行
-        self._execute_generated_code(gen_py_path, wb, ws, page_heights=page_heights)
+        # AI生成コードの実行 (total_rowsを渡して不足分を補えるようにする)
+        self._execute_generated_code(gen_py_path, wb, ws, page_heights=page_heights, total_rows=total_rows, page_breaks=page_breaks)
 
         # 保存
         os.makedirs(os.path.dirname(os.path.abspath(output_xlsx_path)), exist_ok=True)
@@ -111,7 +112,7 @@ class Executor:
 
         return wb
 
-    def _execute_generated_code(self, gen_py_path: str, wb, ws, page_heights: list[float] = None):
+    def _execute_generated_code(self, gen_py_path: str, wb, ws, page_heights: list[float] = None, total_rows: int = None, page_breaks: list[int] = None):
         """AI生成のPythonコードを読み込んで実行する"""
         import math as _math
         logger.info(f"Loading generated code: {gen_py_path}")
@@ -138,9 +139,14 @@ class Executor:
             exec_globals["generate"](wb, ws)
             logger.info("✅ AI generated code executed successfully (Sheet 1)")
 
-            # --- 改ページを実際のページ高さで挿入 ---
-            # 固定の target_rows ではなく、PDFの実際の page.height を累積して正確な行組みを計算する
-            if page_heights and len(page_heights) > 1:
+            # --- 改ページを挿入 ---
+            if page_breaks:
+                for br in page_breaks:
+                    if br > 0:
+                        ws.row_breaks.append(Break(id=br))
+                        logger.info(f"  改ページ at row {br} (from extracted page_breaks)")
+            elif page_heights and len(page_heights) > 1:
+                # 従来通りのポイント計算（フォールバック）
                 cumulative_pt = 0.0
                 for ph in page_heights[:-1]:  # 最終ページの後は改ページ不要
                     cumulative_pt += ph
@@ -154,17 +160,15 @@ class Executor:
                     for r in range(self.max_rows, max_row, self.max_rows):
                         ws.row_breaks.append(Break(id=r))
 
-            # --- 印刷範囲（Print Area）を実際のページ高さ合計から計算 ---
-            if page_heights:
-                # ページ数 * max_rows を上限とし、端数による意図しない2ページ目発生を防ぐ
-                row_limit = len(page_heights) * self.max_rows
-                total_print_rows = min(row_limit, _math.ceil(sum(page_heights) / self.row_height))
-            else:
-                max_row = ws.max_row
-                total_print_rows = ((max_row - 1) // self.max_rows + 1) * self.max_rows
-            
+            # 実際の書き込み済みの最大行まで方眼高さを保証する
+            max_r = ws.max_row
+            if total_rows and max_r > total_rows:
+                for row_idx in range(total_rows + 1, max_r + 1):
+                    ws.row_dimensions[row_idx].height = self.row_height
+
+            # --- 印刷範囲（Print Area）をデータが存在する最大行から設定 ---
             last_col_letter = get_column_letter(self.max_cols)
-            ws.print_area = f"A1:{last_col_letter}{total_print_rows}"
+            ws.print_area = f"A1:{last_col_letter}{max_r}"
             logger.info(f"✅ Set exact print area to: {ws.print_area}")
 
 

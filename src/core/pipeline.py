@@ -27,7 +27,7 @@ class SheetlingPipeline:
         self.extractor = PdfExtractor()
         self.executor = Executor()
 
-    def generate_prompts(self, pdf_path: str) -> dict:
+    def generate_prompts(self, pdf_path: str, rel_dir: str = None) -> dict:
         """
         Phase 1: PDFを解析し、LLMに渡すためのプロンプトを data/out/ に出力する。
         """
@@ -35,7 +35,11 @@ class SheetlingPipeline:
         pdf_name = Path(pdf_path).stem
 
         # 出力先のディレクトリを作成（既に存在する場合はそのまま使用）
-        out_dir = self.output_base_dir / pdf_name
+        if rel_dir and str(rel_dir) != ".":
+            out_dir = self.output_base_dir / rel_dir / pdf_name
+        else:
+            out_dir = self.output_base_dir / pdf_name
+            
         out_dir.mkdir(parents=True, exist_ok=True)
 
         # PDFから情報（テキスト・フォント・カラー等）を抽出
@@ -52,6 +56,7 @@ class SheetlingPipeline:
             "num_pages": len(extracted_json.get("pages", [])),
             # 各ページの実際の高さ(pt) - executor.pyの改ページ計算に使用
             "page_heights": extracted_json.get("page_heights", []),
+            "page_breaks": extracted_json.get("page_breaks", []),
         }
 
         with open(meta_path, "w", encoding="utf-8") as f:
@@ -91,12 +96,15 @@ class SheetlingPipeline:
             "meta_path": str(meta_path),
         }
 
-    def render_excel(self, pdf_name: str, gen_py_path: str) -> str:
+    def render_excel(self, gen_py_path: str) -> str:
         """
         Phase 3: AI出力のPythonソースを実行し、2シートExcelを生成する。
         """
+        gen_path_obj = Path(gen_py_path)
+        pdf_name = gen_path_obj.stem.replace("_gen", "")
+        out_dir = gen_path_obj.parent
+        
         logger.info(f"--- [Phase 3] Excel生成: {pdf_name} ---")
-        out_dir = self.output_base_dir / pdf_name
         out_dir.mkdir(parents=True, exist_ok=True)
 
         output_xlsx_path = out_dir / f"{pdf_name}.xlsx"
@@ -108,10 +116,12 @@ class SheetlingPipeline:
                 meta = json.load(f)
             num_pages = meta.get("num_pages", 1)
             page_heights = meta.get("page_heights", [])
+            page_breaks = meta.get("page_breaks", [])
         else:
             logger.warning(f"メタデータが見つかりません: {meta_path}")
             num_pages = 1
             page_heights = []
+            page_breaks = []
 
         # Executor でExcel生成
         result_path = self.executor.execute(
@@ -119,6 +129,7 @@ class SheetlingPipeline:
             output_xlsx_path=str(output_xlsx_path),
             num_pages=num_pages,
             page_heights=page_heights,
+            page_breaks=page_breaks,
         )
 
         logger.info(f"✅ Phase 3 完了: {result_path}")
