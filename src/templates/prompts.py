@@ -133,8 +133,8 @@ EXCEL_CODE_GEN_PROMPT = """あなたは生成AIプログラミングのエキス
    - 文字の折り返し (`wrap_text=True`) や垂直方向の中央揃え (`vertical='center'`) を適切に行う。
 
 3. 印刷設定（等倍印刷）:
-   - 用紙サイズ: A4
-   - 向き: 縦
+   - 用紙サイズ: A4 (openpyxlの仕様に合わせ、ws.page_setup.paperSize には定数などを使わずに直接 9 を代入してください)
+   - 向き: 縦 (ws.page_setup.orientation には定数などを使わずに直接 'portrait' を代入してください)
    - **重要: スケーリング（`fitToWidth` や `fitToPage`）の自動縮小設定は無効化するか、一切記述しないでください。等倍（100%）で出力されるようにしてください。**
    - 印刷範囲の設定 (`ws.print_area`) は、入力データに `print_range` があればそれを使用してください。
 
