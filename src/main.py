@@ -31,18 +31,20 @@ def main():
 
     elif args.phase == "generate":
         output_base_dir = Path("data/out")
-        target_dirs = [d for d in output_base_dir.iterdir() if d.is_dir()]
+        
+        # *_gen.py ファイルを検索
+        gen_files = list(output_base_dir.rglob("*_gen.py"))
         
         generated_count = 0
-        for out_dir in target_dirs:
-            pdf_name = out_dir.name
-            generated_code_path = out_dir / f"{pdf_name}_gen.py"
+        for gen_file in gen_files:
+            out_dir = gen_file.parent
             
-            # 手動で保存された生成コードがある場合のみ実行
-            if generated_code_path.exists():
+            # gen_file.name は "{pdf_name}_gen.py" なので、末尾の "_gen.py" (7文字) を除外して pdf_name を取得
+            if gen_file.name.endswith("_gen.py"):
+                pdf_name = gen_file.name[:-7]
                 generated_count += 1
                 try:
-                    pipeline.render_excel(pdf_name)
+                    pipeline.render_excel(pdf_name, specific_out_dir=str(out_dir))
                 except Exception as e:
                     logger.error(f"❌ Phase 3 failed for {pdf_name}: {e}", exc_info=True)
                     

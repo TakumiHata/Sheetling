@@ -26,15 +26,21 @@ class SheetlingPipeline:
     def __init__(self, output_base_dir: str):
         self.output_base_dir = Path(output_base_dir)
 
-    def generate_prompts(self, pdf_path: str) -> dict:
+    def generate_prompts(self, pdf_path: str, in_base_dir: str = "data/in") -> dict:
         """
         Phase 1: PDFを解析し、LLMに渡すためのプロンプトを data/out/ に出力する。
         """
         logger.info(f"--- [Phase 1] PDF解析 & プロンプト生成: {Path(pdf_path).name} ---")
-        pdf_name = Path(pdf_path).stem
+        path_obj = Path(pdf_path)
+        pdf_name = path_obj.stem
 
         # 出力先のディレクトリを作成
-        out_dir = self.output_base_dir / pdf_name
+        try:
+            rel_path = path_obj.parent.relative_to(Path(in_base_dir))
+            out_dir = self.output_base_dir / rel_path
+        except ValueError:
+            out_dir = self.output_base_dir / pdf_name
+            
         out_dir.mkdir(parents=True, exist_ok=True)
 
         # PDFから情報を抽出 (markdown_content と pages)
@@ -101,12 +107,16 @@ class SheetlingPipeline:
             "generated_code_base_path": str(generated_code_path)
         }
 
-    def render_excel(self, pdf_name: str) -> str:
+    def render_excel(self, pdf_name: str, specific_out_dir: str = None) -> str:
         """
         Phase 3: AI出力の生成コードを読み込み、Excel方眼紙を描画する。
         """
         logger.info(f"--- [Phase 3] Excel生成: {pdf_name} ---")
-        out_dir = self.output_base_dir / pdf_name
+        if specific_out_dir:
+            out_dir = Path(specific_out_dir)
+        else:
+            out_dir = self.output_base_dir / pdf_name
+        
         output_xlsx_path = out_dir / f"{pdf_name}.xlsx"
         generated_code_path = out_dir / f"{pdf_name}_gen.py"
 
