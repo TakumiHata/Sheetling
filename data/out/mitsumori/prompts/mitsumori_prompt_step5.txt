@@ -1,0 +1,440 @@
+あなたはExcelの印刷レイアウトを厳密に検証し調整するアシスタントです。
+STEP 4 で生成されたコマンドを読み取り、全体のレイアウトが「列100制限」というA4物理幅（約180mm）を超過していないかをチェックし、
+必要に応じてインデックスを再計算して調整してください。
+
+**【重要】全体座標の最終調整ルール:**
+1. 入力されたコマンド群の中で、`end_column` の最大値が「100」を超える、または `end_row` の最大値が「55」を超える場合、すべての座標の比率を保ったまま、最大列が100以内かつ最大行が55以内に収まるように全体を縮小・再計算を行ってください。
+2. データが存在する **最小の列・行から最大の列・行まで** を正確に計算し、不要な右側の空白セルを含まないよう `print_range` （例："B1:CV50"など）を設定してください。
+   （例：データがB列から始まっている場合、"A1"ではなく"B1"から印刷範囲を開始することを検討してください）
+
+**【重要】各アクションの `"value"` に含まれるテキスト内容は、レイアウト調整中も一切変更・省略しないでください。**
+
+**【重要】出力時のフォーマット指定**
+入力データで渡された構造を維持しつつ、必要に応じて全体に対する `print_range` などをページレベルのキーとして追加し、`data` には調整済みのコマンドを格納してください。
+
+入力データ:
+[
+  {
+    "page_number": 1,
+    "width": 595.0,
+    "height": 842.0,
+    "data": [
+      {
+        "action": "merge_and_set",
+        "start_row": 3,
+        "start_column": 40,
+        "end_row": 5,
+        "end_column": 60,
+        "value": "御見積書",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 6,
+        "start_column": 70,
+        "end_row": 6,
+        "end_column": 95,
+        "value": "見積書Ｎｏ．20121119_00001",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 7,
+        "start_column": 5,
+        "end_row": 8,
+        "end_column": 45,
+        "value": "△△株式会社 御中",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 8,
+        "start_column": 70,
+        "end_row": 8,
+        "end_column": 95,
+        "value": "作成日: 2012年11月19日",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 10,
+        "start_column": 10,
+        "end_row": 11,
+        "end_column": 50,
+        "value": "下記のとおり御見積申し上げます。\n何卒ご用命の程、お願い申し上げます。",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 13,
+        "start_column": 5,
+        "end_row": 13,
+        "end_column": 30,
+        "value": "受渡期日:別途御打合せ",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 13,
+        "start_column": 70,
+        "end_row": 13,
+        "end_column": 95,
+        "value": "ワークフロー商事株式会社",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 14,
+        "start_column": 5,
+        "end_row": 14,
+        "end_column": 30,
+        "value": "取引方法:別途御打合せ",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 14,
+        "start_column": 70,
+        "end_row": 15,
+        "end_column": 95,
+        "value": "東京都新宿区千代田９−９−９\nWSビル",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 16,
+        "start_column": 5,
+        "end_row": 16,
+        "end_column": 30,
+        "value": "有効期限:発行日から30日",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 16,
+        "start_column": 70,
+        "end_row": 17,
+        "end_column": 95,
+        "value": "TEL ０３-××××−９９９９\nFAX ０３-９９９９−××××",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 18,
+        "start_column": 5,
+        "end_row": 18,
+        "end_column": 20,
+        "value": "貴社管理番号：",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 18,
+        "start_column": 75,
+        "end_row": 18,
+        "end_column": 84,
+        "value": "承認",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 18,
+        "start_column": 85,
+        "end_row": 18,
+        "end_column": 95,
+        "value": "担当営業",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 19,
+        "start_column": 75,
+        "end_row": 21,
+        "end_column": 84,
+        "value": "",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 19,
+        "start_column": 85,
+        "end_row": 21,
+        "end_column": 95,
+        "value": "",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 22,
+        "start_column": 20,
+        "end_row": 23,
+        "end_column": 70,
+        "value": "合計金額： \\3,700,000 (消費税別)",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 25,
+        "start_column": 2,
+        "end_row": 25,
+        "end_column": 10,
+        "value": "No.",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 25,
+        "start_column": 11,
+        "end_row": 25,
+        "end_column": 55,
+        "value": "摘 要",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 25,
+        "start_column": 56,
+        "end_row": 25,
+        "end_column": 65,
+        "value": "数量",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 25,
+        "start_column": 66,
+        "end_row": 25,
+        "end_column": 77,
+        "value": "標準価格",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 25,
+        "start_column": 78,
+        "end_row": 25,
+        "end_column": 89,
+        "value": "見積価格",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 25,
+        "start_column": 90,
+        "end_row": 25,
+        "end_column": 100,
+        "value": "合計金額",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 26,
+        "start_column": 2,
+        "end_row": 26,
+        "end_column": 10,
+        "value": "1",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 26,
+        "start_column": 11,
+        "end_row": 26,
+        "end_column": 55,
+        "value": "ワークフローシステム 30ユーザーライセンス",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 26,
+        "start_column": 56,
+        "end_row": 26,
+        "end_column": 65,
+        "value": "1",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 26,
+        "start_column": 66,
+        "end_row": 26,
+        "end_column": 77,
+        "value": "2,700,000",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 26,
+        "start_column": 78,
+        "end_row": 26,
+        "end_column": 89,
+        "value": "2,700,000",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 26,
+        "start_column": 90,
+        "end_row": 26,
+        "end_column": 100,
+        "value": "2,700,000",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 27,
+        "start_column": 2,
+        "end_row": 27,
+        "end_column": 10,
+        "value": "2",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 27,
+        "start_column": 11,
+        "end_row": 27,
+        "end_column": 55,
+        "value": "初期設定費用",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 27,
+        "start_column": 56,
+        "end_row": 27,
+        "end_column": 65,
+        "value": "1",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 27,
+        "start_column": 66,
+        "end_row": 27,
+        "end_column": 77,
+        "value": "500,000",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 27,
+        "start_column": 78,
+        "end_row": 27,
+        "end_column": 89,
+        "value": "500,000",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 27,
+        "start_column": 90,
+        "end_row": 27,
+        "end_column": 100,
+        "value": "500,000",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 28,
+        "start_column": 2,
+        "end_row": 28,
+        "end_column": 10,
+        "value": "3",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 28,
+        "start_column": 11,
+        "end_row": 28,
+        "end_column": 55,
+        "value": "管理者費用",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 28,
+        "start_column": 56,
+        "end_row": 28,
+        "end_column": 65,
+        "value": "1",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 28,
+        "start_column": 66,
+        "end_row": 28,
+        "end_column": 77,
+        "value": "500,000",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 28,
+        "start_column": 78,
+        "end_row": 28,
+        "end_column": 89,
+        "value": "500,000",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 28,
+        "start_column": 90,
+        "end_row": 28,
+        "end_column": 100,
+        "value": "500,000",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 49,
+        "start_column": 2,
+        "end_row": 49,
+        "end_column": 89,
+        "value": "合 計",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 49,
+        "start_column": 90,
+        "end_row": 49,
+        "end_column": 100,
+        "value": "3,700,000",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 51,
+        "start_column": 2,
+        "end_row": 51,
+        "end_column": 100,
+        "value": "備 考",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 52,
+        "start_column": 2,
+        "end_row": 52,
+        "end_column": 100,
+        "value": "・消費税は別途計上させていただきます。",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 53,
+        "start_column": 2,
+        "end_row": 53,
+        "end_column": 100,
+        "value": "・製品の瑕疵、無償保証期間は御購入後3ヶ月間です。",
+        "border": true
+      }
+    ]
+  }
+]
+
+出力形式は調整済みの指定形式JSON配列のみとしてください。

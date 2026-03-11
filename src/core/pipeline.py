@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from src.parser.pdf_extractor import extract_pdf_data
-from src.templates.prompts import CHUNKING_PROMPT, STRUCTURE_ALIGNMENT_PROMPT, GRID_MAPPING_PROMPT, COMMAND_GENERATION_PROMPT, PAGE_FIT_PROMPT, EXCEL_CODE_GEN_PROMPT
+from src.templates.prompts import CHUNKING_PROMPT, STRUCTURE_ALIGNMENT_PROMPT, GRID_MAPPING_PROMPT, COMMAND_GENERATION_PROMPT, PAGE_FIT_PROMPT, EXCEL_CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT
 from src.core.config import config
 from src.utils.logger import get_logger
 
@@ -48,21 +48,15 @@ class SheetlingPipeline:
         # 抽出データを文字列化してプロンプトに埋め込む
         input_data_str = json.dumps(extracted_data, indent=2, ensure_ascii=False)
         
-        # ページ情報の抽出
-        page_info = []
-        for p in extracted_data.get("pages", []):
-            page_info.append({"page_number": p.get("page_number"), "width": p.get("width"), "height": p.get("height")})
-        page_info_str = json.dumps(page_info, indent=2, ensure_ascii=False)
-        
         # STEP 2 用の入力テンプレート文字列
         step2_input_template = f"==== Markdown テキスト ====\n{markdown_str}\n\n==== STEP 1 (チャンク抽出) の出力結果 ====\n[ここにSTEP 1のJSON出力結果を貼り付けてください]"
 
-        prompt_1 = CHUNKING_PROMPT.format(page_info=page_info_str, input_data=input_data_str)
-        prompt_2 = STRUCTURE_ALIGNMENT_PROMPT.format(page_info=page_info_str, input_data=step2_input_template)
-        prompt_3 = GRID_MAPPING_PROMPT.format(page_info=page_info_str, input_data="[ここにSTEP 2の出力（JSON部分のみ）を貼り付けてください]")
-        prompt_4 = COMMAND_GENERATION_PROMPT.format(page_info=page_info_str, input_data="[ここにSTEP 3の出力（JSON部分のみ）を貼り付けてください]")
-        prompt_5 = PAGE_FIT_PROMPT.format(page_info=page_info_str, input_data="[ここにSTEP 4の出力（JSON部分のみ）を貼り付けてください]")
-        prompt_6 = EXCEL_CODE_GEN_PROMPT.format(page_info=page_info_str, input_data="[ここにSTEP 5の出力（JSON部分のみ）を貼り付けてください]")
+        prompt_1 = CHUNKING_PROMPT.format(input_data=input_data_str)
+        prompt_2 = STRUCTURE_ALIGNMENT_PROMPT.format(input_data=step2_input_template)
+        prompt_3 = GRID_MAPPING_PROMPT.format(input_data="[ここにSTEP 2の出力（JSON部分のみ）を貼り付けてください]")
+        prompt_4 = COMMAND_GENERATION_PROMPT.format(input_data="[ここにSTEP 3の出力（JSON部分のみ）を貼り付けてください]")
+        prompt_5 = PAGE_FIT_PROMPT.format(input_data="[ここにSTEP 4の出力（JSON部分のみ）を貼り付けてください]")
+        prompt_6 = EXCEL_CODE_GEN_PROMPT.format(input_data="[ここにSTEP 5の出力（JSON部分のみ）を貼り付けてください]")
 
         # プロンプト保存用のディレクトリを作成
         prompts_dir = out_dir / "prompts"
@@ -122,7 +116,11 @@ class SheetlingPipeline:
                 content = f.read().strip()
             
             # プレースホルダーのみの場合や極端に短い場合はスキップ
-            is_placeholder = content.startswith("# Please paste") or len(content) < 50
+            # "# Please paste" から始まっている場合でも、改行以降に有効なコードがあれば実行するように変更
+            code_lines = [line for line in content.splitlines() if not line.strip().startswith("#")]
+            actual_code = "\n".join(code_lines).strip()
+            is_placeholder = len(actual_code) < 50
+            
             if content and not is_placeholder:
                 logger.info(f"✨ 生成されたコードを実行します: {generated_code_path.name}")
                 import subprocess
@@ -148,16 +146,31 @@ class SheetlingPipeline:
                             logger.info(f"✅ Phase 3 完了 (コード生成経由): {output_xlsx_path}")
                             return str(output_xlsx_path)
                         else:
-                            logger.error("❌ 生成コードは正常終了しましたが、output.xlsx が生成されませんでした。")
+                            error_msg = "生成コードは正常終了しましたが、output.xlsx が生成されませんでした。"
+                            logger.error(f"❌ {error_msg}")
+                            self._generate_error_prompt(out_dir, pdf_name, error_msg, content)
                     else:
-                        logger.error(f"❌ 生成コードの実行に失敗しました:\n{result.stderr}")
+                        error_msg = f"生成コードの実行に失敗しました:\n{result.stderr}"
+                        logger.error(f"❌ {error_msg}")
+                        self._generate_error_prompt(out_dir, pdf_name, error_msg, content)
                 except Exception as e:
-                    logger.error(f"❌ 生成コード実行中に例外が発生しました: {e}")
+                    error_msg = f"生成コード実行中に例外が発生しました: {e}"
+                    logger.error(f"❌ {error_msg}")
+                    self._generate_error_prompt(out_dir, pdf_name, error_msg, content)
             else:
                 logger.warning(f"⚠️ 生成コードファイル {generated_code_path.name} が空、または未編集です。")
         else:
             logger.error(f"❌ 生成コードファイル {generated_code_path.name} が見つかりません。STEP 6 の結果を保存してください。")
 
         raise RuntimeError(f"Excelの生成に失敗しました ({pdf_name})")
+
+    def _generate_error_prompt(self, out_dir: Path, pdf_name: str, error_msg: str, current_code: str):
+        prompt_text = CODE_ERROR_FIXING_PROMPT.format(error_msg=error_msg, code=current_code)
+        prompts_dir = out_dir / "prompts"
+        prompts_dir.mkdir(parents=True, exist_ok=True)
+        error_prompt_path = prompts_dir / f"{pdf_name}_prompt_error_fix.txt"
+        with open(error_prompt_path, "w", encoding="utf-8") as f:
+            f.write(prompt_text)
+        logger.info(f"💡 エラー修正用プロンプトを出力しました: {error_prompt_path}")
 
 
