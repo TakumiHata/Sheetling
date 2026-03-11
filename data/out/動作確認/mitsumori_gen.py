@@ -1,138 +1,126 @@
-import json
-from openpyxl import Workbook
-from openpyxl.styles import Border, Side, Alignment, Font, PatternFill
+import openpyxl
+from openpyxl.styles import Alignment, Border, Side, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-def create_excel_from_commands(data_json):
-    wb = Workbook()
+def create_mitsumori_excel():
+    # 1. ブックとシートの作成
+    wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "見積書"
+    ws.title = "Page 1"
 
-    # 1. レイアウトと方眼紙サイズの厳密な設定
-    # 列幅の設定 (1列＝約4.0mm)
-    for col in range(1, 65):
-        ws.column_dimensions[get_column_letter(col)].width = 1.45
-    
-    # 行高さの設定 (1行＝約4.0mm)
-    for row in range(1, 80):
-        ws.row_dimensions[row].height = 11.34
+    # 入力データ (STEP 5 出力)
+    print_range = "B2:AI49"
+    data_list = [
+        {"action": "merge_and_set", "start_row": 2, "start_column": 14, "end_row": 3, "end_column": 22, "value": "御見積書", "border": False},
+        {"action": "merge_and_set", "start_row": 6, "start_column": 24, "end_row": 6, "end_column": 35, "value": "見積書Ｎｏ．20121119_00001", "border": False},
+        {"action": "merge_and_set", "start_row": 7, "start_column": 2, "end_row": 8, "end_column": 15, "value": "△△株式会社 御中", "border": False},
+        {"action": "merge_and_set", "start_row": 8, "start_column": 24, "end_row": 8, "end_column": 35, "value": "作成日: 2012年11月19日", "border": False},
+        {"action": "merge_and_set", "start_row": 10, "start_column": 4, "end_row": 11, "end_column": 20, "value": "下記のとおり御見積申し上げます。\n何卒ご用命の程、お願い申し上げます。", "border": False},
+        {"action": "merge_and_set", "start_row": 13, "start_column": 2, "end_row": 13, "end_column": 12, "value": "受渡期日:別途御打合せ", "border": False},
+        {"action": "merge_and_set", "start_row": 13, "start_column": 24, "end_row": 13, "end_column": 35, "value": "ワークフロー商事株式会社", "border": False},
+        {"action": "merge_and_set", "start_row": 14, "start_column": 24, "end_row": 15, "end_column": 35, "value": "東京都新宿区千代田９－９－９\nWSビル", "border": False},
+        {"action": "merge_and_set", "start_row": 16, "start_column": 24, "end_row": 16, "end_column": 35, "value": "TEL ０３-××××－９９９９", "border": False},
+        {"action": "merge_and_set", "start_row": 17, "start_column": 24, "end_row": 17, "end_column": 35, "value": "FAX ０３-９９９９－××××", "border": False},
+        {"action": "merge_and_set", "start_row": 15, "start_column": 2, "end_row": 15, "end_column": 12, "value": "取引方法:別途御打合せ", "border": False},
+        {"action": "merge_and_set", "start_row": 17, "start_column": 2, "end_row": 17, "end_column": 12, "value": "有効期限:発行日から30日", "border": False},
+        {"action": "merge_and_set", "start_row": 19, "start_column": 2, "end_row": 19, "end_column": 12, "value": "貴社管理番号：", "border": False},
+        {"action": "merge_and_set", "start_row": 19, "start_column": 28, "end_row": 19, "end_column": 35, "value": "| 承認 | 担当営業 |", "border": True},
+        {"action": "merge_and_set", "start_row": 20, "start_column": 28, "end_row": 21, "end_column": 35, "value": "| | |", "border": True},
+        {"action": "merge_and_set", "start_row": 23, "start_column": 5, "end_row": 23, "end_column": 18, "value": "合計金額： \\3,700,000", "border": False},
+        {"action": "merge_and_set", "start_row": 23, "start_column": 19, "end_row": 23, "end_column": 25, "value": "(消費税別)", "border": False},
+        {"action": "merge_and_set", "start_row": 25, "start_column": 2, "end_row": 25, "end_column": 35, "value": "| No. | 摘 要 | 数量 | 標準価格 | 見積価格 | 合計金額 |", "border": True},
+        {"action": "merge_and_set", "start_row": 26, "start_column": 2, "end_row": 26, "end_column": 35, "value": "| 1 | ワークフローシステム 30ユーザーライセンス | 1 | 2,700,000 | 2,700,000 | 2,700,000 |", "border": True},
+        {"action": "merge_and_set", "start_row": 27, "start_column": 2, "end_row": 27, "end_column": 35, "value": "| 2 | 初期設定費用 | 1 | 500,000 | 500,000 | 500,000 |", "border": True},
+        {"action": "merge_and_set", "start_row": 28, "start_column": 2, "end_row": 28, "end_column": 35, "value": "| 3 | 管理者費用 | 1 | 500,000 | 500,000 | 500,000 |", "border": True},
+        {"action": "merge_and_set", "start_row": 29, "start_column": 2, "end_row": 29, "end_column": 35, "value": "| 4 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 30, "start_column": 2, "end_row": 30, "end_column": 35, "value": "| 5 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 31, "start_column": 2, "end_row": 31, "end_column": 35, "value": "| 6 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 32, "start_column": 2, "end_row": 32, "end_column": 35, "value": "| 7 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 33, "start_column": 2, "end_row": 33, "end_column": 35, "value": "| 8 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 34, "start_column": 2, "end_row": 34, "end_column": 35, "value": "| 9 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 35, "start_column": 2, "end_row": 35, "end_column": 35, "value": "| 10 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 36, "start_column": 2, "end_row": 36, "end_column": 35, "value": "| 11 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 37, "start_column": 2, "end_row": 37, "end_column": 35, "value": "| 12 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 38, "start_column": 2, "end_row": 38, "end_column": 35, "value": "| 13 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 39, "start_column": 2, "end_row": 39, "end_column": 35, "value": "| 14 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 40, "start_column": 2, "end_row": 40, "end_column": 35, "value": "| 15 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 41, "start_column": 2, "end_row": 41, "end_column": 35, "value": "| 16 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 42, "start_column": 2, "end_row": 42, "end_column": 35, "value": "| 17 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 43, "start_column": 2, "end_row": 43, "end_column": 35, "value": "| 18 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 44, "start_column": 2, "end_row": 44, "end_column": 35, "value": "| 19 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 45, "start_column": 2, "end_row": 45, "end_column": 35, "value": "| 20 | | | | | |", "border": True},
+        {"action": "merge_and_set", "start_row": 46, "start_column": 2, "end_row": 46, "end_column": 35, "value": "| | 合 計 | | | | 3,700,000 |", "border": True},
+        {"action": "merge_and_set", "start_row": 47, "start_column": 2, "end_row": 47, "end_column": 35, "value": "| 備 考 |", "border": True},
+        {"action": "merge_and_set", "start_row": 48, "start_column": 2, "end_row": 48, "end_column": 35, "value": "| ・消費税は別途計上させていただきます。 |", "border": True},
+        {"action": "merge_and_set", "start_row": 49, "start_column": 2, "end_row": 49, "end_column": 35, "value": "| ・製品の瑕疵、無償保証期間は御購入後3ヶ月間です。 |", "border": True},
+    ]
 
-    # デザインの定義
-    thin_side = Side(style='thin', color="000000")
+    # 2. レイアウト設定 (1列=6mm, 1行=6mm)
+    for col in range(1, 40):
+        ws.column_dimensions[get_column_letter(col)].width = 2.53
+    for row in range(1, 60):
+        ws.row_dimensions[row].height = 17.01
+
+    # スタイル定義
+    thin_border = Border(
+        left=Side(style='thin'), 
+        right=Side(style='thin'), 
+        top=Side(style='thin'), 
+        bottom=Side(style='thin')
+    )
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-    header_font = Font(bold=True)
-    
-    # 罫線を結合セル全体に適用するためのヘルパー関数
-    def set_border(ws, start_row, start_col, end_row, end_col):
-        for r in range(start_row, end_row + 1):
-            for c in range(start_col, end_col + 1):
-                ws.cell(row=r, column=c).border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+    bold_font = Font(bold=True)
 
-    # データの描画処理
-    page_data = data_json[0]
-    commands = page_data['data']
-    
-    for cmd in commands:
-        s_row, s_col = cmd['start_row'], cmd['start_column']
-        e_row, e_col = cmd['end_row'], cmd['end_column']
-        val = cmd['value']
+    # 3. データ描画
+    for item in data_list:
+        sr, sc = item["start_row"], item["start_column"]
+        er, ec = item["end_row"], item["end_column"]
+        val = item["value"]
+
+        # 結合処理
+        if sr != er or sc != ec:
+            ws.merge_cells(start_row=sr, start_column=sc, end_row=er, end_column=ec)
         
-        # セルの値を設定してから結合する（起点セルに設定）
-        cell = ws.cell(row=s_row, column=s_col)
+        # 値のセット
+        cell = ws.cell(row=sr, column=sc)
         cell.value = val
         
-        # アライメント設定
-        cell.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left' if cmd['type'] != 'heading' else 'center')
+        # 基本配置スタイル
+        cell.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left')
         
-        if s_row != e_row or s_col != e_col:
-            ws.merge_cells(start_row=s_row, start_column=s_col, end_row=e_row, end_column=e_col)
-        
-        # 罫線の適用
-        if cmd.get('border'):
-            set_border(ws, s_row, s_col, e_row, e_col)
-            
-        # ヘッダー（表題行など）の装飾
-        if "No." in str(val) or "摘 要" in str(val) or val == "備 考":
-            cell.fill = header_fill
-            cell.font = header_font
+        # 見出し用スタイル（「御見積書」など）
+        if "heading" in str(item.get("type", "")):
+            cell.font = Font(size=16, bold=True)
             cell.alignment = Alignment(horizontal='center', vertical='center')
 
-    # 3. 印刷設定（絶対等倍）
-    ws.page_setup.paperSize = 9 # A4
+        # 罫線の適用
+        if item.get("border"):
+            for r in range(sr, er + 1):
+                for c in range(sc, ec + 1):
+                    ws.cell(row=r, column=c).border = thin_border
+            
+            # テーブルヘッダーの強調 (No. 摘要... など)
+            if "No." in val or "承認" in val or "備 考" in val:
+                cell.fill = header_fill
+                cell.font = bold_font
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+
+    # 4. 印刷設定 (絶対等倍・中央配置)
+    ws.page_setup.paperSize = 9  # A4
     ws.page_setup.orientation = 'portrait' # 縦
     
-    # 印刷範囲の設定
-    if 'print_range' in page_data:
-        ws.print_area = page_data['print_range']
-    
-    # 数学的余白と中央配置設定
     ws.print_options.horizontalCentered = True
-    ws.page_margins.left = 0.43
-    ws.page_margins.right = 0.43
+    ws.page_margins.left = 0.47
+    ws.page_margins.right = 0.47
     ws.page_margins.top = 0.41
     ws.page_margins.bottom = 0.41
+    
+    if print_range:
+        ws.print_area = print_range
 
     # 保存
     wb.save("output.xlsx")
-
-# 入力データ
-input_data = [
-  {
-    "page_number": 1,
-    "width": 595.0,
-    "height": 842.0,
-    "print_range": "B1:BJ75",
-    "data": [
-      {"action": "merge_and_set", "type": "heading", "start_row": 4, "start_column": 26, "end_row": 6, "end_column": 36, "value": "御見積書", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 8, "start_column": 42, "end_row": 9, "end_column": 61, "value": "見積書Ｎｏ．20121119_00001", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 9, "start_column": 4, "end_row": 10, "end_column": 30, "value": "△△株式会社 御中", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 11, "start_column": 42, "end_row": 12, "end_column": 61, "value": "作成日: 2012年11月19日", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 14, "start_column": 8, "end_row": 16, "end_column": 40, "value": "下記のとおり御見積申し上げます。\n何卒ご用命の程、お願い申し上げます。", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 18, "start_column": 4, "end_row": 19, "end_column": 25, "value": "受渡期日:別途御打合せ", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 19, "start_column": 42, "end_row": 20, "end_column": 61, "value": "ワークフロー商事株式会社", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 20, "start_column": 4, "end_row": 21, "end_column": 25, "value": "取引方法:別途御打合せ", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 21, "start_column": 42, "end_row": 23, "end_column": 61, "value": "東京都新宿区千代田９−９−９\nWSビル", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 22, "start_column": 4, "end_row": 23, "end_column": 25, "value": "有効期限:発行日から30日", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 24, "start_column": 42, "end_row": 24, "end_column": 61, "value": "TEL ０３-××××−９９９９", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 25, "start_column": 42, "end_row": 25, "end_column": 61, "value": "FAX ０３-９９９９−××××", "border": False},
-      {"action": "merge_and_set", "type": "text", "start_row": 26, "start_column": 4, "end_row": 27, "end_column": 20, "value": "貴社管理番号：", "border": False},
-      {"action": "merge_and_set", "type": "table", "start_row": 26, "start_column": 48, "end_row": 27, "end_column": 54, "value": "承認", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 26, "start_column": 55, "end_row": 27, "end_column": 61, "value": "担当営業", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 28, "start_column": 48, "end_row": 30, "end_column": 54, "value": "", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 28, "start_column": 55, "end_row": 30, "end_column": 61, "value": "", "border": True},
-      {"action": "merge_and_set", "type": "text", "start_row": 32, "start_column": 12, "end_row": 34, "end_column": 45, "value": "合計金額： \\3,700,000\n(消費税別)", "border": False},
-      {"action": "merge_and_set", "type": "table", "start_row": 36, "start_column": 2, "end_row": 37, "end_column": 5, "value": "No.", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 36, "start_column": 6, "end_row": 37, "end_column": 35, "value": "摘 要", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 36, "start_column": 36, "end_row": 37, "end_column": 40, "value": "数量", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 36, "start_column": 41, "end_row": 37, "end_column": 48, "value": "標準価格", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 36, "start_column": 49, "end_row": 37, "end_column": 55, "value": "見積価格", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 36, "start_column": 56, "end_row": 37, "end_column": 62, "value": "合計金額", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 38, "start_column": 2, "end_row": 38, "end_column": 5, "value": "1", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 38, "start_column": 6, "end_row": 38, "end_column": 35, "value": "ワークフローシステム 30ユーザーライセンス", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 38, "start_column": 36, "end_row": 38, "end_column": 40, "value": "1", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 38, "start_column": 41, "end_row": 38, "end_column": 48, "value": "2,700,000", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 38, "start_column": 49, "end_row": 38, "end_column": 55, "value": "2,700,000", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 38, "start_column": 56, "end_row": 38, "end_column": 62, "value": "2,700,000", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 39, "start_column": 2, "end_row": 39, "end_column": 5, "value": "2", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 39, "start_column": 6, "end_row": 39, "end_column": 35, "value": "初期設定費用", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 39, "start_column": 36, "end_row": 39, "end_column": 40, "value": "1", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 39, "start_column": 41, "end_row": 39, "end_column": 48, "value": "500,000", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 39, "start_column": 49, "end_row": 39, "end_column": 55, "value": "500,000", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 39, "start_column": 56, "end_row": 39, "end_column": 62, "value": "500,000", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 40, "start_column": 2, "end_row": 40, "end_column": 5, "value": "3", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 40, "start_column": 6, "end_row": 40, "end_column": 35, "value": "管理者費用", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 40, "start_column": 36, "end_row": 40, "end_column": 40, "value": "1", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 40, "start_column": 41, "end_row": 40, "end_column": 48, "value": "500,000", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 40, "start_column": 49, "end_row": 40, "end_column": 55, "value": "500,000", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 40, "start_column": 56, "end_row": 40, "end_column": 62, "value": "500,000", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 41, "start_column": 2, "end_row": 67, "end_column": 62, "value": "", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 68, "start_column": 2, "end_row": 68, "end_column": 55, "value": "合 計", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 68, "start_column": 56, "end_row": 68, "end_column": 62, "value": "3,700,000", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 70, "start_column": 2, "end_row": 70, "end_column": 62, "value": "備 考", "border": True},
-      {"action": "merge_and_set", "type": "table", "start_row": 71, "start_column": 2, "end_row": 75, "end_column": 62, "value": "・消費税は別途計上させていただきます。\n・製品の瑕疵、無償保証期間は御購入後3ヶ月間です。", "border": True}
-    ]
-  }
-]
+    print("Excel file 'output.xlsx' has been created successfully.")
 
 if __name__ == "__main__":
-    create_excel_from_commands(input_data)
+    create_mitsumori_excel()
