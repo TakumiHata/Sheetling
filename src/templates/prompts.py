@@ -53,35 +53,55 @@ GRID_SIZES = {
     "small": {
         "col_width_mm": "4.0",
         "row_height_mm": "4.0",
-        "max_cols": 45,
-        "max_rows": 67,
-        "excel_col_width": 1.43,
-        "excel_row_height": 11.25
+        "max_cols": 62,
+        "max_rows": 76,
+        "excel_col_width": 1.45,
+        "excel_row_height": 11.34,
+        "margin_left": 0.43,
+        "margin_right": 0.43,
+        "margin_top": 0.41,
+        "margin_bottom": 0.41
     },
     "medium": {
         "col_width_mm": "6.0",
         "row_height_mm": "6.0",
-        "max_cols": 30,
-        "max_rows": 45,
-        "excel_col_width": 2.57,
-        "excel_row_height": 17.25
+        "max_cols": 41,
+        "max_rows": 50,
+        "excel_col_width": 2.53,
+        "excel_row_height": 17.01,
+        "margin_left": 0.47,
+        "margin_right": 0.47,
+        "margin_top": 0.41,
+        "margin_bottom": 0.41
     },
     "large": {
         "col_width_mm": "8.0",
         "row_height_mm": "8.0",
-        "max_cols": 22,
-        "max_rows": 33,
-        "excel_col_width": 3.57,
-        "excel_row_height": 22.5
+        "max_cols": 31,
+        "max_rows": 38,
+        "excel_col_width": 3.61,
+        "excel_row_height": 22.68,
+        "margin_left": 0.51,
+        "margin_right": 0.51,
+        "margin_top": 0.49,
+        "margin_bottom": 0.49
     }
 }
 
 GRID_MAPPING_PROMPT = """あなたは構造化されたデータをExcelの方眼紙状の座標（行・列番号）にマッピングするアシスタントです。
 「1列=約{col_width_mm}mm」「1行=約{row_height_mm}mm」のグリッドを想定し、各要素がExcel上のどの範囲（start_row, start_col, end_row, end_col）に配置されるべきかを計算してください。
+**【重要】A4縦の有効印字幅・高さに対して、列1から最大「列{max_cols}」、行1から最大「行{max_rows}」の範囲内に完全に収まるようにアスペクト比を維持したまま配置してください。**
+・用紙サイズ: A4縦 (210mm × 297mm の絶対アスペクト比)
+・方眼サイズと座標系設定:
+    - 1マス = 今回のグリッドは {col_width_mm}mm 四方の正方形です
+    - 方眼紙の列数 (幅): 左から右へ 1列目 〜 {max_cols}列目
+    - 方眼紙の行数 (高さ): 上から下へ 1行目 〜 {max_rows}行目
+    - **【重要指示】Excelの印刷設定（縮小して全体を印刷など）には一切頼りません。** A4サイズの紙面内に指定された限界値（列・行数）へ等倍で収まるよう、数学的に方眼サイズ・余白が固定されています。
+    - したがって、入力となるPDF元データから、この絶対座標系（最大 {max_cols}列 × {max_rows}行）へ、**あなた自身がアスペクト比を保ちつつ比例配分（アフィン変換）してマッピングを調整**してください。
+    - PDFが非常に複雑な場合でも、決して限界列数・行数をはみ出さないようにこの座標内に収めるのがあなたの役割です。
 
-**【重要】A4縦の有効印字幅・高さに対して、列1から最大「列{max_cols}」、行1から最大「行{max_rows}」の範囲内に完全に収まるように配置してください。**
 特にメインの表（明細テーブル等）は、左右の余白を詰め、全体の横幅いっぱいに広がるように（例: 列2から列{max_cols}まで使用するなど）座標を割り当ててください。
-中央に寄せて小さく配置せず、紙面を効果的に使うレイアウトを目指してください。
+中央に寄せて小さく配置せず、指定された列数・行数をフルに使ったレイアウトを目指してください。
 
 **【重要】テーブルデータは、各行がExcel上の独立した行（または複数の行に跨る範囲）に適切に割り振られるようにしてください。**
 大きなテーブル全体を一つの大きな結合セルとして定義しないでください。各情報を読み取れるよう、行ごとに分割した配置情報を生成してください。
@@ -159,12 +179,19 @@ EXCEL_CODE_GEN_PROMPT = """あなたは生成AIプログラミングのエキス
    - 罫線は、単一セルだけでなく、**結合セル（Merged Range）全体に適切に適用されるようループ等で処理する**。
    - 文字の折り返し (`wrap_text=True`) や垂直方向の中央揃え (`vertical='center'`) を適切に行う。
 
-3. 印刷設定（等倍印刷）:
+3. 印刷設定（縮小機能に一切頼らない絶対等倍）:
    - 用紙サイズ: A4 (openpyxlの仕様に合わせ、ws.page_setup.paperSize には定数などを使わずに直接 9 を代入してください)
    - 向き: 縦 (ws.page_setup.orientation には定数などを使わずに直接 'portrait' を代入してください)
-   - **重要: スケーリング（`fitToWidth` や `fitToPage`）の自動縮小設定は無効化するか、一切記述しないでください。等倍（100%）で出力されるようにしてください。**
+   - **重要: スケーリング（`fitToWidth` や `fitToPage`）の自動縮小設定は無効化するか、一切記述しないでください。縮小不要な等倍（100%）で出力されることが大前提です。**
    - 印刷範囲の設定 (`ws.print_area`) は、入力データに `print_range` があればそれを使用してください。
-
+   - **重要: ページ中央に配置し、真のA4サイズと一致する数学的余白として、必ず以下のコードを含めてください。**
+     ```python
+     ws.print_options.horizontalCentered = True
+     ws.page_margins.left = {margin_left}
+     ws.page_margins.right = {margin_right}
+     ws.page_margins.top = {margin_top}
+     ws.page_margins.bottom = {margin_bottom}
+     ```
 4. **重要: 技術的制約の遵守 (openpyxl)**:
    - **セルの値を設定してから `ws.merge_cells` を呼び出すこと**。あるいは、結合後に起点セル（左上）に対して値を設定すること。 `MergedCell` オブジェクトに対して値を設定しようとすると `AttributeError` になります。
    - 結合範囲が重複（overlap）しないように、入力データの重複をチェックするか、例外処理を入れること。

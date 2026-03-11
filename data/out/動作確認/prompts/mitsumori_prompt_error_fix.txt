@@ -1,3 +1,30 @@
+あなたはPythonプログラミングのエキスパートです。
+以下のExcel生成用Pythonスクリプトを実行したところ、エラーが発生しました（または期待する結果が得られませんでした）。
+エラーメッセージと現在のコードを分析し、問題を修正した新しいPythonスクリプトを生成してください。
+
+【エラーメッセージ・実行結果】
+生成コードの実行に失敗しました:
+/app/data/out/動作確認/mitsumori_gen.py:69: SyntaxWarning: 'bool' object is not subscriptable; perhaps you missed a comma?
+  ws.print_options.horizontalCentered = True [cite: 239]
+/app/data/out/動作確認/mitsumori_gen.py:70: SyntaxWarning: 'float' object is not subscriptable; perhaps you missed a comma?
+  ws.page_margins.left = 0.43 [cite: 239]
+/app/data/out/動作確認/mitsumori_gen.py:71: SyntaxWarning: 'float' object is not subscriptable; perhaps you missed a comma?
+  ws.page_margins.right = 0.43 [cite: 239]
+/app/data/out/動作確認/mitsumori_gen.py:72: SyntaxWarning: 'float' object is not subscriptable; perhaps you missed a comma?
+  ws.page_margins.top = 0.41 [cite: 239]
+/app/data/out/動作確認/mitsumori_gen.py:73: SyntaxWarning: 'float' object is not subscriptable; perhaps you missed a comma?
+  ws.page_margins.bottom = 0.41 [cite: 239]
+Traceback (most recent call last):
+  File "/app/data/out/動作確認/mitsumori_gen.py", line 138, in <module>
+    create_excel_from_commands(input_data)
+  File "/app/data/out/動作確認/mitsumori_gen.py", line 69, in create_excel_from_commands
+    ws.print_options.horizontalCentered = True [cite: 239]
+                                                ^^^^
+NameError: name 'cite' is not defined. Did you mean: 'aiter'?
+
+
+【現在のコード】
+```python
 import json
 from openpyxl import Workbook
 from openpyxl.styles import Border, Side, Alignment, Font, PatternFill
@@ -8,27 +35,27 @@ def create_excel_from_commands(data_json):
     ws = wb.active
     ws.title = "見積書"
 
-    # 1. レイアウトと方眼紙サイズの厳密な設定
-    # 列幅の設定 (1列＝約4.0mm)
+    # 1. レイアウトと方眼紙サイズの厳密な設定 [cite: 238]
+    # 列幅の設定 (1列＝約4.0mm) [cite: 238]
     for col in range(1, 65):
         ws.column_dimensions[get_column_letter(col)].width = 1.45
     
-    # 行高さの設定 (1行＝約4.0mm)
+    # 行高さの設定 (1行＝約4.0mm) [cite: 238]
     for row in range(1, 80):
         ws.row_dimensions[row].height = 11.34
 
-    # デザインの定義
+    # デザインの定義 [cite: 238]
     thin_side = Side(style='thin', color="000000")
     header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
     header_font = Font(bold=True)
     
-    # 罫線を結合セル全体に適用するためのヘルパー関数
+    # 罫線を結合セル全体に適用するためのヘルパー関数 [cite: 238]
     def set_border(ws, start_row, start_col, end_row, end_col):
         for r in range(start_row, end_row + 1):
             for c in range(start_col, end_col + 1):
                 ws.cell(row=r, column=c).border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
 
-    # データの描画処理
+    # データの描画処理 [cite: 240, 252]
     page_data = data_json[0]
     commands = page_data['data']
     
@@ -37,42 +64,42 @@ def create_excel_from_commands(data_json):
         e_row, e_col = cmd['end_row'], cmd['end_column']
         val = cmd['value']
         
-        # セルの値を設定してから結合する（起点セルに設定）
+        # セルの値を設定してから結合する（起点セルに設定） [cite: 238]
         cell = ws.cell(row=s_row, column=s_col)
         cell.value = val
         
-        # アライメント設定
+        # アライメント設定 [cite: 238]
         cell.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left' if cmd['type'] != 'heading' else 'center')
         
         if s_row != e_row or s_col != e_col:
             ws.merge_cells(start_row=s_row, start_column=s_col, end_row=e_row, end_column=e_col)
         
-        # 罫線の適用
+        # 罫線の適用 [cite: 238]
         if cmd.get('border'):
             set_border(ws, s_row, s_col, e_row, e_col)
             
-        # ヘッダー（表題行など）の装飾
+        # ヘッダー（表題行など）の装飾 [cite: 238]
         if "No." in str(val) or "摘 要" in str(val) or val == "備 考":
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center', vertical='center')
 
-    # 3. 印刷設定（絶対等倍）
-    ws.page_setup.paperSize = 9 # A4
-    ws.page_setup.orientation = 'portrait' # 縦
+    # 3. 印刷設定（絶対等倍） [cite: 238, 239]
+    ws.page_setup.paperSize = 9 # A4 [cite: 238]
+    ws.page_setup.orientation = 'portrait' # 縦 [cite: 238]
     
-    # 印刷範囲の設定
+    # 印刷範囲の設定 [cite: 238]
     if 'print_range' in page_data:
         ws.print_area = page_data['print_range']
     
-    # 数学的余白と中央配置設定
-    ws.print_options.horizontalCentered = True
-    ws.page_margins.left = 0.43
-    ws.page_margins.right = 0.43
-    ws.page_margins.top = 0.41
-    ws.page_margins.bottom = 0.41
+    # 数学的余白と中央配置設定 [cite: 238, 239]
+    ws.print_options.horizontalCentered = True [cite: 239]
+    ws.page_margins.left = 0.43 [cite: 239]
+    ws.page_margins.right = 0.43 [cite: 239]
+    ws.page_margins.top = 0.41 [cite: 239]
+    ws.page_margins.bottom = 0.41 [cite: 239]
 
-    # 保存
+    # 保存 [cite: 238]
     wb.save("output.xlsx")
 
 # 入力データ
@@ -136,3 +163,7 @@ input_data = [
 
 if __name__ == "__main__":
     create_excel_from_commands(input_data)
+```
+
+出力は、**修正済みの実行可能な Python コードのみ**をマークダウンのコードブロック (```python ... ```) で出力してください。
+解説や謝罪は不要です。
