@@ -1,0 +1,1405 @@
+あなたは生成AIプログラミングのエキスパートです。
+提供された Excel 描画コマンド（JSON）に基づき、`openpyxl` を用いて、
+**A4 縦 1 ページ（または指定されたページ数）の実寸大で完璧に収まる、非常に見栄えの良い Excel ファイルを作成する Python スクリプト**を生成してください。
+
+【要件】
+1. レイアウトと方眼紙サイズの厳密な設定:
+   入力データの座標は、すでにA4横幅（最大約36列）にフィットするように計算されています。
+   以下の数値を列幅と行の高さとして設定するコードを必ず含めてください。
+   - `ws.column_dimensions[...].width = 2.53` （1列＝約6.0mm）
+   - `ws.row_dimensions[...].height = 17.01` （1行＝約6.0mm）
+   **重要: 複数ページの場合に備え、行の高さの設定は `1` 行目から「最大ページ数 × 50」行目程度まで適用するループを作成してください。**
+
+2. デザインの洗練:
+   - 表のヘッダーは背景色（薄いグレーなど）を塗り、太字にする。
+   - 罫線は、単一セルだけでなく、**結合セル（Merged Range）全体に適切に適用されるようループ等で処理する**。
+   - 文字の折り返し (`wrap_text=True`) や垂直方向の中央揃え (`vertical='center'`) を適切に行う。
+
+3. 印刷設定（縮小機能に一切頼らない絶対等倍）:
+   - 用紙サイズ: A4 (openpyxlの仕様に合わせ、ws.page_setup.paperSize には定数などを使わずに直接 9 を代入してください)
+   - 向き: 縦 (ws.page_setup.orientation には定数などを使わずに直接 'portrait' を代入してください)
+   - **重要: スケーリング（`fitToWidth` や `fitToPage`）の自動縮小設定は無効化するか、一切記述しないでください。縮小不要な等倍（100%）で出力されることが大前提です。**
+   - 印刷範囲の設定 (`ws.print_area`) は、入力データに `print_range` があればそれを使用してください。
+   - **重要: ページ中央に配置し、真のA4サイズと一致する数学的余白として、必ず以下のコードを含めてください。**
+     ```python
+     ws.print_options.horizontalCentered = True
+     ws.page_margins.left = 0.47
+     ws.page_margins.right = 0.47
+     ws.page_margins.top = 0.41
+     ws.page_margins.bottom = 0.41
+     ```
+4. 複数ページへの完全対応:
+   - 入力JSONに複数ページのデータが含まれる場合、**シートをページごとに分けず、必ず「1つの同じワークシート(`ws = wb.active`)」に全ページのデータを縦に並べて出力**してください。
+   - `page_number` をキーとし、2ページ目以降のデータには **「(page_number - 1) * 50」分の行オフセット**を算出し、各アイテムの `s_row` と `e_row` に加算して下にずらすロジックを必ず実装してください。これによりA4単位で綺麗に行が配置されます。
+   - ページ間の境界には改ページ設定 (`from openpyxl.worksheet.pagebreak import Break; ws.row_breaks.append(Break(id=ページ単位の行オフセット))`) を行い、印刷時にA4単位で正しく分割されるようにしてください。
+   - 最終的な印刷範囲 (`ws.print_area`) は、全ページを含んだ全体のセル範囲を指定してください。
+5. **重要: 技術的制約の遵守 (openpyxl)**:
+   - セルの値を設定する際や `ws.merge_cells` を呼び出す際は、JSONで座標の重複（overlap）が存在する可能性があるため、必ず以下の様に `try...except AttributeError:` のブロックで囲んでエラーをスキップし、処理が途中で落ちないようにしてください。
+     ```python
+     try:
+         cell = ws.cell(row=s_row, column=s_col)
+         cell.value = val
+         if s_row != e_row or s_col != e_col:
+             ws.merge_cells(start_row=s_row, start_column=s_col, end_row=e_row, end_column=e_col)
+         # アラインメントや罫線などのスタイリング処理
+     except AttributeError:
+         pass
+     ```
+
+6. 出力ファイル:
+   - `output.xlsx` という名前で保存するようにしてください。
+
+入力データ (STEP 5の出力):
+[
+  {
+    "page_number": 1,
+    "width": 595.27557,
+    "height": 841.88977,
+    "print_range": "B3:AJ49",
+    "data": [
+      {
+        "action": "merge_and_set",
+        "start_row": 3,
+        "start_column": 15,
+        "end_row": 4,
+        "end_column": 22,
+        "value": "SAMPLE PDF",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 6,
+        "start_column": 2,
+        "end_row": 7,
+        "end_column": 36,
+        "value": "ソースネクストの「いきなりPDF」は、販売本数シェアNo.1。高性能・低価格で操作も簡単。PDF作成의 常識を変えたロングセラー製品です。",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 9,
+        "start_column": 2,
+        "end_row": 10,
+        "end_column": 10,
+        "value": "",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 9,
+        "start_column": 11,
+        "end_row": 10,
+        "end_column": 19,
+        "value": "いきなりPDF／BASIC Edition Ver.2",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 9,
+        "start_column": 20,
+        "end_row": 10,
+        "end_column": 28,
+        "value": "いきなりPDF／ STANDARD Edition Ver.2",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 9,
+        "start_column": 29,
+        "end_row": 10,
+        "end_column": 36,
+        "value": "いきなりPDF／ COMPLETE Edition Ver.2",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 11,
+        "start_column": 2,
+        "end_row": 12,
+        "end_column": 10,
+        "value": "ひとことで言うと",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 11,
+        "start_column": 11,
+        "end_row": 12,
+        "end_column": 19,
+        "value": "PDF作成・編集",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 11,
+        "start_column": 20,
+        "end_row": 12,
+        "end_column": 28,
+        "value": "PDF作成・データ変換・編集",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 11,
+        "start_column": 29,
+        "end_row": 12,
+        "end_column": 36,
+        "value": "PDF作成・データ変換・高度編集",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 13,
+        "start_column": 2,
+        "end_row": 13,
+        "end_column": 10,
+        "value": "標準価格（税込）",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 13,
+        "start_column": 11,
+        "end_row": 13,
+        "end_column": 19,
+        "value": "2,980円",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 13,
+        "start_column": 20,
+        "end_row": 13,
+        "end_column": 28,
+        "value": "3,980円",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 13,
+        "start_column": 29,
+        "end_row": 13,
+        "end_column": 36,
+        "value": "9,980円",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 14,
+        "start_column": 2,
+        "end_row": 14,
+        "end_column": 10,
+        "value": "Windows 8対応",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 14,
+        "start_column": 11,
+        "end_row": 14,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 14,
+        "start_column": 20,
+        "end_row": 14,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 14,
+        "start_column": 29,
+        "end_row": 14,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 16,
+        "start_column": 2,
+        "end_row": 16,
+        "end_column": 10,
+        "value": "PDFの作成",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 17,
+        "start_column": 2,
+        "end_row": 17,
+        "end_column": 10,
+        "value": "PDFファイルの作成",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 17,
+        "start_column": 11,
+        "end_row": 17,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 17,
+        "start_column": 20,
+        "end_row": 17,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 17,
+        "start_column": 29,
+        "end_row": 17,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 18,
+        "start_column": 2,
+        "end_row": 18,
+        "end_column": 10,
+        "value": "PDFファイルの閲覧、検索",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 18,
+        "start_column": 11,
+        "end_row": 18,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 18,
+        "start_column": 20,
+        "end_row": 18,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 18,
+        "start_column": 29,
+        "end_row": 18,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 19,
+        "start_column": 2,
+        "end_row": 19,
+        "end_column": 10,
+        "value": "Office製品へのプラグイン",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 19,
+        "start_column": 11,
+        "end_row": 19,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 19,
+        "start_column": 20,
+        "end_row": 19,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 19,
+        "start_column": 29,
+        "end_row": 19,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 20,
+        "start_column": 2,
+        "end_row": 20,
+        "end_column": 10,
+        "value": "フォントの埋め込み",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 20,
+        "start_column": 11,
+        "end_row": 20,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 20,
+        "start_column": 20,
+        "end_row": 20,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 20,
+        "start_column": 29,
+        "end_row": 20,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 21,
+        "start_column": 2,
+        "end_row": 21,
+        "end_column": 10,
+        "value": "複数文書の一括作成",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 21,
+        "start_column": 11,
+        "end_row": 21,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 21,
+        "start_column": 20,
+        "end_row": 21,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 21,
+        "start_column": 29,
+        "end_row": 21,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 23,
+        "start_column": 2,
+        "end_row": 23,
+        "end_column": 10,
+        "value": "PDFの組み換え",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 24,
+        "start_column": 2,
+        "end_row": 24,
+        "end_column": 10,
+        "value": "ページの分割、抽出、結合",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 24,
+        "start_column": 11,
+        "end_row": 24,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 24,
+        "start_column": 20,
+        "end_row": 24,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 24,
+        "start_column": 29,
+        "end_row": 24,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 26,
+        "start_column": 2,
+        "end_row": 26,
+        "end_column": 10,
+        "value": "PDFの編集",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 27,
+        "start_column": 2,
+        "end_row": 27,
+        "end_column": 10,
+        "value": "ノート注釈の追加",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 27,
+        "start_column": 11,
+        "end_row": 27,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 27,
+        "start_column": 20,
+        "end_row": 27,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 27,
+        "start_column": 29,
+        "end_row": 27,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 28,
+        "start_column": 2,
+        "end_row": 28,
+        "end_column": 10,
+        "value": "テキストボックスの追加",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 28,
+        "start_column": 11,
+        "end_row": 28,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 28,
+        "start_column": 20,
+        "end_row": 28,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 28,
+        "start_column": 29,
+        "end_row": 28,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 29,
+        "start_column": 2,
+        "end_row": 29,
+        "end_column": 10,
+        "value": "添付ファイルの追加",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 29,
+        "start_column": 11,
+        "end_row": 29,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 29,
+        "start_column": 20,
+        "end_row": 29,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 29,
+        "start_column": 29,
+        "end_row": 29,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 30,
+        "start_column": 2,
+        "end_row": 30,
+        "end_column": 10,
+        "value": "しおりの作成、編集",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 30,
+        "start_column": 11,
+        "end_row": 30,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 30,
+        "start_column": 20,
+        "end_row": 30,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 30,
+        "start_column": 29,
+        "end_row": 30,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 31,
+        "start_column": 2,
+        "end_row": 31,
+        "end_column": 10,
+        "value": "ハイパーリンクの挿入",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 31,
+        "start_column": 11,
+        "end_row": 31,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 31,
+        "start_column": 20,
+        "end_row": 31,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 31,
+        "start_column": 29,
+        "end_row": 31,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 33,
+        "start_column": 2,
+        "end_row": 33,
+        "end_column": 10,
+        "value": "PDFを変換",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 34,
+        "start_column": 2,
+        "end_row": 34,
+        "end_column": 10,
+        "value": "PDFをWordに変換",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 34,
+        "start_column": 11,
+        "end_row": 34,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 34,
+        "start_column": 20,
+        "end_row": 34,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 34,
+        "start_column": 29,
+        "end_row": 34,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 35,
+        "start_column": 2,
+        "end_row": 35,
+        "end_column": 10,
+        "value": "PDFをExcelに変換",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 35,
+        "start_column": 11,
+        "end_row": 35,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 35,
+        "start_column": 20,
+        "end_row": 35,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 35,
+        "start_column": 29,
+        "end_row": 35,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 36,
+        "start_column": 2,
+        "end_row": 36,
+        "end_column": 10,
+        "value": "PDFをPowePointに変換",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 36,
+        "start_column": 11,
+        "end_row": 36,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 36,
+        "start_column": 20,
+        "end_row": 36,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 36,
+        "start_column": 29,
+        "end_row": 36,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 37,
+        "start_column": 2,
+        "end_row": 37,
+        "end_column": 10,
+        "value": "PDFをJPEGに変換",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 37,
+        "start_column": 11,
+        "end_row": 37,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 37,
+        "start_column": 20,
+        "end_row": 37,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 37,
+        "start_column": 29,
+        "end_row": 37,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 38,
+        "start_column": 2,
+        "end_row": 38,
+        "end_column": 10,
+        "value": "PDFをBMPに変換",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 38,
+        "start_column": 11,
+        "end_row": 38,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 38,
+        "start_column": 20,
+        "end_row": 38,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 38,
+        "start_column": 29,
+        "end_row": 38,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 39,
+        "start_column": 2,
+        "end_row": 39,
+        "end_column": 10,
+        "value": "透明テキスト付きPDFに変換",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 39,
+        "start_column": 11,
+        "end_row": 39,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 39,
+        "start_column": 20,
+        "end_row": 39,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 39,
+        "start_column": 29,
+        "end_row": 39,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 41,
+        "start_column": 2,
+        "end_row": 41,
+        "end_column": 10,
+        "value": "PDFの直接編集",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 42,
+        "start_column": 2,
+        "end_row": 42,
+        "end_column": 10,
+        "value": "すかしの挿入",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 42,
+        "start_column": 11,
+        "end_row": 42,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 42,
+        "start_column": 20,
+        "end_row": 42,
+        "end_column": 28,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 42,
+        "start_column": 29,
+        "end_row": 42,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 43,
+        "start_column": 2,
+        "end_row": 43,
+        "end_column": 10,
+        "value": "クリップアートの挿入",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 43,
+        "start_column": 11,
+        "end_row": 43,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 43,
+        "start_column": 20,
+        "end_row": 43,
+        "end_column": 28,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 43,
+        "start_column": 29,
+        "end_row": 43,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 44,
+        "start_column": 2,
+        "end_row": 44,
+        "end_column": 10,
+        "value": "スタンプの追加",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 44,
+        "start_column": 11,
+        "end_row": 44,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 44,
+        "start_column": 20,
+        "end_row": 44,
+        "end_column": 28,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 44,
+        "start_column": 29,
+        "end_row": 44,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 45,
+        "start_column": 2,
+        "end_row": 45,
+        "end_column": 10,
+        "value": "ページのトリミング編集",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 45,
+        "start_column": 11,
+        "end_row": 45,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 45,
+        "start_column": 20,
+        "end_row": 45,
+        "end_column": 28,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 45,
+        "start_column": 29,
+        "end_row": 45,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 46,
+        "start_column": 2,
+        "end_row": 46,
+        "end_column": 10,
+        "value": "フォームオブジェクトの追加",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 46,
+        "start_column": 11,
+        "end_row": 46,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 46,
+        "start_column": 20,
+        "end_row": 46,
+        "end_column": 28,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 46,
+        "start_column": 29,
+        "end_row": 46,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 47,
+        "start_column": 2,
+        "end_row": 47,
+        "end_column": 10,
+        "value": "テキストの直接編集",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 47,
+        "start_column": 11,
+        "end_row": 47,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 47,
+        "start_column": 20,
+        "end_row": 47,
+        "end_column": 28,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 47,
+        "start_column": 29,
+        "end_row": 47,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 48,
+        "start_column": 2,
+        "end_row": 48,
+        "end_column": 10,
+        "value": "オブジェクトの編集",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 48,
+        "start_column": 11,
+        "end_row": 48,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 48,
+        "start_column": 20,
+        "end_row": 48,
+        "end_column": 28,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 48,
+        "start_column": 29,
+        "end_row": 48,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 49,
+        "start_column": 2,
+        "end_row": 49,
+        "end_column": 10,
+        "value": "ページの回転編集",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 49,
+        "start_column": 11,
+        "end_row": 49,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 49,
+        "start_column": 20,
+        "end_row": 49,
+        "end_column": 28,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 49,
+        "start_column": 29,
+        "end_row": 49,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      }
+    ]
+  },
+  {
+    "page_number": 2,
+    "width": 595.27557,
+    "height": 841.88977,
+    "print_range": "B3:AJ9",
+    "data": [
+      {
+        "action": "merge_and_set",
+        "start_row": 3,
+        "start_column": 2,
+        "end_row": 3,
+        "end_column": 10,
+        "value": "セキュリティ",
+        "border": false
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 4,
+        "start_column": 2,
+        "end_row": 4,
+        "end_column": 10,
+        "value": "暗号化",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 4,
+        "start_column": 11,
+        "end_row": 4,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 4,
+        "start_column": 20,
+        "end_row": 4,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 4,
+        "start_column": 29,
+        "end_row": 4,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 5,
+        "start_column": 2,
+        "end_row": 5,
+        "end_column": 10,
+        "value": "閲覧制限",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 5,
+        "start_column": 11,
+        "end_row": 5,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 5,
+        "start_column": 20,
+        "end_row": 5,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 5,
+        "start_column": 29,
+        "end_row": 5,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 6,
+        "start_column": 2,
+        "end_row": 6,
+        "end_column": 10,
+        "value": "印刷制限",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 6,
+        "start_column": 11,
+        "end_row": 6,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 6,
+        "start_column": 20,
+        "end_row": 6,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 6,
+        "start_column": 29,
+        "end_row": 6,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 7,
+        "start_column": 2,
+        "end_row": 7,
+        "end_column": 10,
+        "value": "修正制限",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 7,
+        "start_column": 11,
+        "end_row": 7,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 7,
+        "start_column": 20,
+        "end_row": 7,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 7,
+        "start_column": 29,
+        "end_row": 7,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 8,
+        "start_column": 2,
+        "end_row": 8,
+        "end_column": 10,
+        "value": "コピー制限",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 8,
+        "start_column": 11,
+        "end_row": 8,
+        "end_column": 19,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 8,
+        "start_column": 20,
+        "end_row": 8,
+        "end_column": 28,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 8,
+        "start_column": 29,
+        "end_row": 8,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 9,
+        "start_column": 2,
+        "end_row": 9,
+        "end_column": 10,
+        "value": "電子署名の添付",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 9,
+        "start_column": 11,
+        "end_row": 9,
+        "end_column": 19,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 9,
+        "start_column": 20,
+        "end_row": 9,
+        "end_column": 28,
+        "value": "×",
+        "border": true
+      },
+      {
+        "action": "merge_and_set",
+        "start_row": 9,
+        "start_column": 29,
+        "end_row": 9,
+        "end_column": 36,
+        "value": "○",
+        "border": true
+      }
+    ]
+  }
+]
+
+出力は、**実行可能な Python コードのみ**をマークダウンのコードブロック (```python ... ```) で出力してください。
+**【重要】出力するコード内には、`[cite: ...]` のような参照タグやアノテーション（例: ` [cite: 271]`）を絶対に含めないでください。SyntaxErrorの原因となります。純粋で実行可能なPythonコードのみを出力してください。**

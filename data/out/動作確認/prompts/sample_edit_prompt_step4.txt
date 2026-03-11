@@ -1,0 +1,503 @@
+あなたはExcel操作の指示を生成するアシスタントです。
+STEP 3 で計算された座標に基づき、openpyxl 等で実行可能な描画コマンド（merge_and_set, set_borderなど）のリストを作成してください。
+表構造に含まれるセルには `"border": true` を指定してください。
+
+**【重要】入力データに含まれるテキスト内容は、一切省略したり要約したりせず、そのまま `"value"` に含めてください。**
+「〜セクション」や「〜一覧」といったプレースホルダーに置き換えないでください。
+
+**【重要】出力時のフォーマット指定**
+入力データで渡されたJSON配列の構造（`page_number`, `width`, `height`）はそのまま維持し、`data` 配列の中身だけをコマンドリストの内容に置き換えて出力してください。
+
+入力データ:
+[
+  {
+    "page_number": 1,
+    "width": 595.27557,
+    "height": 841.88977,
+    "data": [
+      {
+        "chunk_id": 1,
+        "type": "heading",
+        "content": "SAMPLE PDF",
+        "start_row": 3,
+        "start_col": 15,
+        "end_row": 4,
+        "end_col": 22
+      },
+      {
+        "chunk_id": 2,
+        "type": "text",
+        "content": "ソースネクストの「いきなりPDF」は、販売本数シェアNo.1。高性能・低価格で操作も簡単。PDF作成의 常識を変えたロングセラー製品です。",
+        "start_row": 6,
+        "start_col": 2,
+        "end_row": 7,
+        "end_col": 36
+      },
+      {
+        "chunk_id": 3,
+        "type": "table",
+        "content": [
+          {
+            "row": [
+              { "content": "", "start_col": 2, "end_col": 10 },
+              { "content": "いきなりPDF／BASIC Edition Ver.2", "start_col": 11, "end_col": 19 },
+              { "content": "いきなりPDF／ STANDARD Edition Ver.2", "start_col": 20, "end_col": 28 },
+              { "content": "いきなりPDF／ COMPLETE Edition Ver.2", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 9,
+            "end_row": 10
+          },
+          {
+            "row": [
+              { "content": "ひとことで言うと", "start_col": 2, "end_col": 10 },
+              { "content": "PDF作成・編集", "start_col": 11, "end_col": 19 },
+              { "content": "PDF作成・データ変換・編集", "start_col": 20, "end_col": 28 },
+              { "content": "PDF作成・データ変換・高度編集", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 11,
+            "end_row": 12
+          },
+          {
+            "row": [
+              { "content": "標準価格（税込）", "start_col": 2, "end_col": 10 },
+              { "content": "2,980円", "start_col": 11, "end_col": 19 },
+              { "content": "3,980円", "start_col": 20, "end_col": 28 },
+              { "content": "9,980円", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 13,
+            "end_row": 13
+          },
+          {
+            "row": [
+              { "content": "Windows 8対応", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 14,
+            "end_row": 14
+          }
+        ]
+      },
+      {
+        "chunk_id": 4,
+        "type": "heading",
+        "content": "PDFの作成",
+        "start_row": 16,
+        "start_col": 2,
+        "end_row": 16,
+        "end_col": 10
+      },
+      {
+        "chunk_id": 5,
+        "type": "table",
+        "content": [
+          {
+            "row": [
+              { "content": "PDFファイルの作成", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 17,
+            "end_row": 17
+          },
+          {
+            "row": [
+              { "content": "PDFファイルの閲覧、検索", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 18,
+            "end_row": 18
+          },
+          {
+            "row": [
+              { "content": "Office製品へのプラグイン", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 19,
+            "end_row": 19
+          },
+          {
+            "row": [
+              { "content": "フォントの埋め込み", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 20,
+            "end_row": 20
+          },
+          {
+            "row": [
+              { "content": "複数文書の一括作成", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 21,
+            "end_row": 21
+          }
+        ]
+      },
+      {
+        "chunk_id": 6,
+        "type": "heading",
+        "content": "PDFの組み換え",
+        "start_row": 23,
+        "start_col": 2,
+        "end_row": 23,
+        "end_col": 10
+      },
+      {
+        "chunk_id": 7,
+        "type": "table",
+        "content": [
+          {
+            "row": [
+              { "content": "ページの分割、抽出、結合", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 24,
+            "end_row": 24
+          }
+        ]
+      },
+      {
+        "chunk_id": 8,
+        "type": "heading",
+        "content": "PDFの編集",
+        "start_row": 26,
+        "start_col": 2,
+        "end_row": 26,
+        "end_col": 10
+      },
+      {
+        "chunk_id": 9,
+        "type": "table",
+        "content": [
+          {
+            "row": [
+              { "content": "ノート注釈の追加", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 27,
+            "end_row": 27
+          },
+          {
+            "row": [
+              { "content": "テキストボックスの追加", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 28,
+            "end_row": 28
+          },
+          {
+            "row": [
+              { "content": "添付ファイルの追加", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 29,
+            "end_row": 29
+          },
+          {
+            "row": [
+              { "content": "しおりの作成、編集", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 30,
+            "end_row": 30
+          },
+          {
+            "row": [
+              { "content": "ハイパーリンクの挿入", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 31,
+            "end_row": 31
+          }
+        ]
+      },
+      {
+        "chunk_id": 10,
+        "type": "heading",
+        "content": "PDFを変換",
+        "start_row": 33,
+        "start_col": 2,
+        "end_row": 33,
+        "end_col": 10
+      },
+      {
+        "chunk_id": 11,
+        "type": "table",
+        "content": [
+          {
+            "row": [
+              { "content": "PDFをWordに変換", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 34,
+            "end_row": 34
+          },
+          {
+            "row": [
+              { "content": "PDFをExcelに変換", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 35,
+            "end_row": 35
+          },
+          {
+            "row": [
+              { "content": "PDFをPowePointに変換", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 36,
+            "end_row": 36
+          },
+          {
+            "row": [
+              { "content": "PDFをJPEGに変換", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 37,
+            "end_row": 37
+          },
+          {
+            "row": [
+              { "content": "PDFをBMPに変換", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 38,
+            "end_row": 38
+          },
+          {
+            "row": [
+              { "content": "透明テキスト付きPDFに変換", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 39,
+            "end_row": 39
+          }
+        ]
+      },
+      {
+        "chunk_id": 12,
+        "type": "heading",
+        "content": "PDFの直接編集",
+        "start_row": 41,
+        "start_col": 2,
+        "end_row": 41,
+        "end_col": 10
+      },
+      {
+        "chunk_id": 13,
+        "type": "table",
+        "content": [
+          {
+            "row": [
+              { "content": "すかしの挿入", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "×", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 42,
+            "end_row": 42
+          },
+          {
+            "row": [
+              { "content": "クリップアートの挿入", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "×", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 43,
+            "end_row": 43
+          },
+          {
+            "row": [
+              { "content": "スタンプの追加", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "×", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 44,
+            "end_row": 44
+          },
+          {
+            "row": [
+              { "content": "ページのトリミング編集", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "×", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 45,
+            "end_row": 45
+          },
+          {
+            "row": [
+              { "content": "フォームオブジェクトの追加", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "×", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 46,
+            "end_row": 46
+          },
+          {
+            "row": [
+              { "content": "テキストの直接編集", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "×", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 47,
+            "end_row": 47
+          },
+          {
+            "row": [
+              { "content": "オブジェクトの編集", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "×", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 48,
+            "end_row": 48
+          },
+          {
+            "row": [
+              { "content": "ページの回転編集", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "×", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 49,
+            "end_row": 49
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "page_number": 2,
+    "width": 595.27557,
+    "height": 841.88977,
+    "data": [
+      {
+        "chunk_id": 14,
+        "type": "heading",
+        "content": "セキュリティ",
+        "start_row": 3,
+        "start_col": 2,
+        "end_row": 3,
+        "end_col": 10
+      },
+      {
+        "chunk_id": 15,
+        "type": "table",
+        "content": [
+          {
+            "row": [
+              { "content": "暗号化", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 4,
+            "end_row": 4
+          },
+          {
+            "row": [
+              { "content": "閲覧制限", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 5,
+            "end_row": 5
+          },
+          {
+            "row": [
+              { "content": "印刷制限", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 6,
+            "end_row": 6
+          },
+          {
+            "row": [
+              { "content": "修正制限", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 7,
+            "end_row": 7
+          },
+          {
+            "row": [
+              { "content": "コピー制限", "start_col": 2, "end_col": 10 },
+              { "content": "○", "start_col": 11, "end_col": 19 },
+              { "content": "○", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 8,
+            "end_row": 8
+          },
+          {
+            "row": [
+              { "content": "電子署名の添付", "start_col": 2, "end_col": 10 },
+              { "content": "×", "start_col": 11, "end_col": 19 },
+              { "content": "×", "start_col": 20, "end_col": 28 },
+              { "content": "○", "start_col": 29, "end_col": 36 }
+            ],
+            "start_row": 9,
+            "end_row": 9
+          }
+        ]
+      }
+    ]
+  }
+]
+
+出力形式は以下の形式のJSON配列のみとしてください:
+[
+  {
+    "page_number": 1,
+    "width": 595.0,
+    "height": 842.0,
+    "data": [
+      { "action": "merge_and_set", "start_row": 1, "start_column": 1, "end_row": 2, "end_column": 10, "value": "Title", "border": true }
+    ]
+  }
+]

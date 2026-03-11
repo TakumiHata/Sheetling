@@ -173,6 +173,7 @@ EXCEL_CODE_GEN_PROMPT = """あなたは生成AIプログラミングのエキス
    以下の数値を列幅と行の高さとして設定するコードを必ず含めてください。
    - `ws.column_dimensions[...].width = {excel_col_width}` （1列＝約{col_width_mm}mm）
    - `ws.row_dimensions[...].height = {excel_row_height}` （1行＝約{row_height_mm}mm）
+   **重要: 複数ページの場合に備え、行の高さの設定は `1` 行目から「最大ページ数 × {max_rows}」行目程度まで適用するループを作成してください。**
 
 2. デザインの洗練:
    - 表のヘッダーは背景色（薄いグレーなど）を塗り、太字にする。
@@ -192,7 +193,12 @@ EXCEL_CODE_GEN_PROMPT = """あなたは生成AIプログラミングのエキス
      ws.page_margins.top = {margin_top}
      ws.page_margins.bottom = {margin_bottom}
      ```
-4. **重要: 技術的制約の遵守 (openpyxl)**:
+4. 複数ページへの完全対応:
+   - 入力JSONに複数ページのデータが含まれる場合、**シートをページごとに分けず、必ず「1つの同じワークシート(`ws = wb.active`)」に全ページのデータを縦に並べて出力**してください。
+   - `page_number` をキーとし、2ページ目以降のデータには **「(page_number - 1) * {max_rows}」分の行オフセット**を算出し、各アイテムの `s_row` と `e_row` に加算して下にずらすロジックを必ず実装してください。これによりA4単位で綺麗に行が配置されます。
+   - ページ間の境界には改ページ設定 (`from openpyxl.worksheet.pagebreak import Break; ws.row_breaks.append(Break(id=ページ単位の行オフセット))`) を行い、印刷時にA4単位で正しく分割されるようにしてください。
+   - 最終的な印刷範囲 (`ws.print_area`) は、全ページを含んだ全体のセル範囲を指定してください。
+5. **重要: 技術的制約の遵守 (openpyxl)**:
    - セルの値を設定する際や `ws.merge_cells` を呼び出す際は、JSONで座標の重複（overlap）が存在する可能性があるため、必ず以下の様に `try...except AttributeError:` のブロックで囲んでエラーをスキップし、処理が途中で落ちないようにしてください。
      ```python
      try:
@@ -205,7 +211,7 @@ EXCEL_CODE_GEN_PROMPT = """あなたは生成AIプログラミングのエキス
          pass
      ```
 
-5. 出力ファイル:
+6. 出力ファイル:
    - `output.xlsx` という名前で保存するようにしてください。
 
 入力データ (STEP 5の出力):
