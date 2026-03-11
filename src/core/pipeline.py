@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from src.parser.pdf_extractor import extract_pdf_data
-from src.templates.prompts import CHUNKING_PROMPT, STRUCTURE_ALIGNMENT_PROMPT, GRID_MAPPING_PROMPT, COMMAND_GENERATION_PROMPT, PAGE_FIT_PROMPT, EXCEL_CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT
+from src.templates.prompts import CHUNKING_PROMPT, STRUCTURE_ALIGNMENT_PROMPT, GRID_MAPPING_PROMPT, COMMAND_GENERATION_PROMPT, PAGE_FIT_PROMPT, EXCEL_CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GRID_SIZES
 from src.core.config import config
 from src.utils.logger import get_logger
 
@@ -26,7 +26,7 @@ class SheetlingPipeline:
     def __init__(self, output_base_dir: str):
         self.output_base_dir = Path(output_base_dir)
 
-    def generate_prompts(self, pdf_path: str, in_base_dir: str = "data/in") -> dict:
+    def generate_prompts(self, pdf_path: str, in_base_dir: str = "data/in", grid_size: str = "small") -> dict:
         """
         Phase 1: PDFを解析し、LLMに渡すためのプロンプトを data/out/ に出力する。
         """
@@ -59,10 +59,22 @@ class SheetlingPipeline:
 
         prompt_1 = CHUNKING_PROMPT.format(input_data=input_data_str)
         prompt_2 = STRUCTURE_ALIGNMENT_PROMPT.format(input_data=step2_input_template)
-        prompt_3 = GRID_MAPPING_PROMPT.format(input_data="[ここにSTEP 2の出力（JSON部分のみ）を貼り付けてください]")
+        
+        grid_params = GRID_SIZES.get(grid_size, GRID_SIZES["small"])
+        
+        prompt_3 = GRID_MAPPING_PROMPT.format(
+            input_data="[ここにSTEP 2の出力（JSON部分のみ）を貼り付けてください]",
+            **grid_params
+        )
         prompt_4 = COMMAND_GENERATION_PROMPT.format(input_data="[ここにSTEP 3の出力（JSON部分のみ）を貼り付けてください]")
-        prompt_5 = PAGE_FIT_PROMPT.format(input_data="[ここにSTEP 4の出力（JSON部分のみ）を貼り付けてください]")
-        prompt_6 = EXCEL_CODE_GEN_PROMPT.format(input_data="[ここにSTEP 5の出力（JSON部分のみ）を貼り付けてください]")
+        prompt_5 = PAGE_FIT_PROMPT.format(
+            input_data="[ここにSTEP 4の出力（JSON部分のみ）を貼り付けてください]",
+            **grid_params
+        )
+        prompt_6 = EXCEL_CODE_GEN_PROMPT.format(
+            input_data="[ここにSTEP 5の出力（JSON部分のみ）を貼り付けてください]",
+            **grid_params
+        )
 
         # プロンプト保存用のディレクトリを作成
         prompts_dir = out_dir / "prompts"

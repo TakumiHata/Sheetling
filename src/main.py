@@ -9,6 +9,7 @@ def main():
     parser = argparse.ArgumentParser(description="Sheetling: PDF to Excel conversion")
     parser.add_argument("phase", choices=["extract", "generate"], help="Phase to run: extract (Phase 1) or generate (Phase 3)")
     parser.add_argument("--pdf", type=str, help="PDF file path for extraction (Phase 1). If not provided, processes all PDFs in data/in/")
+    parser.add_argument("--grid-size", type=str, choices=["small", "medium", "large"], default="small", help="Grid size for Excel layout (small, medium, large)")
     args = parser.parse_args()
 
     pipeline = SheetlingPipeline("data/out")
@@ -25,7 +26,7 @@ def main():
 
         for pdf_path in pdf_files:
             try:
-                pipeline.generate_prompts(str(pdf_path))
+                pipeline.generate_prompts(str(pdf_path), grid_size=args.grid_size)
             except Exception as e:
                 logger.error(f"❌ Phase 1 failed for {pdf_path.name}: {e}", exc_info=True)
 
