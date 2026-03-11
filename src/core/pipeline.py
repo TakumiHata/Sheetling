@@ -11,7 +11,6 @@ from pathlib import Path
 
 from src.parser.pdf_extractor import extract_pdf_data
 from src.templates.prompts import CHUNKING_PROMPT, STRUCTURE_ALIGNMENT_PROMPT, GRID_MAPPING_PROMPT, COMMAND_GENERATION_PROMPT, PAGE_FIT_PROMPT, EXCEL_CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GRID_SIZES
-from src.core.config import config
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
