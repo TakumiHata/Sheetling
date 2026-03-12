@@ -111,918 +111,888 @@ elif item["type"] == "border_rect":
 - `True`/`False`（Python形式）を使用。JSONの`true`/`false`は禁止
 - `[cite: ...]` のようなアノテーションタグは絶対に含めない（SyntaxErrorの原因）
 - 出力ファイル名: `output.xlsx`
+- `ws.page_margins` への dict 代入は**絶対に禁止**（`AttributeError: 'dict' object has no attribute 'to_tree'` の原因）。必ず属性代入形式を使用すること:
+  ```python
+  # ✗ 禁止
+  ws.page_margins = {'left': 0.47, ...}
+  # ✓ 正しい形式（上記「印刷設定」の通り）
+  ws.page_margins.left = 0.47
+  ```
 
 入力データ（Step 1のレイアウト仕様）:
 【重要】以下の入力データに `[` で始まる JSON 配列が含まれています。JSON配列の前後に説明文や検証コメントが含まれている場合は完全に無視し、`[` から `]` までのJSON部分のみを使用してください。
 [
-{
-"page_number": 1,
-"elements": [
-{
-"type": "text",
-"content": "請求書",
-"row": 5,
-"col": 16,
-"end_col": 22,
-"font_size": 20.0
-},
-{
-"type": "text",
-"content": "下記のとおりご請求いたします。",
-"row": 11,
-"col": 4,
-"end_col": 20,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "（会社名）",
-"row": 9,
-"col": 22,
-"end_col": 27,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "〒",
-"row": 10,
-"col": 22,
-"end_col": 23,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "（住所）",
-"row": 11,
-"col": 22,
-"end_col": 26,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "（振込先）",
-"row": 13,
-"col": 5,
-"end_col": 11,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "TEL.",
-"row": 13,
-"col": 22,
-"end_col": 24,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "◯◯銀行◯◯支店",
-"row": 14,
-"col": 5,
-"end_col": 13,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "FAX.",
-"row": 14,
-"col": 22,
-"end_col": 24,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "預金種別：",
-"row": 14,
-"col": 5,
-"end_col": 11,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "普通",
-"row": 14,
-"col": 10,
-"end_col": 12,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "口座番号：",
-"row": 15,
-"col": 5,
-"end_col": 10,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "1234567",
-"row": 15,
-"col": 10,
-"end_col": 16,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "口座名義：",
-"row": 16,
-"col": 5,
-"end_col": 10,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "◯◯株式会社",
-"row": 16,
-"col": 10,
-"end_col": 17,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "検 印",
-"row": 15,
-"col": 27,
-"end_col": 28,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "担当者印",
-"row": 15,
-"col": 30,
-"end_col": 32,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "御請求金額",
-"row": 18,
-"col": 5,
-"end_col": 12,
-"font_size": 14.0
-},
-{
-"type": "text",
-"content": "¥32,400-",
-"row": 18,
-"col": 16,
-"end_col": 24,
-"font_size": 18.0
-},
-{
-"type": "text",
-"content": "（消費税込み）",
-"row": 18,
-"col": 22,
-"end_col": 29,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "品 名",
-"row": 20,
-"col": 4,
-"end_col": 7,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "数量",
-"row": 20,
-"col": 16,
-"end_col": 18,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "単価",
-"row": 20,
-"col": 22,
-"end_col": 24,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "金額",
-"row": 20,
-"col": 22,
-"end_col": 24,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "摘要",
-"row": 20,
-"col": 30,
-"end_col": 32,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "洗面台パイプ修理",
-"row": 21,
-"col": 4,
-"end_col": 14,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "1",
-"row": 21,
-"col": 16,
-"end_col": 16,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "21,000",
-"row": 21,
-"col": 22,
-"end_col": 26,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "21,000",
-"row": 21,
-"col": 22,
-"end_col": 26,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "サンプル",
-"row": 21,
-"col": 27,
-"end_col": 30,
-"font_size": 9.0
-},
-{
-"type": "text",
-"content": "清掃一式",
-"row": 23,
-"col": 4,
-"end_col": 9,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "1",
-"row": 23,
-"col": 16,
-"end_col": 16,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "9,000",
-"row": 23,
-"col": 22,
-"end_col": 24,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "9,000",
-"row": 23,
-"col": 22,
-"end_col": 24,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "サンプル",
-"row": 23,
-"col": 27,
-"end_col": 30,
-"font_size": 9.0
-},
-{
-"type": "text",
-"content": "小 計",
-"row": 39,
-"col": 12,
-"end_col": 16,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "30,000",
-"row": 39,
-"col": 22,
-"end_col": 26,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "消費税等",
-"row": 40,
-"col": 12,
-"end_col": 17,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "2,400",
-"row": 40,
-"col": 22,
-"end_col": 25,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "合 計",
-"row": 41,
-"col": 12,
-"end_col": 16,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "32,400",
-"row": 41,
-"col": 22,
-"end_col": 26,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "備考：",
-"row": 43,
-"col": 4,
-"end_col": 7,
-"font_size": 11.0
-},
-{
-"type": "border_rect",
-"row": 15,
-"end_row": 16,
-"col": 27,
-"end_col": 30
-},
-{
-"type": "border_rect",
-"row": 16,
-"end_row": 19,
-"col": 27,
-"end_col": 30
-},
-{
-"type": "border_rect",
-"row": 15,
-"end_row": 16,
-"col": 30,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 16,
-"end_row": 19,
-"col": 30,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 20,
-"end_row": 21,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 21,
-"end_row": 23,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 23,
-"end_row": 24,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 24,
-"end_row": 25,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 25,
-"end_row": 27,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 27,
-"end_row": 28,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 28,
-"end_row": 29,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 29,
-"end_row": 31,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 31,
-"end_row": 32,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 32,
-"end_row": 33,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 33,
-"end_row": 35,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 35,
-"end_row": 36,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 36,
-"end_row": 37,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 37,
-"end_row": 39,
-"col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 39,
-"end_row": 40,
-"col": 4,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 40,
-"end_row": 41,
-"col": 4,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 41,
-"end_row": 43,
-"col": 4,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 43,
-"end_row": 47,
-"col": 4,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 20,
-"end_row": 21,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 21,
-"end_row": 23,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 23,
-"end_row": 24,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 24,
-"end_row": 25,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 25,
-"end_row": 27,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 27,
-"end_row": 28,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 28,
-"end_row": 29,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 29,
-"end_row": 31,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 31,
-"end_row": 32,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 32,
-"end_row": 33,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 33,
-"end_row": 35,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 35,
-"end_row": 36,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 36,
-"end_row": 37,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 37,
-"end_row": 39,
-"col": 16,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 20,
-"end_row": 21,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 21,
-"end_row": 23,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 23,
-"end_row": 24,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 24,
-"end_row": 25,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 25,
-"end_row": 27,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 27,
-"end_row": 28,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 28,
-"end_row": 29,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 29,
-"end_row": 31,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 31,
-"end_row": 32,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 32,
-"end_row": 33,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 33,
-"end_row": 35,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 35,
-"end_row": 36,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 36,
-"end_row": 37,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 37,
-"end_row": 39,
-"col": 16,
-"end_col": 22
-},
-{
-"type": "border_rect",
-"row": 20,
-"end_row": 21,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 21,
-"end_row": 23,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 23,
-"end_row": 24,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 24,
-"end_row": 25,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 25,
-"end_row": 27,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 27,
-"end_row": 28,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 28,
-"end_row": 29,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 29,
-"end_row": 31,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 31,
-"end_row": 32,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 32,
-"end_row": 33,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 33,
-"end_row": 35,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 35,
-"end_row": 36,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 36,
-"end_row": 37,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 37,
-"end_row": 39,
-"col": 22,
-"end_col": 27
-},
-{
-"type": "border_rect",
-"row": 20,
-"end_row": 21,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 21,
-"end_row": 23,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 23,
-"end_row": 24,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 24,
-"end_row": 25,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 25,
-"end_row": 27,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 27,
-"end_row": 28,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 28,
-"end_row": 29,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 29,
-"end_row": 31,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 31,
-"end_row": 32,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 32,
-"end_row": 33,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 33,
-"end_row": 35,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 35,
-"end_row": 36,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 36,
-"end_row": 37,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 37,
-"end_row": 39,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 39,
-"end_row": 40,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 40,
-"end_row": 41,
-"col": 27,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 41,
-"end_row": 43,
-"col": 27,
-"end_col": 33
-}
-]
-}
+  {
+    "page_number": 1,
+    "elements": [
+      {
+        "type": "border_rect",
+        "row": 15,
+        "end_row": 16,
+        "col": 26,
+        "end_col": 30
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 19,
+        "col": 26,
+        "end_col": 30
+      },
+      {
+        "type": "border_rect",
+        "row": 15,
+        "end_row": 16,
+        "col": 30,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 19,
+        "col": 30,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 21,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 21,
+        "end_row": 23,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 24,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 24,
+        "end_row": 25,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 25,
+        "end_row": 27,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 27,
+        "end_row": 28,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 28,
+        "end_row": 29,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 29,
+        "end_row": 31,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 31,
+        "end_row": 32,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 32,
+        "end_row": 33,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 35,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 35,
+        "end_row": 36,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 37,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 37,
+        "end_row": 39,
+        "col": 4,
+        "end_col": 16
+      },
+      {
+        "type": "border_rect",
+        "row": 39,
+        "end_row": 40,
+        "col": 4,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 40,
+        "end_row": 41,
+        "col": 4,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 41,
+        "end_row": 43,
+        "col": 4,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 47,
+        "col": 4,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 21,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 21,
+        "end_row": 23,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 24,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 24,
+        "end_row": 25,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 25,
+        "end_row": 27,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 27,
+        "end_row": 28,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 28,
+        "end_row": 29,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 29,
+        "end_row": 31,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 31,
+        "end_row": 32,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 32,
+        "end_row": 33,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 35,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 35,
+        "end_row": 36,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 37,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 37,
+        "end_row": 39,
+        "col": 16,
+        "end_col": 18
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 21,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 21,
+        "end_row": 23,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 24,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 24,
+        "end_row": 25,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 25,
+        "end_row": 27,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 27,
+        "end_row": 28,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 28,
+        "end_row": 29,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 29,
+        "end_row": 31,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 31,
+        "end_row": 32,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 32,
+        "end_row": 33,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 35,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 35,
+        "end_row": 36,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 37,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 37,
+        "end_row": 39,
+        "col": 18,
+        "end_col": 24
+      },
+      {
+        "type": "border_rect",
+        "row": 39,
+        "end_row": 40,
+        "col": 24,
+        "end_col": 27
+      },
+      {
+        "type": "border_rect",
+        "row": 40,
+        "end_row": 41,
+        "col": 24,
+        "end_col": 27
+      },
+      {
+        "type": "border_rect",
+        "row": 41,
+        "end_row": 43,
+        "col": 24,
+        "end_col": 27
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 21,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 21,
+        "end_row": 23,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 24,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 24,
+        "end_row": 25,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 25,
+        "end_row": 27,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 27,
+        "end_row": 28,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 28,
+        "end_row": 29,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 29,
+        "end_row": 31,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 31,
+        "end_row": 32,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 32,
+        "end_row": 33,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 35,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 35,
+        "end_row": 36,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 37,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 37,
+        "end_row": 39,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 39,
+        "end_row": 40,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 40,
+        "end_row": 41,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "border_rect",
+        "row": 41,
+        "end_row": 43,
+        "col": 27,
+        "end_col": 33
+      },
+      {
+        "type": "text",
+        "content": "請",
+        "row": 5,
+        "col": 14,
+        "end_col": 15,
+        "font_size": 20.0
+      },
+      {
+        "type": "text",
+        "content": "求",
+        "row": 5,
+        "col": 16,
+        "end_col": 17,
+        "font_size": 20.0
+      },
+      {
+        "type": "text",
+        "content": "書",
+        "row": 5,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 20.0
+      },
+      {
+        "type": "text",
+        "content": "御請求金額",
+        "row": 18,
+        "col": 5,
+        "end_col": 14,
+        "font_size": 14.0
+      },
+      {
+        "type": "text",
+        "content": "¥32,400-",
+        "row": 18,
+        "col": 14,
+        "end_col": 23,
+        "font_size": 18.0
+      },
+      {
+        "type": "text",
+        "content": "（消費税込み）",
+        "row": 18,
+        "col": 21,
+        "end_col": 29,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "下記のとおりご請求いたします。",
+        "row": 11,
+        "col": 4,
+        "end_col": 23,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "（会社名）",
+        "row": 9,
+        "col": 21,
+        "end_col": 26,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "様",
+        "row": 9,
+        "col": 14,
+        "end_col": 15,
+        "font_size": 14.0
+      },
+      {
+        "type": "text",
+        "content": "〒",
+        "row": 10,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "（住所）",
+        "row": 11,
+        "col": 21,
+        "end_col": 25,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "TEL.",
+        "row": 13,
+        "col": 21,
+        "end_col": 23,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "FAX.",
+        "row": 14,
+        "col": 21,
+        "end_col": 23,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "（振込先）",
+        "row": 13,
+        "col": 5,
+        "end_col": 10,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "◯◯銀行◯◯支店",
+        "row": 14,
+        "col": 5,
+        "end_col": 13,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "預金種別：",
+        "row": 14,
+        "col": 5,
+        "end_col": 10,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "普通",
+        "row": 14,
+        "col": 10,
+        "end_col": 12,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "口座番号：",
+        "row": 15,
+        "col": 5,
+        "end_col": 10,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "1234567",
+        "row": 15,
+        "col": 10,
+        "end_col": 13,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "口座名義：",
+        "row": 16,
+        "col": 5,
+        "end_col": 10,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "◯◯株式会社",
+        "row": 16,
+        "col": 10,
+        "end_col": 16,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "品",
+        "row": 20,
+        "col": 10,
+        "end_col": 11,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "名",
+        "row": 20,
+        "col": 10,
+        "end_col": 11,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "数量",
+        "row": 20,
+        "col": 16,
+        "end_col": 18,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "単価",
+        "row": 20,
+        "col": 21,
+        "end_col": 23,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "金額",
+        "row": 20,
+        "col": 24,
+        "end_col": 26,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "摘要",
+        "row": 20,
+        "col": 29,
+        "end_col": 31,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "洗面台パイプ修理",
+        "row": 21,
+        "col": 4,
+        "end_col": 12,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "1",
+        "row": 21,
+        "col": 16,
+        "end_col": 17,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "21,000",
+        "row": 21,
+        "col": 21,
+        "end_col": 25,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "21,000",
+        "row": 21,
+        "col": 24,
+        "end_col": 28,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "サンプル",
+        "row": 21,
+        "col": 27,
+        "end_col": 31,
+        "font_size": 9.0
+      },
+      {
+        "type": "text",
+        "content": "清掃一式",
+        "row": 23,
+        "col": 4,
+        "end_col": 8,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "1",
+        "row": 23,
+        "col": 16,
+        "end_col": 17,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "9,000",
+        "row": 23,
+        "col": 21,
+        "end_col": 24,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "9,000",
+        "row": 23,
+        "col": 24,
+        "end_col": 27,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "サンプル",
+        "row": 23,
+        "col": 27,
+        "end_col": 31,
+        "font_size": 9.0
+      },
+      {
+        "type": "text",
+        "content": "小 計",
+        "row": 39,
+        "col": 12,
+        "end_col": 14,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "30,000",
+        "row": 39,
+        "col": 24,
+        "end_col": 28,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "消費税等",
+        "row": 40,
+        "col": 12,
+        "end_col": 16,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "2,400",
+        "row": 40,
+        "col": 24,
+        "end_col": 27,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "合 計",
+        "row": 41,
+        "col": 14,
+        "end_col": 16,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "32,400",
+        "row": 41,
+        "col": 24,
+        "end_col": 28,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "備考：",
+        "row": 43,
+        "col": 4,
+        "end_col": 7,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "検",
+        "row": 15,
+        "col": 26,
+        "end_col": 27,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "印",
+        "row": 15,
+        "col": 27,
+        "end_col": 28,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "担当者印",
+        "row": 15,
+        "col": 30,
+        "end_col": 32,
+        "font_size": 11.0
+      }
+    ]
+  }
 ]
 
 出力はPythonコードのみをマークダウンのコードブロック（```python ... ```）で出力してください。前後の挨拶・説明文・思考プロセスは一切不要です。

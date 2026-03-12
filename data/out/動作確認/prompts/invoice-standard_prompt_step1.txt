@@ -28,9 +28,11 @@
 
 ### Step 3: テキスト要素の生成
 
-`words` を `_row` の値でグループ化し、同一 `_row` のwordを1つの `text` 要素に結合する。
-- `row` = グループのwordの `_row` 値
-- `col` = グループ内で最小の `_col` 値
+`words` を **`(_row, _col)` の組み合わせ** でグループ化し、同一 `(_row, _col)` のwordを1つの `text` 要素にまとめる。
+これにより、テーブル内の各列セルが別々の `text` 要素として保持される（行単位の結合は禁止）。
+
+- `row` = グループの `_row` 値
+- `col` = グループの `_col` 値
 - `content` = グループ内のwordを左から順に半角スペースで結合したテキスト
 - `end_col` = `col` + `content` の文字数（概算）
 - `font_color` = グループ内最初のwordの `font_color`（存在し、かつ黒 `"000000"` でない場合のみ含める）
@@ -183,7 +185,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 13,
-          "_col": 22
+          "_col": 21
         },
         {
           "text": "◯◯銀行◯◯支店",
@@ -215,7 +217,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 14,
-          "_col": 22
+          "_col": 21
         },
         {
           "text": "普通",
@@ -263,7 +265,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 18,
-          "_col": 22
+          "_col": 21
         },
         {
           "text": "備考：",
@@ -295,7 +297,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 39,
-          "_col": 22
+          "_col": 24
         },
         {
           "text": "9,000",
@@ -311,7 +313,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 23,
-          "_col": 22
+          "_col": 21
         },
         {
           "text": "9,000",
@@ -327,7 +329,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 23,
-          "_col": 22
+          "_col": 24
         },
         {
           "text": "サンプル",
@@ -439,7 +441,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 20,
-          "_col": 22
+          "_col": 21
         },
         {
           "text": "金額",
@@ -455,7 +457,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 20,
-          "_col": 22
+          "_col": 24
         },
         {
           "text": "摘要",
@@ -471,7 +473,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 20,
-          "_col": 30
+          "_col": 29
         },
         {
           "text": "21,000",
@@ -487,7 +489,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 21,
-          "_col": 22
+          "_col": 21
         },
         {
           "text": "21,000",
@@ -503,7 +505,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 21,
-          "_col": 22
+          "_col": 24
         },
         {
           "text": "請",
@@ -519,7 +521,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 20.0,
           "_row": 5,
-          "_col": 16
+          "_col": 14
         },
         {
           "text": "求",
@@ -551,7 +553,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 20.0,
           "_row": 5,
-          "_col": 22
+          "_col": 21
         },
         {
           "text": "預金種別：",
@@ -615,7 +617,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 41,
-          "_col": 16
+          "_col": 14
         },
         {
           "text": "32,400",
@@ -631,7 +633,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 41,
-          "_col": 22
+          "_col": 24
         },
         {
           "text": "1",
@@ -679,7 +681,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 40,
-          "_col": 22
+          "_col": 24
         },
         {
           "text": "様",
@@ -695,7 +697,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 14.0,
           "_row": 9,
-          "_col": 16
+          "_col": 14
         },
         {
           "text": "（会社名）",
@@ -711,7 +713,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 9,
-          "_col": 22
+          "_col": 21
         },
         {
           "text": "〒",
@@ -727,7 +729,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 10,
-          "_col": 22
+          "_col": 21
         },
         {
           "text": "（住所）",
@@ -743,7 +745,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 11,
-          "_col": 22
+          "_col": 21
         },
         {
           "text": "1234567",
@@ -775,7 +777,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 15,
-          "_col": 27
+          "_col": 26
         },
         {
           "text": "印",
@@ -839,7 +841,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 18.0,
           "_row": 18,
-          "_col": 16
+          "_col": 14
         },
         {
           "text": "小",
@@ -871,7 +873,7 @@
           "fontname": "WPCYYJ+MSMincho",
           "font_size": 11.0,
           "_row": 39,
-          "_col": 16
+          "_col": 14
         },
         {
           "text": "◯◯株式会社",
@@ -1609,7 +1611,7 @@
           "_row": 19,
           "_end_row": 19,
           "_col": 5,
-          "_end_col": 22
+          "_end_col": 24
         },
         {
           "x0": 535.8,
@@ -1630,8 +1632,8 @@
           "fill_color": "000000",
           "_row": 15,
           "_end_row": 19,
-          "_col": 27,
-          "_end_col": 27
+          "_col": 26,
+          "_end_col": 26
         },
         {
           "x0": 477.71999999999997,
@@ -1641,7 +1643,7 @@
           "fill_color": "000000",
           "_row": 15,
           "_end_row": 19,
-          "_col": 30,
+          "_col": 29,
           "_end_col": 30
         },
         {
@@ -1674,7 +1676,7 @@
           "fill_color": "000000",
           "_row": 20,
           "_end_row": 39,
-          "_col": 16,
+          "_col": 14,
           "_end_col": 16
         },
         {
@@ -1686,7 +1688,7 @@
           "_row": 20,
           "_end_row": 39,
           "_col": 16,
-          "_end_col": 16
+          "_end_col": 18
         },
         {
           "x0": 361.56,
@@ -1696,8 +1698,8 @@
           "fill_color": "000000",
           "_row": 20,
           "_end_row": 43,
-          "_col": 22,
-          "_end_col": 22
+          "_col": 21,
+          "_end_col": 24
         },
         {
           "x0": 434.15999999999997,
@@ -1707,7 +1709,7 @@
           "fill_color": "000000",
           "_row": 20,
           "_end_row": 43,
-          "_col": 27,
+          "_col": 26,
           "_end_col": 27
         },
         {
@@ -1718,8 +1720,8 @@
           "fill_color": "000000",
           "_row": 6,
           "_end_row": 6,
-          "_col": 16,
-          "_end_col": 22
+          "_col": 14,
+          "_end_col": 24
         },
         {
           "x0": 216.84,
@@ -1729,8 +1731,8 @@
           "fill_color": "000000",
           "_row": 6,
           "_end_row": 6,
-          "_col": 16,
-          "_end_col": 22
+          "_col": 14,
+          "_end_col": 24
         },
         {
           "x0": 57.12,
@@ -1751,7 +1753,7 @@
           "fill_color": "000000",
           "_row": 15,
           "_end_row": 15,
-          "_col": 27,
+          "_col": 26,
           "_end_col": 33
         },
         {
@@ -1762,7 +1764,7 @@
           "fill_color": "000000",
           "_row": 16,
           "_end_row": 16,
-          "_col": 27,
+          "_col": 26,
           "_end_col": 33
         },
         {
@@ -1773,7 +1775,7 @@
           "fill_color": "000000",
           "_row": 19,
           "_end_row": 19,
-          "_col": 27,
+          "_col": 26,
           "_end_col": 33
         },
         {
@@ -1992,13 +1994,13 @@
             {
               "row": 15,
               "end_row": 16,
-              "col": 27,
+              "col": 26,
               "end_col": 30
             },
             {
               "row": 16,
               "end_row": 19,
-              "col": 27,
+              "col": 26,
               "end_col": 30
             },
             {
@@ -2103,19 +2105,19 @@
               "row": 39,
               "end_row": 40,
               "col": 4,
-              "end_col": 22
+              "end_col": 24
             },
             {
               "row": 40,
               "end_row": 41,
               "col": 4,
-              "end_col": 22
+              "end_col": 24
             },
             {
               "row": 41,
               "end_row": 43,
               "col": 4,
-              "end_col": 22
+              "end_col": 24
             },
             {
               "row": 43,
@@ -2127,270 +2129,270 @@
               "row": 20,
               "end_row": 21,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 21,
               "end_row": 23,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 23,
               "end_row": 24,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 24,
               "end_row": 25,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 25,
               "end_row": 27,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 27,
               "end_row": 28,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 28,
               "end_row": 29,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 29,
               "end_row": 31,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 31,
               "end_row": 32,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 32,
               "end_row": 33,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 33,
               "end_row": 35,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 35,
               "end_row": 36,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 36,
               "end_row": 37,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 37,
               "end_row": 39,
               "col": 16,
-              "end_col": 16
+              "end_col": 18
             },
             {
               "row": 20,
               "end_row": 21,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 21,
               "end_row": 23,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 23,
               "end_row": 24,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 24,
               "end_row": 25,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 25,
               "end_row": 27,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 27,
               "end_row": 28,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 28,
               "end_row": 29,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 29,
               "end_row": 31,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 31,
               "end_row": 32,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 32,
               "end_row": 33,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 33,
               "end_row": 35,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 35,
               "end_row": 36,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 36,
               "end_row": 37,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 37,
               "end_row": 39,
-              "col": 16,
-              "end_col": 22
+              "col": 18,
+              "end_col": 24
             },
             {
               "row": 20,
               "end_row": 21,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 21,
               "end_row": 23,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 23,
               "end_row": 24,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 24,
               "end_row": 25,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 25,
               "end_row": 27,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 27,
               "end_row": 28,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 28,
               "end_row": 29,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 29,
               "end_row": 31,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 31,
               "end_row": 32,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 32,
               "end_row": 33,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 33,
               "end_row": 35,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 35,
               "end_row": 36,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 36,
               "end_row": 37,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 37,
               "end_row": 39,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 39,
               "end_row": 40,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 40,
               "end_row": 41,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {
               "row": 41,
               "end_row": 43,
-              "col": 22,
+              "col": 24,
               "end_col": 27
             },
             {

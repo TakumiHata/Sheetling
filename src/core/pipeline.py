@@ -45,11 +45,17 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
     def snap(v: float) -> float:
         return round(float(v), 2)
 
-    def build_cluster_map(raw_vals: set, grid_size: float, max_idx: int) -> dict:
+    def build_cluster_map(raw_vals: set, grid_size: float, max_idx: int, anchor_vals: set = None) -> dict:
+        """
+        近接する座標値をクラスタリングしてグリッドインデックスに変換する。
+        anchor_vals に含まれる値は直前のクラスタと近接していても必ず独立したクラスタを開始する。
+        これによりテーブル列境界が隣接列と合算されるのを防ぐ。
+        """
+        anchor_vals = anchor_vals or set()
         sorted_vals = sorted(raw_vals)
         clusters: list = []
         for v in sorted_vals:
-            if not clusters or v - clusters[-1][-1] > grid_size * 0.6:
+            if not clusters or v - clusters[-1][-1] > grid_size * 0.6 or v in anchor_vals:
                 clusters.append([v])
             else:
                 clusters[-1].append(v)
@@ -64,6 +70,8 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
     # 全Y・X座標を収集
     y_vals: set = set()
     x_vals: set = set()
+    # テーブル列境界X座標（クラスタリング時に独立扱いにするため別途保持）
+    table_col_x_anchors: set = set()
 
     for w in page['words']:
         y_vals.add(snap(w['top']))
@@ -79,7 +87,9 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
         y_vals.add(snap(bbox[3]))  # bottom
     for col_xs in page['table_col_x_positions']:
         for x in col_xs:
-            x_vals.add(snap(x))
+            sx = snap(x)
+            x_vals.add(sx)
+            table_col_x_anchors.add(sx)
     for cells in page.get('table_cells', []):
         for c in cells:
             y_vals.add(snap(c['top']))
@@ -88,7 +98,20 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
             x_vals.add(snap(c['x1']))
 
     y_map = build_cluster_map(y_vals, grid_h, max_rows)
-    x_map = build_cluster_map(x_vals, grid_w, max_cols)
+    x_map = build_cluster_map(x_vals, grid_w, max_cols, anchor_vals=table_col_x_anchors)
+
+    # テーブル列境界が同一グリッド列に潰れた場合の後処理:
+    # 各テーブルの列X座標を左から順に走査し、前の列と同じグリッド列になっていたら +1 する。
+    for col_xs in page['table_col_x_positions']:
+        snapped_xs = sorted(set(snap(x) for x in col_xs))
+        prev_idx = 0
+        for x in snapped_xs:
+            idx = x_map[x]
+            if idx <= prev_idx:
+                idx = prev_idx + 1
+            idx = min(idx, max_cols)
+            x_map[x] = idx
+            prev_idx = idx
 
     # words に付与
     for w in page['words']:
