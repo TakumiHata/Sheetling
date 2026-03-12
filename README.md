@@ -108,11 +108,11 @@ python -m src.main generate
 
 Phase 2でLLMに実行させる2つのプロンプトステップには、それぞれ明確な役割（責務）が定義されています。
 
-1. **Step 1（列アンカー確定 - Table Anchor）**
-   pdfplumberが抽出したテーブルの列境界X座標（`table_col_x_positions`）を元に、各テーブルの列アンカー（Excel列番号リスト）を確定します。全行が同じ列アンカーを参照することで、列ズレのない整合性の取れたテーブル配置を実現します。非テーブルのテキスト要素についても座標変換を行い、Excelレイアウト仕様JSONを出力します。
+1. **Step 1（レイアウト仕様JSON生成）**
+   pdfplumberが抽出した `words`（テキスト・フォント色・サイズ）と `rects`（矩形枠・背景色）に、事前計算済みのExcel行列番号（`_row`/`_col`等）が付与されています。LLMはこの座標をそのまま使用して `text` 要素と `border_rect` 要素のみからなるレイアウト仕様JSONを出力します。
 
 2. **Step 2（コード生成 - Code Generation）**
-   Step 1で確定したレイアウト仕様（列アンカー込みのJSON）をもとに、Python（`openpyxl`ベース）の実行可能な描画スクリプト（`_gen.py`）を生成します。テーブルはループで `col_anchors` を参照するパターンで生成されるため、行ごとの列ズレが構造的に発生しません。
+   Step 1のレイアウト仕様JSONをもとに、Python（`openpyxl`ベース）の実行可能な描画スクリプト（`_gen.py`）を生成します。`text` はセルへの値書き込み・フォント設定、`border_rect` は外枠罫線と背景色の塗りつぶしとして描画されます。
 
 ---
 
@@ -127,8 +127,7 @@ Sheetling/
 │   ├── templates/
 │   │   └── prompts.py       # Phase 1: 各ステップのLLMプロンプト定義
 │   ├── core/
-│   │   ├── pipeline.py      # フェーズ全体のフロー制御
-│   │   └── config.py        # 内部グリッド・Excel出力設定
+│   │   └── pipeline.py      # フェーズ全体のフロー制御
 │   └── utils/
 │       └── logger.py        # ログ出力管理
 ├── data/
@@ -145,7 +144,6 @@ Sheetling/
 
 | パッケージ | 用途 |
 |-----------|------|
-| `markitdown` | PDF全体の論理的なテキスト構造をMarkdown形式で抽出 (Microsoft製) |
 | `pdfplumber` | PDF内のテキスト、表、罫線の詳細な座標情報を抽出 |
 | `openpyxl` | Excelファイルの生成、セルのスタイリング、印刷範囲設定 |
 
