@@ -1,87 +1,31 @@
-あなたはPDF解析データからExcelレイアウト仕様を生成する設計者です。
+あなたはExcelレイアウト設計の検証者です。
+STEP 1が生成したレイアウト仕様JSONを検証・補正し、同じフォーマットの修正済みJSONを出力してください。
 
-## 座標について（最重要）
+## 検証・修正項目
 
-入力データの各要素には **事前計算済みのExcel座標** が付与されています。
-独自に座標を計算せず、必ず以下のフィールドをそのまま参照してください。
+### 1. border_rect の座標整合性
+- `row > end_row` または `col > end_col` となっている場合は値を入れ替えて修正する
+- `row == end_row` かつ `col == end_col`（1×1セル）のborder_rectは削除する
 
-| フィールド | 意味 |
-|---|---|
-| `words[i]._row` | テキストのExcel行番号 |
-| `words[i]._col` | テキストのExcel列番号（開始） |
-| `rects[i]._row` / `_end_row` | 矩形の開始・終了行番号 |
-| `rects[i]._col` / `_end_col` | 矩形の開始・終了列番号 |
-| `_grid.table_cell_ranges[i]` | テーブルiの全セルのExcel範囲リスト（枠線描画用） |
+### 2. 重複するborder_rectの除去
+- `row`, `end_row`, `col`, `end_col` がすべて同一のborder_rectが複数ある場合、1つだけ残す
 
-## 処理手順
+### 3. テキスト要素の欠落補完
+以下の元PDF解析データの `words` と照合し、レイアウトJSONに欠落しているテキストを補完する：
+- 元データの各ページの `words` を確認し、対応するページの `text` 要素に含まれていない `text` フィールドの内容を探す
+- 欠落が確認された場合、該当wordの `_row` を `row`、`_col` を `col` として `text` 要素を追加する
+- `end_col` = `col` + `text` の文字数（概算）
+- 空白・記号のみのword（`text` が空文字、スペースのみ、または1文字以下の記号）は無視してよい
 
-### Step 1: border_rect 要素の生成（テーブルセル境界）
+### 4. text 要素の重複除去
+- 同一ページ内で `row` と `col` が同じ `text` 要素が複数ある場合、`content` を半角スペースで結合して1つにまとめる
 
-各テーブル（インデックスi）について：
-- `_grid.table_cell_ranges[i]` の各エントリを `border_rect` 要素として1つずつ出力する
-- 各エントリの `row`, `end_row`, `col`, `end_col` をそのまま使用する
+### 5. 座標のクランプ
+- `row`, `end_row` が 50 を超えている場合は 50 に切り詰める
+- `col`, `end_col` が 36 を超えている場合は 36 に切り詰める
 
-### Step 2: border_rect 要素の生成（rects）
+## 元のPDF解析データ（参照用）
 
-各 rect の `_row`, `_col`, `_end_row`, `_end_col` をそのまま使用する。
-`table_bboxes` のいずれかと座標が完全一致する rect はスキップする。
-
-### Step 3: テキスト要素の生成
-
-`words` を `_row` の値でグループ化し、同一 `_row` のwordを1つの `text` 要素に結合する。
-- `row` = グループのwordの `_row` 値
-- `col` = グループ内で最小の `_col` 値
-- `content` = グループ内のwordを左から順に半角スペースで結合したテキスト
-- `end_col` = `col` + `content` の文字数（概算）
-- `font_color` = グループ内最初のwordの `font_color`（存在し、かつ黒 `"000000"` でない場合のみ含める）
-- `font_size` = グループ内最初のwordの `font_size`（存在する場合のみ含める）
-
-### Step 4: border_rect の fill_color
-
-各 rect に `fill_color` フィールドが存在し、かつ白 `"FFFFFF"` でも黒 `"000000"` でもない場合、`border_rect` 要素に `"fill_color"` を含める。
-
-## 出力フォーマット
-
-[
-  {
-    "page_number": 1,
-    "elements": [
-      {
-        "type": "text",
-        "content": "請求書",
-        "row": 2,
-        "col": 20,
-        "end_col": 28,
-        "font_color": "FF0000",
-        "font_size": 14
-      },
-      {
-        "type": "text",
-        "content": "合計金額",
-        "row": 5,
-        "col": 3,
-        "end_col": 9
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 2,
-        "end_col": 17,
-        "fill_color": "CCDDEE"
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 18,
-        "end_col": 27
-      }
-    ]
-  }
-]
-
-入力データ:
 {
   "pages": [
     {
@@ -2502,4 +2446,917 @@
   ]
 }
 
-【最重要】出力は `[` で始まり `]` で終わる純粋なJSON配列文字列のみとしてください。Markdownのコードブロック(```json等)、前後の説明文、思考プロセス、検証コメントは一切含めないでください。JSON以外の文字を1文字でも出力するとSTEP 1.5で処理できなくなります。
+## STEP 1の出力（検証・修正対象）
+
+[
+{
+"page_number": 1,
+"elements": [
+{
+"type": "text",
+"content": "請求書",
+"row": 5,
+"col": 16,
+"end_col": 22,
+"font_size": 20.0
+},
+{
+"type": "text",
+"content": "下記のとおりご請求いたします。",
+"row": 11,
+"col": 4,
+"end_col": 20,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "（会社名）",
+"row": 9,
+"col": 22,
+"end_col": 27,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "〒",
+"row": 10,
+"col": 22,
+"end_col": 23,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "（住所）",
+"row": 11,
+"col": 22,
+"end_col": 26,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "（振込先）",
+"row": 13,
+"col": 5,
+"end_col": 11,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "TEL.",
+"row": 13,
+"col": 22,
+"end_col": 24,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "◯◯銀行◯◯支店",
+"row": 14,
+"col": 5,
+"end_col": 13,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "FAX.",
+"row": 14,
+"col": 22,
+"end_col": 24,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "預金種別：",
+"row": 14,
+"col": 5,
+"end_col": 11,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "普通",
+"row": 14,
+"col": 10,
+"end_col": 12,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "口座番号：",
+"row": 15,
+"col": 5,
+"end_col": 10,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "1234567",
+"row": 15,
+"col": 10,
+"end_col": 16,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "口座名義：",
+"row": 16,
+"col": 5,
+"end_col": 10,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "◯◯株式会社",
+"row": 16,
+"col": 10,
+"end_col": 17,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "検 印",
+"row": 15,
+"col": 27,
+"end_col": 28,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "担当者印",
+"row": 15,
+"col": 30,
+"end_col": 32,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "御請求金額",
+"row": 18,
+"col": 5,
+"end_col": 12,
+"font_size": 14.0
+},
+{
+"type": "text",
+"content": "¥32,400-",
+"row": 18,
+"col": 16,
+"end_col": 24,
+"font_size": 18.0
+},
+{
+"type": "text",
+"content": "（消費税込み）",
+"row": 18,
+"col": 22,
+"end_col": 29,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "品 名",
+"row": 20,
+"col": 4,
+"end_col": 7,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "数量",
+"row": 20,
+"col": 16,
+"end_col": 18,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "単価",
+"row": 20,
+"col": 22,
+"end_col": 24,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "金額",
+"row": 20,
+"col": 22,
+"end_col": 24,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "摘要",
+"row": 20,
+"col": 30,
+"end_col": 32,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "洗面台パイプ修理",
+"row": 21,
+"col": 4,
+"end_col": 14,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "1",
+"row": 21,
+"col": 16,
+"end_col": 16,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "21,000",
+"row": 21,
+"col": 22,
+"end_col": 26,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "21,000",
+"row": 21,
+"col": 22,
+"end_col": 26,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "サンプル",
+"row": 21,
+"col": 27,
+"end_col": 30,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "清掃一式",
+"row": 23,
+"col": 4,
+"end_col": 9,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "1",
+"row": 23,
+"col": 16,
+"end_col": 16,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "9,000",
+"row": 23,
+"col": 22,
+"end_col": 24,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "9,000",
+"row": 23,
+"col": 22,
+"end_col": 24,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "サンプル",
+"row": 23,
+"col": 27,
+"end_col": 30,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "小 計",
+"row": 39,
+"col": 12,
+"end_col": 16,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "30,000",
+"row": 39,
+"col": 22,
+"end_col": 26,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "消費税等",
+"row": 40,
+"col": 12,
+"end_col": 17,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "2,400",
+"row": 40,
+"col": 22,
+"end_col": 25,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "合 計",
+"row": 41,
+"col": 12,
+"end_col": 16,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "32,400",
+"row": 41,
+"col": 22,
+"end_col": 26,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "備考：",
+"row": 43,
+"col": 4,
+"end_col": 7,
+"font_size": 11.0
+},
+{
+"type": "border_rect",
+"row": 15,
+"end_row": 16,
+"col": 27,
+"end_col": 30
+},
+{
+"type": "border_rect",
+"row": 16,
+"end_row": 19,
+"col": 27,
+"end_col": 30
+},
+{
+"type": "border_rect",
+"row": 15,
+"end_row": 16,
+"col": 30,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 16,
+"end_row": 19,
+"col": 30,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 20,
+"end_row": 21,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 21,
+"end_row": 23,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 23,
+"end_row": 24,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 24,
+"end_row": 25,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 25,
+"end_row": 27,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 27,
+"end_row": 28,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 28,
+"end_row": 29,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 29,
+"end_row": 31,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 31,
+"end_row": 32,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 32,
+"end_row": 33,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 33,
+"end_row": 35,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 35,
+"end_row": 36,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 36,
+"end_row": 37,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 37,
+"end_row": 39,
+"col": 4,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 39,
+"end_row": 40,
+"col": 4,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 40,
+"end_row": 41,
+"col": 4,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 41,
+"end_row": 43,
+"col": 4,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 43,
+"end_row": 47,
+"col": 4,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 20,
+"end_row": 21,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 21,
+"end_row": 23,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 23,
+"end_row": 24,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 24,
+"end_row": 25,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 25,
+"end_row": 27,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 27,
+"end_row": 28,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 28,
+"end_row": 29,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 29,
+"end_row": 31,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 31,
+"end_row": 32,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 32,
+"end_row": 33,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 33,
+"end_row": 35,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 35,
+"end_row": 36,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 36,
+"end_row": 37,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 37,
+"end_row": 39,
+"col": 16,
+"end_col": 16
+},
+{
+"type": "border_rect",
+"row": 20,
+"end_row": 21,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 21,
+"end_row": 23,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 23,
+"end_row": 24,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 24,
+"end_row": 25,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 25,
+"end_row": 27,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 27,
+"end_row": 28,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 28,
+"end_row": 29,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 29,
+"end_row": 31,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 31,
+"end_row": 32,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 32,
+"end_row": 33,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 33,
+"end_row": 35,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 35,
+"end_row": 36,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 36,
+"end_row": 37,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 37,
+"end_row": 39,
+"col": 16,
+"end_col": 22
+},
+{
+"type": "border_rect",
+"row": 20,
+"end_row": 21,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 21,
+"end_row": 23,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 23,
+"end_row": 24,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 24,
+"end_row": 25,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 25,
+"end_row": 27,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 27,
+"end_row": 28,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 28,
+"end_row": 29,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 29,
+"end_row": 31,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 31,
+"end_row": 32,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 32,
+"end_row": 33,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 33,
+"end_row": 35,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 35,
+"end_row": 36,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 36,
+"end_row": 37,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 37,
+"end_row": 39,
+"col": 22,
+"end_col": 27
+},
+{
+"type": "border_rect",
+"row": 20,
+"end_row": 21,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 21,
+"end_row": 23,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 23,
+"end_row": 24,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 24,
+"end_row": 25,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 25,
+"end_row": 27,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 27,
+"end_row": 28,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 28,
+"end_row": 29,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 29,
+"end_row": 31,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 31,
+"end_row": 32,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 32,
+"end_row": 33,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 33,
+"end_row": 35,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 35,
+"end_row": 36,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 36,
+"end_row": 37,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 37,
+"end_row": 39,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 39,
+"end_row": 40,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 40,
+"end_row": 41,
+"col": 27,
+"end_col": 33
+},
+{
+"type": "border_rect",
+"row": 41,
+"end_row": 43,
+"col": 27,
+"end_col": 33
+}
+]
+}
+]
+
+【最重要】出力は `[` で始まり `]` で終わる純粋なJSON配列文字列のみとしてください。Markdownのコードブロック(```json等)、前後の説明文、思考プロセス、検証コメントは一切含めないでください。JSON以外の文字を1文字でも出力するとSTEP 2で処理できなくなります。

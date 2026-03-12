@@ -1,16 +1,35 @@
 """
 Sheetling パイプライン。
-2ステップ・パイプライン方式:
-1. 解析 (pdfplumber) → extracted_data.json + prompt_step1.txt + prompt_step2.txt
+3ステップ・パイプライン方式:
+1. 解析 (pdfplumber) → extracted_data.json + prompt_step1.txt + prompt_step1_5.txt + prompt_step2.txt
 2. 描画 (openpyxl) — LLMが生成した _gen.py を実行
 """
 
 import json
+import re
 from pathlib import Path
 
 from src.parser.pdf_extractor import extract_pdf_data
-from src.templates.prompts import TABLE_ANCHOR_PROMPT, CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GRID_SIZES
+from src.templates.prompts import TABLE_ANCHOR_PROMPT, LAYOUT_REVIEW_PROMPT, CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GRID_SIZES
 from src.utils.logger import get_logger
+
+
+def _sanitize_generated_code(code: str) -> tuple[str, list[str]]:
+    """生成コードの既知の問題パターンを検出・自動修正する。"""
+    fixes = []
+
+    # 修正: ws.page_margins = {...} → 属性代入形式に変換
+    margins_dict_pattern = re.compile(r"ws\.page_margins\s*=\s*\{([^}]*)\}", re.DOTALL)
+    match = margins_dict_pattern.search(code)
+    if match:
+        kv_pattern = re.compile(r"['\"](\w+)['\"]\s*:\s*([\d.]+)")
+        pairs = kv_pattern.findall(match.group(1))
+        if pairs:
+            replacement = "\n".join(f"ws.page_margins.{k} = {v}" for k, v in pairs)
+            code = margins_dict_pattern.sub(replacement, code)
+            fixes.append("ws.page_margins への dict 代入を属性代入形式に自動修正しました")
+
+    return code, fixes
 
 
 def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
@@ -149,9 +168,16 @@ class SheetlingPipeline:
             **grid_params
         )
 
-        # Step 2: コード生成プロンプト（Step 1の出力を貼り付けるプレースホルダー）
+        # Step 1.5: レイアウトJSON検証・補正プロンプト（Step 1の出力を貼り付けるプレースホルダー）
+        prompt_1_5 = LAYOUT_REVIEW_PROMPT.format(
+            input_data=input_data_str,
+            step1_output="[ここにSTEP 1の出力（JSON部分のみ）を貼り付けてください]",
+            **grid_params
+        )
+
+        # Step 2: コード生成プロンプト（Step 1.5の出力を貼り付けるプレースホルダー）
         prompt_2 = CODE_GEN_PROMPT.format(
-            input_data="[ここにSTEP 1の出力（JSON部分のみ）を貼り付けてください]",
+            input_data="[ここにSTEP 1.5の出力（JSON部分のみ）を貼り付けてください]",
             **grid_params
         )
 
@@ -160,10 +186,13 @@ class SheetlingPipeline:
         prompts_dir.mkdir(parents=True, exist_ok=True)
 
         prompt_1_path = prompts_dir / f"{pdf_name}_prompt_step1.txt"
+        prompt_1_5_path = prompts_dir / f"{pdf_name}_prompt_step1_5.txt"
         prompt_2_path = prompts_dir / f"{pdf_name}_prompt_step2.txt"
 
         with open(prompt_1_path, "w", encoding="utf-8") as f:
             f.write(prompt_1)
+        with open(prompt_1_5_path, "w", encoding="utf-8") as f:
+            f.write(prompt_1_5)
         with open(prompt_2_path, "w", encoding="utf-8") as f:
             f.write(prompt_2)
 
@@ -175,13 +204,15 @@ class SheetlingPipeline:
 
         logger.info(f"✅ Phase 1 完了: {pdf_name}")
         logger.info(f"  抽出データ: {extracted_json_path}")
-        logger.info(f"  STEP 1 プロンプト: {prompt_1_path}")
-        logger.info(f"  STEP 2 プロンプト: {prompt_2_path}")
-        logger.info(f"  ※ STEP1をLLMに入力 → 出力をSTEP2に貼り付けてLLMに入力 → コードを {generated_code_path.name} に保存してください。")
+        logger.info(f"  STEP 1   プロンプト: {prompt_1_path}")
+        logger.info(f"  STEP 1.5 プロンプト: {prompt_1_5_path}")
+        logger.info(f"  STEP 2   プロンプト: {prompt_2_path}")
+        logger.info(f"  ※ STEP1をLLMに入力 → 出力をSTEP1.5に貼り付けてLLMに入力 → 出力をSTEP2に貼り付けてLLMに入力 → コードを {generated_code_path.name} に保存してください。")
 
         return {
             "json_path": str(extracted_json_path),
             "prompt_step1_path": str(prompt_1_path),
+            "prompt_step1_5_path": str(prompt_1_5_path),
             "prompt_step2_path": str(prompt_2_path),
             "generated_code_base_path": str(generated_code_path)
         }
@@ -208,6 +239,15 @@ class SheetlingPipeline:
             is_placeholder = len(actual_code) < 50
 
             if content and not is_placeholder:
+                # 既知の問題パターンを静的チェック・自動修正
+                sanitized_content, fixes = _sanitize_generated_code(content)
+                if fixes:
+                    for fix in fixes:
+                        logger.warning(f"🔧 静的修正: {fix}")
+                    with open(generated_code_path, "w", encoding="utf-8") as f:
+                        f.write(sanitized_content)
+                    content = sanitized_content
+
                 logger.info(f"✨ 生成されたコードを実行します: {generated_code_path.name}")
                 import subprocess
                 import os

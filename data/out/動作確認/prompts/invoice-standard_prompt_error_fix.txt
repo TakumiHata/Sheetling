@@ -1,10 +1,45 @@
+あなたはPythonプログラミングのエキスパートです。
+以下のExcel生成用Pythonスクリプトを実行したところ、エラーが発生しました（または期待する結果が得られませんでした）。
+エラーメッセージと現在のコードを分析し、問題を修正した新しいPythonスクリプトを生成してください。
+
+【最重要：Python文法の遵守】
+修正後のコード内では、必ず Python の予約語である `True`/`False` （先頭大文字）を使用してください。小文字の `true`/`false` を含めないでください。
+
+【エラーメッセージ・実行結果】
+生成コードの実行に失敗しました:
+Traceback (most recent call last):
+  File "/app/data/out/動作確認/invoice-standard_gen.py", line 1043, in <module>
+    wb.save("output.xlsx")
+  File "/usr/local/lib/python3.11/site-packages/openpyxl/workbook/workbook.py", line 386, in save
+    save_workbook(self, filename)
+  File "/usr/local/lib/python3.11/site-packages/openpyxl/writer/excel.py", line 294, in save_workbook
+    writer.save()
+  File "/usr/local/lib/python3.11/site-packages/openpyxl/writer/excel.py", line 275, in save
+    self.write_data()
+  File "/usr/local/lib/python3.11/site-packages/openpyxl/writer/excel.py", line 77, in write_data
+    self._write_worksheets()
+  File "/usr/local/lib/python3.11/site-packages/openpyxl/writer/excel.py", line 215, in _write_worksheets
+    self.write_worksheet(ws)
+  File "/usr/local/lib/python3.11/site-packages/openpyxl/writer/excel.py", line 200, in write_worksheet
+    writer.write()
+  File "/usr/local/lib/python3.11/site-packages/openpyxl/worksheet/_writer.py", line 360, in write
+    self.write_tail()
+  File "/usr/local/lib/python3.11/site-packages/openpyxl/worksheet/_writer.py", line 345, in write_tail
+    self.write_margins()
+  File "/usr/local/lib/python3.11/site-packages/openpyxl/worksheet/_writer.py", line 222, in write_margins
+    self.xf.send(margins.to_tree())
+                 ^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'to_tree'
+
+
+【現在のコード】
+```python
 from openpyxl import Workbook
 from openpyxl.styles import Border, Side, Alignment, PatternFill, Font
 from openpyxl.utils import get_column_letter
-from openpyxl.worksheet.pagebreak import Break
 import json
 
-# Input data (Step 1 layout specification)
+# 入力データ (Step 1のレイアウト仕様)
 data = [
     {
         "page_number": 1,
@@ -919,7 +954,7 @@ data = [
 # --- Grid Settings ---
 MAX_COLS = 36
 MAX_ROWS_PER_PAGE = 50
-TOTAL_PAGES = len(data)
+TOTAL_PAGES = len(data) # Assuming one page in the input for simplicity, adjust if more pages
 
 # --- Helper Function ---
 thin = Side(style='thin')
@@ -931,7 +966,7 @@ def apply_outer_border(ws, s_row, e_row, s_col, e_col, fill_color=None):
             try:
                 target.alignment = Alignment(horizontal='left', vertical='center', wrap_text=False)
             except AttributeError:
-                pass # Ignore if the cell is already part of a merged cell or has different properties
+                pass
             top    = thin if r == s_row else None
             bottom = thin if r == e_row else None
             left   = thin if c == s_col else None
@@ -939,12 +974,12 @@ def apply_outer_border(ws, s_row, e_row, s_col, e_col, fill_color=None):
             try:
                 target.border = Border(top=top, bottom=bottom, left=left, right=right)
             except AttributeError:
-                pass # Ignore if the cell is already part of a merged cell or has different properties
+                pass
             if fill:
                 try:
                     target.fill = fill
                 except AttributeError:
-                    pass # Ignore if the cell is already part of a merged cell or has different properties
+                    pass
 
 # --- Workbook Creation ---
 wb = Workbook()
@@ -1002,16 +1037,15 @@ for page_data in data:
             )
 
     # Add page break after the last row of the current page's content
+    # Find the maximum row used in the current page
     max_row_in_page = 0
     for item in page_data["elements"]:
         max_row_in_page = max(max_row_in_page, item["end_row"] if item["type"] == "border_rect" else item["row"])
 
     if page_number < TOTAL_PAGES:
+        # Add a page break at the calculated row after the content of the current page
         # The row index for the break should be the last row of content + 1
-        # Ensure the row index is within the worksheet's bounds if possible
-        break_row_index = row_offset + max_row_in_page + 1
-        if break_row_index <= ws.max_row: # Check if the row index is valid
-            ws.row_breaks.append(Break(id=break_row_index))
+        ws.row_breaks.append(Break(id=row_offset + max_row_in_page + 1))
 
 
 # --- Print Range Calculation ---
@@ -1020,30 +1054,30 @@ max_used_row = 0
 max_used_col = 0
 for page_data in data:
     for item in page_data["elements"]:
-        # Ensure end_row/end_col are considered for the extent of the content
-        current_max_row = item["end_row"] if item["type"] == "border_rect" else item["row"]
-        current_max_col = item["end_col"] if item["type"] == "border_rect" else item["end_col"]
-        
-        max_used_row = max(max_used_row, current_max_row)
-        max_used_col = max(max_used_col, current_max_col)
+        max_used_row = max(max_used_row, item["end_row"] if item["type"] == "border_rect" else item["row"])
+        max_used_col = max(max_used_col, item["end_col"] if item["type"] == "border_rect" else item["end_col"])
 
-# Apply print range, ensuring it's within reasonable bounds
+# Apply print range
 if max_used_row > 0 and max_used_col > 0:
-    ws.print_area = f"A1:{get_column_letter(min(max_used_col, MAX_COLS))}{min(max_used_row, TOTAL_PAGES * MAX_ROWS_PER_PAGE)}"
+    ws.print_area = f"A1:{get_column_letter(max_used_col)}{max_used_row}"
 
 # --- Page Setup ---
 ws.page_setup.paperSize = 9  # A4
 ws.page_setup.orientation = 'portrait'
 
 # Margins
-# The error "AttributeError: 'dict' object has no attribute 'to_tree'" suggests that the margins were
-# being assigned incorrectly. The correct way is to set each margin attribute individually.
-ws.page_margins.left = 0.47
-ws.page_margins.right = 0.47
-ws.page_margins.top = 0.41
-ws.page_margins.bottom = 0.41
-ws.page_margins.header = 0.0
-ws.page_margins.footer = 0.0
+ws.page_margins = {
+    'left': 0.47,
+    'right': 0.47,
+    'top': 0.41,
+    'bottom': 0.41,
+    'header': 0.0,
+    'footer': 0.0
+}
 
 # Save the workbook
 wb.save("output.xlsx")
+```
+【最重要】出力は、修正済みの実行可能な Python コードのみをマークダウンのコードブロック (```python ... ```) で出力してください。前後の挨拶、解説、謝罪、思考プロセスなどは一切不要です。
+【最重要】出力するコード内には、`[cite: ...]` のような参照タグやアノテーション（例: ` [cite: 271]`）を絶対に含めないでください。SyntaxErrorの原因となります。純粋で実行可能なPythonコードのみを出力してください。また、コードブロックの外にいかなるテキストも記述しないでください。
+【重要】`AttributeError: 'MergedCell' object attribute 'value' is read-only` を回避するため、セルへの値の代入や `merge_cells` 等の処理は、必ず `try...except AttributeError:` で囲み、重複座標エラーを握り潰す（passする）ように修正してください。
