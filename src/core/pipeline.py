@@ -1,17 +1,103 @@
 """
 Sheetling パイプライン。
-新しい多段パイプライン方式:
-1. 解析 (pdfplumber)
-2. 構造化・座標計算 (LLMプロンプト生成)
-3. 描画 (openpyxl)
+2ステップ・パイプライン方式:
+1. 解析 (pdfplumber) → extracted_data.json + prompt_step1.txt + prompt_step2.txt
+2. 描画 (openpyxl) — LLMが生成した _gen.py を実行
 """
 
 import json
 from pathlib import Path
 
 from src.parser.pdf_extractor import extract_pdf_data
-from src.templates.prompts import CHUNKING_PROMPT, STRUCTURE_ALIGNMENT_PROMPT, GRID_MAPPING_PROMPT, COMMAND_GENERATION_PROMPT, PAGE_FIT_PROMPT, EXCEL_CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GRID_SIZES
+from src.templates.prompts import TABLE_ANCHOR_PROMPT, CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GRID_SIZES
 from src.utils.logger import get_logger
+
+
+def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
+    """
+    PDF座標をExcel行・列番号に変換し、各要素にインプレースで付与する。
+    Y・X座標ともにクラスタリングを行い、近接する座標を同一行・列に統一する。
+    """
+    page_height = page['height']
+    page_width = page['width']
+    grid_h = page_height / max_rows
+    grid_w = page_width / max_cols
+
+    def snap(v: float) -> float:
+        return round(float(v), 2)
+
+    def build_cluster_map(raw_vals: set, grid_size: float, max_idx: int) -> dict:
+        sorted_vals = sorted(raw_vals)
+        clusters: list = []
+        for v in sorted_vals:
+            if not clusters or v - clusters[-1][-1] > grid_size * 0.6:
+                clusters.append([v])
+            else:
+                clusters[-1].append(v)
+        val_map = {}
+        for cluster in clusters:
+            centroid = sum(cluster) / len(cluster)
+            idx = max(1, min(max_idx, 1 + int(centroid / grid_size)))
+            for v in cluster:
+                val_map[v] = idx
+        return val_map
+
+    # 全Y・X座標を収集
+    y_vals: set = set()
+    x_vals: set = set()
+
+    for w in page['words']:
+        y_vals.add(snap(w['top']))
+        x_vals.add(snap(w['x0']))
+        x_vals.add(snap(w['x1']))
+    for r in page['rects']:
+        y_vals.add(snap(r['top']))
+        y_vals.add(snap(r['bottom']))
+        x_vals.add(snap(r['x0']))
+        x_vals.add(snap(r['x1']))
+    for bbox in page['table_bboxes']:
+        y_vals.add(snap(bbox[1]))  # top
+        y_vals.add(snap(bbox[3]))  # bottom
+    for col_xs in page['table_col_x_positions']:
+        for x in col_xs:
+            x_vals.add(snap(x))
+    for cells in page.get('table_cells', []):
+        for c in cells:
+            y_vals.add(snap(c['top']))
+            y_vals.add(snap(c['bottom']))
+            x_vals.add(snap(c['x0']))
+            x_vals.add(snap(c['x1']))
+
+    y_map = build_cluster_map(y_vals, grid_h, max_rows)
+    x_map = build_cluster_map(x_vals, grid_w, max_cols)
+
+    # words に付与
+    for w in page['words']:
+        w['_row'] = y_map[snap(w['top'])]
+        w['_col'] = x_map[snap(w['x0'])]
+
+    # rects に付与
+    for r in page['rects']:
+        r['_row'] = y_map[snap(r['top'])]
+        r['_end_row'] = y_map[snap(r['bottom'])]
+        r['_col'] = x_map[snap(r['x0'])]
+        r['_end_col'] = x_map[snap(r['x1'])]
+
+    # テーブルセル境界のExcel座標を _grid にまとめる（枠線描画用）
+    page['_grid'] = {
+        'table_cell_ranges': [
+            [
+                {
+                    'row':     y_map.get(snap(c['top']), 1),
+                    'end_row': y_map.get(snap(c['bottom']), 1),
+                    'col':     x_map.get(snap(c['x0']), 1),
+                    'end_col': x_map.get(snap(c['x1']), 1)
+                }
+                for c in cells
+            ]
+            for cells in page.get('table_cells', [])
+        ]
+    }
 
 logger = get_logger(__name__)
 
@@ -19,7 +105,7 @@ logger = get_logger(__name__)
 class SheetlingPipeline:
     """
     1. PDF を解析してプロンプトを出力する (Phase 1)。
-    2. ユーザーがLLMから得たJSONを実行し、Excel方眼紙を生成する (Phase 3)。
+    2. ユーザーがLLMから得たコードを実行し、Excel方眼紙を生成する (Phase 3)。
     """
 
     def __init__(self, output_base_dir: str):
@@ -39,82 +125,64 @@ class SheetlingPipeline:
             out_dir = self.output_base_dir / rel_path
         except ValueError:
             out_dir = self.output_base_dir / pdf_name
-            
+
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        # PDFから情報を抽出 (markdown_content と pages)
+        # PDFから情報を抽出
         extracted_data = extract_pdf_data(pdf_path)
-        markdown_str = extracted_data["markdown_content"]
-        
+
         extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
         with open(extracted_json_path, "w", encoding="utf-8") as f:
             json.dump(extracted_data, f, indent=2, ensure_ascii=False)
 
-        # 抽出データを文字列化してプロンプトに埋め込む
-        input_data_str = json.dumps(extracted_data, indent=2, ensure_ascii=False)
-        
-        # STEP 2 用の入力テンプレート文字列
-        step2_input_template = f"==== Markdown テキスト ====\n{markdown_str}\n\n==== STEP 1 (チャンク抽出) の出力結果 ====\n[ここにSTEP 1のJSON出力結果を貼り付けてください]"
-
-        prompt_1 = CHUNKING_PROMPT.format(input_data=input_data_str)
-        prompt_2 = STRUCTURE_ALIGNMENT_PROMPT.format(input_data=step2_input_template)
-        
         grid_params = GRID_SIZES.get(grid_size, GRID_SIZES["small"])
-        
-        prompt_3 = GRID_MAPPING_PROMPT.format(
-            input_data="[ここにSTEP 2の出力（JSON部分のみ）を貼り付けてください]",
-            **grid_params
-        )
-        prompt_4 = COMMAND_GENERATION_PROMPT.format(input_data="[ここにSTEP 3の出力（JSON部分のみ）を貼り付けてください]")
-        prompt_5 = PAGE_FIT_PROMPT.format(
-            input_data="[ここにSTEP 4の出力（JSON部分のみ）を貼り付けてください]",
-            **grid_params
-        )
-        prompt_6 = EXCEL_CODE_GEN_PROMPT.format(
-            input_data="[ここにSTEP 5の出力（JSON部分のみ）を貼り付けてください]",
+
+        # Y・X座標のクラスタリングを行い、各要素に事前計算済みExcel座標を付与
+        for page in extracted_data['pages']:
+            _compute_grid_coords(page, grid_params['max_rows'], grid_params['max_cols'])
+
+        input_data_str = json.dumps(extracted_data, indent=2, ensure_ascii=False)
+
+        # Step 1: 列アンカー確定プロンプト（PDF解析データを直接埋め込む）
+        prompt_1 = TABLE_ANCHOR_PROMPT.format(
+            input_data=input_data_str,
             **grid_params
         )
 
-        # プロンプト保存用のディレクトリを作成
+        # Step 2: コード生成プロンプト（Step 1の出力を貼り付けるプレースホルダー）
+        prompt_2 = CODE_GEN_PROMPT.format(
+            input_data="[ここにSTEP 1の出力（JSON部分のみ）を貼り付けてください]",
+            **grid_params
+        )
+
+        # プロンプト保存
         prompts_dir = out_dir / "prompts"
         prompts_dir.mkdir(parents=True, exist_ok=True)
 
-        # プロンプトを別々のファイルとして出力
         prompt_1_path = prompts_dir / f"{pdf_name}_prompt_step1.txt"
         prompt_2_path = prompts_dir / f"{pdf_name}_prompt_step2.txt"
-        prompt_3_path = prompts_dir / f"{pdf_name}_prompt_step3.txt"
-        prompt_4_path = prompts_dir / f"{pdf_name}_prompt_step4.txt"
-        prompt_5_path = prompts_dir / f"{pdf_name}_prompt_step5.txt"
-        prompt_6_path = prompts_dir / f"{pdf_name}_prompt_step6.txt"
-        
+
         with open(prompt_1_path, "w", encoding="utf-8") as f:
             f.write(prompt_1)
         with open(prompt_2_path, "w", encoding="utf-8") as f:
             f.write(prompt_2)
-        with open(prompt_3_path, "w", encoding="utf-8") as f:
-            f.write(prompt_3)
-        with open(prompt_4_path, "w", encoding="utf-8") as f:
-            f.write(prompt_4)
-        with open(prompt_5_path, "w", encoding="utf-8") as f:
-            f.write(prompt_5)
-        with open(prompt_6_path, "w", encoding="utf-8") as f:
-            f.write(prompt_6)
 
-        # 生成コード保存用の空ファイルを作成 (STEP 6)
+        # 生成コード保存用の空ファイルを作成
         generated_code_path = out_dir / f"{pdf_name}_gen.py"
         if not generated_code_path.exists():
             with open(generated_code_path, "w", encoding="utf-8") as f:
-                f.write("# Please paste final AI Python code (from STEP 6) here.\n")
+                f.write("# Please paste final AI Python code (from STEP 2) here.\n")
 
         logger.info(f"✅ Phase 1 完了: {pdf_name}")
         logger.info(f"  抽出データ: {extracted_json_path}")
-        logger.info(f"  プロンプトSTEP1〜6を出力しました")
-        logger.info(f"  ※ STEP1から順にLLMに入力し、最終的な出力結果を {generated_code_path} に保存してください。")
+        logger.info(f"  STEP 1 プロンプト: {prompt_1_path}")
+        logger.info(f"  STEP 2 プロンプト: {prompt_2_path}")
+        logger.info(f"  ※ STEP1をLLMに入力 → 出力をSTEP2に貼り付けてLLMに入力 → コードを {generated_code_path.name} に保存してください。")
 
         return {
             "json_path": str(extracted_json_path),
             "prompt_step1_path": str(prompt_1_path),
-            "prompt_step6_path": str(prompt_6_path),
+            "prompt_step2_path": str(prompt_2_path),
             "generated_code_base_path": str(generated_code_path)
         }
 
@@ -127,31 +195,28 @@ class SheetlingPipeline:
             out_dir = Path(specific_out_dir)
         else:
             out_dir = self.output_base_dir / pdf_name
-        
+
         output_xlsx_path = out_dir / f"{pdf_name}.xlsx"
         generated_code_path = out_dir / f"{pdf_name}_gen.py"
 
-        # 生成コード (STEP 6) が存在すれば実行
         if generated_code_path.exists():
             with open(generated_code_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
-            
-            # プレースホルダーのみの場合や極端に短い場合はスキップ
-            # "# Please paste" から始まっている場合でも、改行以降に有効なコードがあれば実行するように変更
+
             code_lines = [line for line in content.splitlines() if not line.strip().startswith("#")]
             actual_code = "\n".join(code_lines).strip()
             is_placeholder = len(actual_code) < 50
-            
+
             if content and not is_placeholder:
                 logger.info(f"✨ 生成されたコードを実行します: {generated_code_path.name}")
                 import subprocess
                 import os
                 import sys
-                
+
                 try:
                     env = os.environ.copy()
                     env["PYTHONPATH"] = os.getcwd()
-                    
+
                     result = subprocess.run(
                         [sys.executable, generated_code_path.name],
                         cwd=str(out_dir),
@@ -159,12 +224,12 @@ class SheetlingPipeline:
                         capture_output=True,
                         text=True
                     )
-                    
+
                     if result.returncode == 0:
                         temp_xlsx = out_dir / "output.xlsx"
                         if temp_xlsx.exists():
                             temp_xlsx.replace(output_xlsx_path)
-                            logger.info(f"✅ Phase 3 完了 (コード生成経由): {output_xlsx_path}")
+                            logger.info(f"✅ Phase 3 完了: {output_xlsx_path}")
                             return str(output_xlsx_path)
                         else:
                             error_msg = "生成コードは正常終了しましたが、output.xlsx が生成されませんでした。"
@@ -181,7 +246,7 @@ class SheetlingPipeline:
             else:
                 logger.warning(f"⚠️ 生成コードファイル {generated_code_path.name} が空、または未編集です。")
         else:
-            logger.error(f"❌ 生成コードファイル {generated_code_path.name} が見つかりません。STEP 6 の結果を保存してください。")
+            logger.error(f"❌ 生成コードファイル {generated_code_path.name} が見つかりません。STEP 2 の結果を保存してください。")
 
         raise RuntimeError(f"Excelの生成に失敗しました ({pdf_name})")
 
@@ -193,5 +258,3 @@ class SheetlingPipeline:
         with open(error_prompt_path, "w", encoding="utf-8") as f:
             f.write(prompt_text)
         logger.info(f"💡 エラー修正用プロンプトを出力しました: {error_prompt_path}")
-
-
