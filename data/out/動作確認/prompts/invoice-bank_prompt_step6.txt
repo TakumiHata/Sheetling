@@ -1,0 +1,379 @@
+あなたは生成AIプログラミングのエキスパートです。
+提供された Excel 描画コマンド（JSON）に基づき、`openpyxl` を用いて、
+**A4 縦 1 ページ（または指定されたページ数）の実寸大で完璧に収まる、非常に見栄えの良い Excel ファイルを作成する Python スクリプト**を生成してください。
+
+【要件】
+1. レイアウトと方眼紙サイズの厳密な設定:
+   入力データの座標は、すでにA4横幅（最大約36列）にフィットするように計算されています。
+   以下の数値を列幅と行の高さとして設定するコードを必ず含めてください。
+   - `ws.column_dimensions[...].width = 2.53` （1列＝約6.0mm）
+   - `ws.row_dimensions[...].height = 17.01` （1行＝約6.0mm）
+   **重要: 複数ページの場合に備え、行の高さの設定は `1` 行目から「最大ページ数 × 50」行目程度まで適用するループを作成してください。**
+
+2. デザインの洗練:
+   - 表のヘッダーは背景色（薄いグレーなど）を塗り、太字にする。
+   - 罫線は、単一セルに適切に適用されるようループ等で処理する。
+   - **重要：セルの結合を行わない方針（Zero-Merge）に対応するため、すべてのテキストセルに対して「折り返して全体を表示」 (`wrap_text=True`) と「垂直方向の中央揃え」 (`vertical='center'`) をデフォルトで適用し、テキストが隣のセルに隠れないように配慮する。**
+
+3. 印刷設定（縮小機能に一切頼らない絶対等倍）:
+   - 用紙サイズ: A4 (openpyxlの仕様に合わせ、ws.page_setup.paperSize には定数などを使わずに直接 9 を代入してください)
+   - 向き: 縦 (ws.page_setup.orientation には定数などを使わずに直接 'portrait' を代入してください)
+   - **重要: スケーリング（`fitToWidth` や `fitToPage`）の自動縮小設定は無効化するか、一切記述しないでください。縮小不要な等倍（100%）で出力されることが大前提です。**
+   - 印刷範囲の設定 (`ws.print_area`) は、入力データに `print_range` があればそれを使用してください。
+   - **重要: ページ中央に配置し、真のA4サイズと一致する数学的余白として、必ず以下のコードを含めてください。**
+     ```python
+     ws.print_options.horizontalCentered = True
+     ws.page_margins.left = 0.47
+     ws.page_margins.right = 0.47
+     ws.page_margins.top = 0.41
+     ws.page_margins.bottom = 0.41
+     ```
+4. 複数ページへの完全対応:
+   - 入力JSONに複数ページのデータが含まれる場合、**シートをページごとに分けず、必ず「1つの同じワークシート(`ws = wb.active`)」に全ページのデータを縦に並べて出力**してください。
+   - `page_number` をキーとし、2ページ目以降のデータには **「(page_number - 1) * 50」分の行オフセット**を算出し、各アイテムの `s_row` と `e_row` に加算して下にずらすロジックを必ず実装してください。これによりA4単位で綺麗に行が配置されます。
+   - ページ間の境界には改ページ設定 (`from openpyxl.worksheet.pagebreak import Break; ws.row_breaks.append(Break(id=ページ単位の行オフセット))`) を行い、印刷時にA4単位で正しく分割されるようにしてください。
+   - 最終的な印刷範囲 (`ws.print_area`) は、全ページを含んだ全体のセル範囲を指定してください。
+5. **重要: 技術的制約の遵守 (openpyxl)**:
+   - セルの値を設定する際は、以下の様に `try...except AttributeError:` のブロックで囲んでエラーをスキップし、処理が途中で落ちないようにしてください。
+   - **【最重要】セルの結合（ws.merge_cells）を行うコードは一切生成しないでください。結合は厳禁です。**
+   - 代わりに、入力JSONに含まれる `start_row, start_column` から `end_row, end_column` までの全範囲（論理セル）に対して、**外枠のみ**に枠線を設定するループコードを生成してください。これにより、複数のExcelマスに跨る論理セルも内部に網目（メッシュ）が入らず、1つの大きなセルに見えます。
+     ```python
+     try:
+         # 値の設定は左上のセルのみに行う
+         cell = ws.cell(row=s_row, column=s_col)
+         cell.value = val
+         
+         # 範囲全体に対して外枠のみに枠線を適用する（網目状になるのを防ぐ）
+         from openpyxl.styles import Border, Side
+         thin = Side(style='thin')
+         for r in range(s_row, e_row + 1):
+             for c in range(s_col, e_col + 1):
+                 target_cell = ws.cell(row=r, column=c)
+                 # デフォルト設定（折り返しなど）
+                 target_cell.alignment = Alignment(wrap_text=True, vertical='center')
+                 
+                 # 境界条件に応じて枠線を設定（外枠のみ）
+                 top = thin if r == s_row else None
+                 bottom = thin if r == e_row else None
+                 left = thin if c == s_col else None
+                 right = thin if c == s_col else None # 修正: c == e_col
+                 # ※実際には LLM が正しいロジック (c == e_col) を書くよう指示
+                 target_cell.border = Border(top=top, bottom=bottom, left=left, right=right)
+     except AttributeError:
+         pass
+     ```
+     ※注：上記の `r == s_row` 等の条件分岐を正しく実装し、範囲の内部にあるセルに不要な罫線が引かれないようにしてください。
+
+6. 出力ファイル:
+   - `output.xlsx` という名前で保存するようにしてください。
+
+入力データ (STEP 5の出力):
+[
+{
+"page_number": 1,
+"width": 595.0,
+"height": 842.0,
+"print_range": "D5:AG48",
+"data": [
+{
+"action": "set_value",
+"start_row": 5,
+"start_column": 14,
+"end_row": 6,
+"end_column": 22,
+"value": "銀行振込請求書",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 8,
+"start_column": 8,
+"end_row": 8,
+"end_column": 28,
+"value": "〇〇金については下記の口座に振り込まれるようお願いします。",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 10,
+"start_column": 18,
+"end_row": 10,
+"end_column": 19,
+"value": "記",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 12,
+"start_column": 4,
+"end_row": 12,
+"end_column": 12,
+"value": "1.振込先銀行名",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 14,
+"start_column": 4,
+"end_row": 16,
+"end_column": 18,
+"value": "銀行",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 14,
+"start_column": 19,
+"end_row": 16,
+"end_column": 33,
+"value": "支店",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 18,
+"start_column": 5,
+"end_row": 18,
+"end_column": 9,
+"value": "銀行コード",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 18,
+"start_column": 19,
+"end_row": 18,
+"end_column": 23,
+"value": "支店コード",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 21,
+"start_column": 5,
+"end_row": 21,
+"end_column": 10,
+"value": "ゆうちょ銀行",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 21,
+"start_column": 12,
+"end_row": 21,
+"end_column": 14,
+"value": "店名",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 21,
+"start_column": 23,
+"end_row": 21,
+"end_column": 25,
+"value": "店番",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 24,
+"start_column": 4,
+"end_row": 25,
+"end_column": 13,
+"value": "2.預金種別",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 24,
+"start_column": 14,
+"end_row": 25,
+"end_column": 33,
+"value": "預金",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 26,
+"start_column": 4,
+"end_row": 27,
+"end_column": 13,
+"value": "3.口座番号",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 26,
+"start_column": 14,
+"end_row": 27,
+"end_column": 33,
+"value": "",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 28,
+"start_column": 4,
+"end_row": 29,
+"end_column": 13,
+"value": "4.口座の名義",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 28,
+"start_column": 14,
+"end_row": 29,
+"end_column": 33,
+"value": "",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 30,
+"start_column": 4,
+"end_row": 31,
+"end_column": 13,
+"value": "フリガナ",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 30,
+"start_column": 14,
+"end_row": 31,
+"end_column": 33,
+"value": "",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 32,
+"start_column": 4,
+"end_row": 33,
+"end_column": 13,
+"value": "氏名",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 32,
+"start_column": 14,
+"end_row": 33,
+"end_column": 33,
+"value": "",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 34,
+"start_column": 4,
+"end_row": 34,
+"end_column": 18,
+"value": "※口座番号は左詰で記入してください。",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 35,
+"start_column": 4,
+"end_row": 35,
+"end_column": 16,
+"value": "※口座の名義は本人に限ります。",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 37,
+"start_column": 18,
+"end_row": 37,
+"end_column": 31,
+"value": "平成　　年　　月　　日",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 39,
+"start_column": 12,
+"end_row": 39,
+"end_column": 26,
+"value": "　　　　　　　　　　　　様",
+"border": false
+},
+{
+"action": "set_value",
+"start_row": 41,
+"start_column": 16,
+"end_row": 42,
+"end_column": 24,
+"value": "住所",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 41,
+"start_column": 25,
+"end_row": 42,
+"end_column": 33,
+"value": "〒",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 43,
+"start_column": 16,
+"end_row": 44,
+"end_column": 24,
+"value": "",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 43,
+"start_column": 25,
+"end_row": 44,
+"end_column": 33,
+"value": "",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 45,
+"start_column": 16,
+"end_row": 46,
+"end_column": 24,
+"value": "氏名",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 45,
+"start_column": 25,
+"end_row": 46,
+"end_column": 33,
+"value": "㊞",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 47,
+"start_column": 16,
+"end_row": 48,
+"end_column": 24,
+"value": "電話",
+"border": true
+},
+{
+"action": "set_value",
+"start_row": 47,
+"start_column": 25,
+"end_row": 48,
+"end_column": 33,
+"value": "",
+"border": true
+}
+]
+}
+]
+**【最重要】出力は、実行可能な Python コードのみをマークダウンのコードブロック (```python ... ```) で出力してください。前後の挨拶、説明文、思考プロセスなどは一切不要です。**
+**【最重要】出力するコード内には、`[cite: ...]` のような参照タグやアノテーション（例: ` [cite: 271]`）を絶対に含めないでください。SyntaxErrorの原因となります。純粋で実行可能なPythonコードのみを出力してください。また、コードブロックの外にいかなるテキストも記述しないでください。**

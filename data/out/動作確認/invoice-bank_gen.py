@@ -1,0 +1,148 @@
+import openpyxl
+from openpyxl.styles import Border, Side, Alignment, PatternFill, Font
+from openpyxl.worksheet.pagebreak import Break
+
+def create_excel_from_commands(input_data):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+
+    # A4縦設定
+    ws.page_setup.paperSize = 9  # A4
+    ws.page_setup.orientation = 'portrait'
+    
+    # 余白と中央配置設定
+    ws.print_options.horizontalCentered = True
+    ws.page_margins.left = 0.47
+    ws.page_margins.right = 0.47
+    ws.page_margins.top = 0.41
+    ws.page_margins.bottom = 0.41
+
+    # スタイル定義
+    thin = Side(style='thin')
+    header_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+    header_font = Font(bold=True)
+
+    max_page = max(p['page_number'] for p in input_data)
+    
+    # 1. 列幅と行高さの厳密な設定 (1列/1行 = 約6.0mm)
+    for i in range(1, 37):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = 2.53
+    
+    for i in range(1, (max_page * 50) + 1):
+        ws.row_dimensions[i].height = 17.01
+
+    all_print_ranges = []
+
+    # ページごとのデータ処理
+    for page in input_data:
+        p_num = page['page_number']
+        offset = (p_num - 1) * 50
+        
+        # 印刷範囲の収集
+        if 'print_range' in page:
+            import re
+            match = re.match(r"([A-Z]+)(\d+):([A-Z]+)(\d+)", page['print_range'])
+            if match:
+                col_start, row_start, col_end, row_end = match.groups()
+                new_range = f"{col_start}{int(row_start) + offset}:{col_end}{int(row_end) + offset}"
+                all_print_ranges.append(new_range)
+
+        # 改ページ設定
+        if p_num > 1:
+            ws.row_breaks.append(Break(id=offset))
+
+        for item in page['data']:
+            s_row = item['start_row'] + offset
+            e_row = item['end_row'] + offset
+            s_col = item['start_column']
+            e_col = item['end_column']
+            val = item.get('value', '')
+            has_border = item.get('border', False)
+
+            try:
+                # 値の設定（左上のセルのみ）
+                cell = ws.cell(row=s_row, column=s_col)
+                cell.value = val
+                
+                # ヘッダー風の装飾（簡易判定：テーブル属性かつ値がある場合など）
+                # 今回は明示的なheader指定がないため、border=Trueかつ特定のラベルを想定
+                if has_border and val in ["銀行", "支店", "2.預金種別", "3.口座番号", "4.口座の名義", "フリガナ", "氏名", "住所", "〒", "電話"]:
+                    cell.fill = header_fill
+                    cell.font = header_font
+
+                # 範囲全体に対してループ処理（結合禁止・外枠のみ罫線）
+                for r in range(s_row, e_row + 1):
+                    for c in range(s_col, e_col + 1):
+                        target_cell = ws.cell(row=r, column=c)
+                        
+                        # デフォルトアライメント
+                        target_cell.alignment = Alignment(wrap_text=True, vertical='center')
+                        
+                        if has_border:
+                            # 境界条件に応じて外枠のみに枠線を設定
+                            top = thin if r == s_row else None
+                            bottom = thin if r == e_row else None
+                            left = thin if c == s_col else None
+                            right = thin if c == e_col else None
+                            target_cell.border = Border(top=top, bottom=bottom, left=left, right=right)
+
+            except AttributeError:
+                pass
+
+    # 最終的な印刷範囲の設定
+    if all_print_ranges:
+        # 複数ページある場合は全体をカバーする範囲（簡易的に最初の開始〜最後の終了）
+        start_cell = all_print_ranges[0].split(':')[0]
+        end_cell = all_print_ranges[-1].split(':')[1]
+        ws.print_area = f"{start_cell}:{end_cell}"
+
+    wb.save("output.xlsx")
+
+# 入力データ
+json_data = [
+{
+"page_number": 1,
+"width": 595.0,
+"height": 842.0,
+"print_range": "D5:AG48",
+"data": [
+{"action": "set_value", "start_row": 5, "start_column": 14, "end_row": 6, "end_column": 22, "value": "銀行振込請求書", "border": False},
+{"action": "set_value", "start_row": 8, "start_column": 8, "end_row": 8, "end_column": 28, "value": "〇〇金については下記の口座に振り込まれるようお願いします。", "border": False},
+{"action": "set_value", "start_row": 10, "start_column": 18, "end_row": 10, "end_column": 19, "value": "記", "border": False},
+{"action": "set_value", "start_row": 12, "start_column": 4, "end_row": 12, "end_column": 12, "value": "1.振込先銀行名", "border": False},
+{"action": "set_value", "start_row": 14, "start_column": 4, "end_row": 16, "end_column": 18, "value": "銀行", "border": True},
+{"action": "set_value", "start_row": 14, "start_column": 19, "end_row": 16, "end_column": 33, "value": "支店", "border": True},
+{"action": "set_value", "start_row": 18, "start_column": 5, "end_row": 18, "end_column": 9, "value": "銀行コード", "border": False},
+{"action": "set_value", "start_row": 18, "start_column": 19, "end_row": 18, "end_column": 23, "value": "支店コード", "border": False},
+{"action": "set_value", "start_row": 21, "start_column": 5, "end_row": 21, "end_column": 10, "value": "ゆうちょ銀行", "border": False},
+{"action": "set_value", "start_row": 21, "start_column": 12, "end_row": 21, "end_column": 14, "value": "店名", "border": False},
+{"action": "set_value", "start_row": 21, "start_column": 23, "end_row": 21, "end_column": 25, "value": "店番", "border": False},
+{"action": "set_value", "start_row": 24, "start_column": 4, "end_row": 25, "end_column": 13, "value": "2.預金種別", "border": True},
+{"action": "set_value", "start_row": 24, "start_column": 14, "end_row": 25, "end_column": 33, "value": "預金", "border": True},
+{"action": "set_value", "start_row": 26, "start_column": 4, "end_row": 27, "end_column": 13, "value": "3.口座番号", "border": True},
+{"action": "set_value", "start_row": 26, "start_column": 14, "end_row": 27, "end_column": 33, "value": "", "border": True},
+{"action": "set_value", "start_row": 28, "start_column": 4, "end_row": 29, "end_column": 13, "value": "4.口座の名義", "border": True},
+{"action": "set_value", "start_row": 28, "start_column": 14, "end_row": 29, "end_column": 33, "value": "", "border": True},
+{"action": "set_value", "start_row": 30, "start_column": 4, "end_row": 31, "end_column": 13, "value": "フリガナ", "border": True},
+{"action": "set_value", "start_row": 30, "start_column": 14, "end_row": 31, "end_column": 33, "value": "", "border": True},
+{"action": "set_value", "start_row": 32, "start_column": 4, "end_row": 33, "end_column": 13, "value": "氏名", "border": True},
+{"action": "set_value", "start_row": 32, "start_column": 14, "end_row": 33, "end_column": 33, "value": "", "border": True},
+{"action": "set_value", "start_row": 34, "start_column": 4, "end_row": 34, "end_column": 18, "value": "※口座番号は左詰で記入してください。", "border": False},
+{"action": "set_value", "start_row": 35, "start_column": 4, "end_row": 35, "end_column": 16, "value": "※口座の名義は本人に限ります。", "border": False},
+{"action": "set_value", "start_row": 37, "start_column": 18, "end_row": 37, "end_column": 31, "value": "平成　　年　　月　　日", "border": False},
+{"action": "set_value", "start_row": 39, "start_column": 12, "end_row": 39, "end_column": 26, "value": "　　　　　　　　　　　　様", "border": False},
+{"action": "set_value", "start_row": 41, "start_column": 16, "end_row": 42, "end_column": 24, "value": "住所", "border": True},
+{"action": "set_value", "start_row": 41, "start_column": 25, "end_row": 42, "end_column": 33, "value": "〒", "border": True},
+{"action": "set_value", "start_row": 43, "start_column": 16, "end_row": 44, "end_column": 24, "value": "", "border": True},
+{"action": "set_value", "start_row": 43, "start_column": 25, "end_row": 44, "end_column": 33, "value": "", "border": True},
+{"action": "set_value", "start_row": 45, "start_column": 16, "end_row": 46, "end_column": 24, "value": "氏名", "border": True},
+{"action": "set_value", "start_row": 45, "start_column": 25, "end_row": 46, "end_column": 33, "value": "㊞", "border": True},
+{"action": "set_value", "start_row": 47, "start_column": 16, "end_row": 48, "end_column": 24, "value": "電話", "border": True},
+{"action": "set_value", "start_row": 47, "start_column": 25, "end_row": 48, "end_column": 33, "value": "", "border": True}
+]
+}
+]
+
+if __name__ == "__main__":
+    create_excel_from_commands(json_data)
