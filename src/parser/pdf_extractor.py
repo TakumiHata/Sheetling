@@ -2,6 +2,39 @@ import pdfplumber
 from typing import Dict, Any, Optional
 
 
+def _remove_containing_rects(rects: list) -> list:
+    """
+    他の矩形を完全に内包している（より大きな外枠）矩形を除去する。
+    内包される側（小さい矩形＝実際のセル境界）を保持し、
+    内包する側（大きい外枠・行枠）を除去することで罫線の重複描画を防ぐ。
+    """
+    tol = 1.0  # 座標誤差許容範囲（pt）
+    to_remove = set()
+    for i, a in enumerate(rects):
+        if i in to_remove:
+            continue
+        for j, b in enumerate(rects):
+            if i == j or j in to_remove:
+                continue
+            # a が b を完全に含み、かつ同一矩形でない
+            a_contains_b = (
+                a['x0'] - tol <= b['x0'] and
+                a['x1'] + tol >= b['x1'] and
+                a['top'] - tol <= b['top'] and
+                a['bottom'] + tol >= b['bottom']
+            )
+            is_same = (
+                abs(a['x0'] - b['x0']) < tol and
+                abs(a['x1'] - b['x1']) < tol and
+                abs(a['top'] - b['top']) < tol and
+                abs(a['bottom'] - b['bottom']) < tol
+            )
+            if a_contains_b and not is_same:
+                to_remove.add(i)
+                break
+    return [r for i, r in enumerate(rects) if i not in to_remove]
+
+
 def _to_hex_color(color) -> Optional[str]:
     """pdfplumber のカラー値を Excel 用 RRGGBB 16進文字列に変換する。None の場合は None を返す。"""
     if color is None:
@@ -40,15 +73,23 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
             # 表データの抽出
             tables = page.find_tables()
             table_bboxes = [table.bbox for table in tables]
-            # 各テーブルの列左端X座標リスト（列アンカー計算用）
+            # 各テーブルの列境界X座標リスト・行境界Y座標リスト（グリッド生成用）
             table_col_x_positions = []
-            # 各テーブルの全セルbbox一覧（セル単位の枠線描画用）
+            table_row_y_positions = []
+            # 各テーブルの全セルbbox一覧（グリッド座標計算用・LLMには渡さない）
             table_cells = []
             for table in tables:
                 try:
                     valid_cells = [c for c in table.cells if c is not None]
-                    col_xs = sorted(set(float(c[0]) for c in valid_cells))
+                    col_xs = sorted(set(
+                        [float(c[0]) for c in valid_cells] +
+                        [float(c[2]) for c in valid_cells]
+                    ))
+                    row_ys = sorted(set(
+                        [float(c[1]) for c in valid_cells] + [float(table.bbox[3])]
+                    ))
                     table_col_x_positions.append(col_xs)
+                    table_row_y_positions.append(row_ys)
                     table_cells.append([
                         {'x0': float(c[0]), 'top': float(c[1]),
                          'x1': float(c[2]), 'bottom': float(c[3])}
@@ -56,6 +97,7 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                     ])
                 except Exception:
                     table_col_x_positions.append([])
+                    table_row_y_positions.append([])
                     table_cells.append([])
             # font_color フィールドを hex 文字列に変換（None の場合は省略）
             words = []
@@ -104,6 +146,8 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                         rect_entry['fill_color'] = fill_hex
                     rects.append(rect_entry)
 
+            rects = _remove_containing_rects(rects)
+
             page_data = {
                 "page_number": page_number,
                 "width": float(width),
@@ -111,6 +155,7 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                 "words": words,
                 "table_bboxes": table_bboxes,
                 "table_col_x_positions": table_col_x_positions,
+                "table_row_y_positions": table_row_y_positions,
                 "table_cells": table_cells,
                 "table_data": cleaned_tables,
                 "rects": rects

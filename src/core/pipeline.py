@@ -90,6 +90,9 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
             sx = snap(x)
             x_vals.add(sx)
             table_col_x_anchors.add(sx)
+    for row_ys in page.get('table_row_y_positions', []):
+        for y in row_ys:
+            y_vals.add(snap(y))
     for cells in page.get('table_cells', []):
         for c in cells:
             y_vals.add(snap(c['top']))
@@ -125,21 +128,39 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
         r['_col'] = x_map[snap(r['x0'])]
         r['_end_col'] = x_map[snap(r['x1'])]
 
-    # テーブルセル境界のExcel座標を _grid にまとめる（枠線描画用）
-    page['_grid'] = {
-        'table_cell_ranges': [
-            [
-                {
-                    'row':     y_map.get(snap(c['top']), 1),
-                    'end_row': y_map.get(snap(c['bottom']), 1),
-                    'col':     x_map.get(snap(c['x0']), 1),
-                    'end_col': x_map.get(snap(c['x1']), 1)
-                }
-                for c in cells
-            ]
-            for cells in page.get('table_cells', [])
-        ]
-    }
+    # テーブル内に含まれる rects を除外（table_border_rects で代替するため）
+    tol = 1.0
+    table_bboxes = page.get('table_bboxes', [])
+
+    def is_inside_table(r: dict) -> bool:
+        for bbox in table_bboxes:
+            if (r['x0'] >= bbox[0] - tol and r['x1'] <= bbox[2] + tol and
+                    r['top'] >= bbox[1] - tol and r['bottom'] <= bbox[3] + tol):
+                return True
+        return False
+
+    page['rects'] = [r for r in page['rects'] if not is_inside_table(r)]
+
+    # テーブルの列・行グリッドから border_rect を生成（pdfplumber が検出した列数×行数）
+    table_border_rects = []
+    for col_xs, row_ys in zip(page.get('table_col_x_positions', []),
+                               page.get('table_row_y_positions', [])):
+        col_xs_s = sorted(set(snap(x) for x in col_xs))
+        row_ys_s = sorted(set(snap(y) for y in row_ys))
+        for ri in range(len(row_ys_s) - 1):
+            for ci in range(len(col_xs_s) - 1):
+                table_border_rects.append({
+                    '_row':     y_map.get(row_ys_s[ri], 1),
+                    '_end_row': y_map.get(row_ys_s[ri + 1], 1),
+                    '_col':     x_map.get(col_xs_s[ci], 1),
+                    '_end_col': x_map.get(col_xs_s[ci + 1], 1),
+                })
+    page['table_border_rects'] = table_border_rects
+
+    # 以下はグリッド座標計算には使用したが LLM には渡さない
+    page.pop('table_cells', None)
+    page.pop('table_data', None)
+    page.pop('table_row_y_positions', None)
 
 logger = get_logger(__name__)
 
