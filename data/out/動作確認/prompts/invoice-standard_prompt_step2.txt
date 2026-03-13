@@ -26,7 +26,7 @@ from openpyxl.styles import Border, Side, Alignment, PatternFill, Font
 if item["type"] == "text":
     r = item["row"] + row_offset
     try:
-        cell = ws.cell(row=r, column=item["col"])
+        cell = ws.cell(row=r, column=item["col"] + col_offset)
         cell.value = item["content"]
         cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=False)
         font_kwargs = {}
@@ -75,7 +75,7 @@ elif item["type"] == "border_rect":
     apply_outer_border(
         ws,
         item["row"] + row_offset, item["end_row"] + row_offset,
-        item["col"], item["end_col"],
+        item["col"] + col_offset, item["end_col"] + col_offset,
         fill_color=item.get("fill_color")
     )
 ```
@@ -99,7 +99,8 @@ elif item["type"] == "border_rect":
 
 ## 複数ページ対応
 - 全ページを1シート（`wb.active`）に縦に並べる
-- 2ページ目以降のrow_offset = `(page_number - 1) * 50`
+- オフセット定数（コード先頭で定義）: `col_offset = 1`（左右1マス余白）、`row_padding = 2`（上下2マス余白）
+- 2ページ目以降のrow_offset = `(page_number - 1) * 50 + row_padding`
 - ページ境界に改ページ設定:
   ```python
   from openpyxl.worksheet.pagebreak import Break
@@ -127,18 +128,66 @@ elif item["type"] == "border_rect":
 "elements": [
 {
 "type": "text",
-"content": "請求書",
+"content": "請",
 "row": 5,
 "col": 14,
-"end_col": 21,
+"end_col": 16,
 "font_size": 20.0
+},
+{
+"type": "text",
+"content": "求",
+"row": 5,
+"col": 16,
+"end_col": 18,
+"font_size": 20.0
+},
+{
+"type": "text",
+"content": "書",
+"row": 5,
+"col": 21,
+"end_col": 23,
+"font_size": 20.0
+},
+{
+"type": "text",
+"content": "様",
+"row": 9,
+"col": 14,
+"end_col": 16,
+"font_size": 14.0
+},
+{
+"type": "text",
+"content": "（会社名）",
+"row": 9,
+"col": 21,
+"end_col": 26,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "〒",
+"row": 10,
+"col": 21,
+"end_col": 22,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "（住所）",
+"row": 11,
+"col": 21,
+"end_col": 25,
+"font_size": 11.0
 },
 {
 "type": "text",
 "content": "下記のとおりご請求いたします。",
 "row": 11,
 "col": 4,
-"end_col": 20,
+"end_col": 22,
 "font_size": 11.0
 },
 {
@@ -146,13 +195,21 @@ elif item["type"] == "border_rect":
 "content": "（振込先）",
 "row": 13,
 "col": 5,
-"end_col": 11,
+"end_col": 10,
 "font_size": 11.0
 },
 {
 "type": "text",
 "content": "TEL.",
 "row": 13,
+"col": 21,
+"end_col": 23,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "FAX.",
+"row": 14,
 "col": 21,
 "end_col": 23,
 "font_size": 11.0
@@ -167,18 +224,10 @@ elif item["type"] == "border_rect":
 },
 {
 "type": "text",
-"content": "FAX.",
-"row": 14,
-"col": 21,
-"end_col": 23,
-"font_size": 11.0
-},
-{
-"type": "text",
 "content": "預金種別：",
 "row": 14,
 "col": 5,
-"end_col": 11,
+"end_col": 10,
 "font_size": 11.0
 },
 {
@@ -223,11 +272,27 @@ elif item["type"] == "border_rect":
 },
 {
 "type": "text",
-"content": "御請求金額",
-"row": 18,
-"col": 5,
-"end_col": 11,
-"font_size": 14.0
+"content": "検",
+"row": 15,
+"col": 26,
+"end_col": 27,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "印",
+"row": 15,
+"col": 27,
+"end_col": 28,
+"font_size": 11.0
+},
+{
+"type": "text",
+"content": "担当者印",
+"row": 15,
+"col": 30,
+"end_col": 34,
+"font_size": 11.0
 },
 {
 "type": "text",
@@ -239,34 +304,18 @@ elif item["type"] == "border_rect":
 },
 {
 "type": "text",
+"content": "御請求金額",
+"row": 18,
+"col": 5,
+"end_col": 12,
+"font_size": 14.0
+},
+{
+"type": "text",
 "content": "（消費税込み）",
 "row": 18,
 "col": 21,
-"end_col": 28,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "年",
-"row": 7,
-"col": 27,
-"end_col": 28,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "月",
-"row": 7,
-"col": 30,
-"end_col": 31,
-"font_size": 11.0
-},
-{
-"type": "text",
-"content": "日",
-"row": 7,
-"col": 33,
-"end_col": 34,
+"end_col": 27,
 "font_size": 11.0
 },
 {
@@ -274,7 +323,7 @@ elif item["type"] == "border_rect":
 "content": "品",
 "row": 20,
 "col": 10,
-"end_col": 10,
+"end_col": 11,
 "font_size": 11.0
 },
 {
@@ -282,7 +331,7 @@ elif item["type"] == "border_rect":
 "content": "名",
 "row": 20,
 "col": 10,
-"end_col": 10,
+"end_col": 11,
 "font_size": 11.0
 },
 {
@@ -290,7 +339,7 @@ elif item["type"] == "border_rect":
 "content": "数量",
 "row": 20,
 "col": 16,
-"end_col": 17,
+"end_col": 18,
 "font_size": 11.0
 },
 {
@@ -298,7 +347,7 @@ elif item["type"] == "border_rect":
 "content": "単価",
 "row": 20,
 "col": 21,
-"end_col": 22,
+"end_col": 23,
 "font_size": 11.0
 },
 {
@@ -306,7 +355,7 @@ elif item["type"] == "border_rect":
 "content": "金額",
 "row": 20,
 "col": 24,
-"end_col": 25,
+"end_col": 26,
 "font_size": 11.0
 },
 {
@@ -314,7 +363,7 @@ elif item["type"] == "border_rect":
 "content": "摘要",
 "row": 20,
 "col": 29,
-"end_col": 30,
+"end_col": 31,
 "font_size": 11.0
 },
 {
@@ -322,7 +371,7 @@ elif item["type"] == "border_rect":
 "content": "洗面台パイプ修理",
 "row": 21,
 "col": 4,
-"end_col": 14,
+"end_col": 16,
 "font_size": 11.0
 },
 {
@@ -330,7 +379,7 @@ elif item["type"] == "border_rect":
 "content": "1",
 "row": 21,
 "col": 16,
-"end_col": 16,
+"end_col": 17,
 "font_size": 11.0
 },
 {
@@ -338,7 +387,7 @@ elif item["type"] == "border_rect":
 "content": "21,000",
 "row": 21,
 "col": 21,
-"end_col": 23,
+"end_col": 26,
 "font_size": 11.0
 },
 {
@@ -346,7 +395,7 @@ elif item["type"] == "border_rect":
 "content": "21,000",
 "row": 21,
 "col": 24,
-"end_col": 26,
+"end_col": 27,
 "font_size": 11.0
 },
 {
@@ -354,7 +403,7 @@ elif item["type"] == "border_rect":
 "content": "サンプル",
 "row": 21,
 "col": 27,
-"end_col": 30,
+"end_col": 32,
 "font_size": 9.0
 },
 {
@@ -362,7 +411,7 @@ elif item["type"] == "border_rect":
 "content": "清掃一式",
 "row": 23,
 "col": 4,
-"end_col": 9,
+"end_col": 8,
 "font_size": 11.0
 },
 {
@@ -370,7 +419,7 @@ elif item["type"] == "border_rect":
 "content": "1",
 "row": 23,
 "col": 16,
-"end_col": 16,
+"end_col": 17,
 "font_size": 11.0
 },
 {
@@ -378,7 +427,7 @@ elif item["type"] == "border_rect":
 "content": "9,000",
 "row": 23,
 "col": 21,
-"end_col": 23,
+"end_col": 24,
 "font_size": 11.0
 },
 {
@@ -386,7 +435,7 @@ elif item["type"] == "border_rect":
 "content": "9,000",
 "row": 23,
 "col": 24,
-"end_col": 26,
+"end_col": 27,
 "font_size": 11.0
 },
 {
@@ -394,15 +443,15 @@ elif item["type"] == "border_rect":
 "content": "サンプル",
 "row": 23,
 "col": 27,
-"end_col": 30,
+"end_col": 32,
 "font_size": 9.0
 },
 {
 "type": "text",
 "content": "消費税等",
 "row": 40,
-"col": 4,
-"end_col": 9,
+"col": 12,
+"end_col": 16,
 "font_size": 11.0
 },
 {
@@ -410,7 +459,7 @@ elif item["type"] == "border_rect":
 "content": "2,400",
 "row": 40,
 "col": 24,
-"end_col": 26,
+"end_col": 27,
 "font_size": 11.0
 },
 {
@@ -418,7 +467,7 @@ elif item["type"] == "border_rect":
 "content": "小",
 "row": 39,
 "col": 12,
-"end_col": 12,
+"end_col": 13,
 "font_size": 11.0
 },
 {
@@ -442,7 +491,7 @@ elif item["type"] == "border_rect":
 "content": "合",
 "row": 41,
 "col": 12,
-"end_col": 12,
+"end_col": 13,
 "font_size": 11.0
 },
 {
@@ -473,13 +522,6 @@ elif item["type"] == "border_rect":
 "type": "border_rect",
 "row": 15,
 "end_row": 16,
-"col": 5,
-"end_col": 10
-},
-{
-"type": "border_rect",
-"row": 15,
-"end_row": 16,
 "col": 26,
 "end_col": 30
 },
@@ -489,13 +531,6 @@ elif item["type"] == "border_rect":
 "end_row": 16,
 "col": 30,
 "end_col": 33
-},
-{
-"type": "border_rect",
-"row": 16,
-"end_row": 19,
-"col": 5,
-"end_col": 10
 },
 {
 "type": "border_rect",
@@ -1143,66 +1178,27 @@ elif item["type"] == "border_rect":
 },
 {
 "type": "border_rect",
-"row": 5,
-"end_row": 5,
-"col": 14,
-"end_col": 21
+"row": 8,
+"end_row": 10,
+"col": 4,
+"end_col": 16,
+"fill_color": "FFFFFF"
 },
 {
 "type": "border_rect",
-"row": 9,
-"end_row": 9,
+"row": 6,
+"end_row": 7,
 "col": 14,
-"end_col": 14
-},
-{
-"type": "border_rect",
-"row": 9,
-"end_row": 9,
-"col": 21,
-"end_col": 26
+"end_col": 24,
+"fill_color": "FFFFFF"
 },
 {
 "type": "border_rect",
 "row": 10,
-"end_row": 10,
-"col": 21,
-"end_col": 33
-},
-{
-"type": "border_rect",
-"row": 11,
 "end_row": 11,
-"col": 21,
-"end_col": 26
-},
-{
-"type": "border_rect",
-"row": 10,
-"end_row": 10,
 "col": 4,
-"end_col": 16
-},
-{
-"type": "border_rect",
-"row": 19,
-"end_row": 19,
-"col": 5,
-"end_col": 24
-},
-{
-"type": "border_rect",
-"row": 6,
-"end_row": 6,
-"col": 14,
-"end_col": 24
-},
-{
-"type": "border_rect",
-"row": 6,
-"end_row": 6,
-"col": 14,
-"end_col": 24
+"end_col": 16,
+"fill_color": "FFFFFF"
 }
 ]
 }

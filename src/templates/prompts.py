@@ -200,7 +200,7 @@ from openpyxl.styles import Border, Side, Alignment, PatternFill, Font
 if item["type"] == "text":
     r = item["row"] + row_offset
     try:
-        cell = ws.cell(row=r, column=item["col"])
+        cell = ws.cell(row=r, column=item["col"] + col_offset)
         cell.value = item["content"]
         cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=False)
         font_kwargs = {{}}
@@ -249,7 +249,7 @@ elif item["type"] == "border_rect":
     apply_outer_border(
         ws,
         item["row"] + row_offset, item["end_row"] + row_offset,
-        item["col"], item["end_col"],
+        item["col"] + col_offset, item["end_col"] + col_offset,
         fill_color=item.get("fill_color")
     )
 ```
@@ -260,7 +260,7 @@ elif item["type"] == "border_rect":
 
 ## 印刷設定（必須）
 - 用紙サイズ: `ws.page_setup.paperSize = 9`（A4、定数は使わず直接代入）
-- 向き: `ws.page_setup.orientation = 'portrait'`（定数は使わず直接代入）
+- 向き: `ws.page_setup.orientation = '{orientation}'`（定数は使わず直接代入）
 - スケーリング: fitToWidth / fitToPage は設定しない（等倍100%が大前提）
 - 余白（数値は変更禁止）:
   ```python
@@ -273,7 +273,8 @@ elif item["type"] == "border_rect":
 
 ## 複数ページ対応
 - 全ページを1シート（`wb.active`）に縦に並べる
-- 2ページ目以降のrow_offset = `(page_number - 1) * {max_rows}`
+- オフセット定数（コード先頭で定義）: `col_offset = 1`（左右1マス余白）、`row_padding = 2`（上下2マス余白）
+- 2ページ目以降のrow_offset = `(page_number - 1) * {max_rows} + row_padding`
 - ページ境界に改ページ設定:
   ```python
   from openpyxl.worksheet.pagebreak import Break

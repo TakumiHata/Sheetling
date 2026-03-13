@@ -198,7 +198,14 @@ class SheetlingPipeline:
         with open(extracted_json_path, "w", encoding="utf-8") as f:
             json.dump(extracted_data, f, indent=2, ensure_ascii=False)
 
-        grid_params = GRID_SIZES.get(grid_size, GRID_SIZES["small"])
+        grid_params = dict(GRID_SIZES.get(grid_size, GRID_SIZES["small"]))
+
+        # ページの向きを検出（最初のページの width > height なら横向き）
+        first_page = extracted_data['pages'][0]
+        is_landscape = first_page['width'] > first_page['height']
+        if is_landscape:
+            grid_params['max_rows'], grid_params['max_cols'] = grid_params['max_cols'], grid_params['max_rows']
+        grid_params['orientation'] = 'landscape' if is_landscape else 'portrait'
 
         # Y・X座標のクラスタリングを行い、各要素に事前計算済みExcel座標を付与
         for page in extracted_data['pages']:
