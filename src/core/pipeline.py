@@ -77,6 +77,8 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
         y_vals.add(snap(w['top']))
         x_vals.add(snap(w['x0']))
         x_vals.add(snap(w['x1']))
+        if w.get('is_vertical') and 'bottom' in w:
+            y_vals.add(snap(w['bottom']))  # 縦文字の下端もグリッドに含める
     for r in page['rects']:
         y_vals.add(snap(r['top']))
         y_vals.add(snap(r['bottom']))
@@ -99,6 +101,15 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
             y_vals.add(snap(c['bottom']))
             x_vals.add(snap(c['x0']))
             x_vals.add(snap(c['x1']))
+    # エッジ座標もクラスタリングに含める（罫線位置をグリッドに正確に反映）
+    for edge in page.get('h_edges', []):
+        y_vals.add(snap(edge['y']))
+        x_vals.add(snap(edge['x0']))
+        x_vals.add(snap(edge['x1']))
+    for edge in page.get('v_edges', []):
+        x_vals.add(snap(edge['x']))
+        y_vals.add(snap(edge['y0']))
+        y_vals.add(snap(edge['y1']))
 
     y_map = build_cluster_map(y_vals, grid_h, max_rows)
     x_map = build_cluster_map(x_vals, grid_w, max_cols, anchor_vals=table_col_x_anchors)
@@ -120,6 +131,9 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
     for w in page['words']:
         w['_row'] = y_map[snap(w['top'])]
         w['_col'] = x_map[snap(w['x0'])]
+        if w.get('is_vertical') and 'bottom' in w:
+            sv = snap(w['bottom'])
+            w['_end_row'] = y_map.get(sv, w['_row'])
 
     # rects に付与
     for r in page['rects']:
@@ -157,10 +171,73 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
                 })
     page['table_border_rects'] = table_border_rects
 
+    # ---- エッジから辺ごとの罫線有無を判定 ----------------------------------------
+
+    def _nearest_idx(val: float, coord_map: dict) -> int:
+        """valに最も近いcoord_mapのキーに対応するグリッドインデックスを返す。"""
+        if not coord_map:
+            return 1
+        sv = snap(val)
+        if sv in coord_map:
+            return coord_map[sv]
+        return coord_map[min(coord_map.keys(), key=lambda k: abs(k - sv))]
+
+    # エッジをグリッド座標に変換してマップ化
+    # h_edge_map: row_idx -> [(col_start, col_end), ...]
+    # v_edge_map: col_idx -> [(row_start, row_end), ...]
+    h_edge_map: dict = {}
+    for edge in page.get('h_edges', []):
+        ri = _nearest_idx(edge['y'], y_map)
+        cs = _nearest_idx(edge['x0'], x_map)
+        ce = _nearest_idx(edge['x1'], x_map)
+        h_edge_map.setdefault(ri, []).append((min(cs, ce), max(cs, ce)))
+
+    v_edge_map: dict = {}
+    for edge in page.get('v_edges', []):
+        ci = _nearest_idx(edge['x'], x_map)
+        rs = _nearest_idx(edge['y0'], y_map)
+        re = _nearest_idx(edge['y1'], y_map)
+        v_edge_map.setdefault(ci, []).append((min(rs, re), max(rs, re)))
+
+    def _has_h(row: int, col_s: int, col_e: int) -> bool:
+        """指定行に col_s〜col_e の中央点をカバーする水平エッジがあるか。"""
+        mid = (col_s + col_e) / 2
+        return any(cs <= mid <= ce for cs, ce in h_edge_map.get(row, []))
+
+    def _has_v(col: int, row_s: int, row_e: int) -> bool:
+        """指定列に row_s〜row_e の中央点をカバーする垂直エッジがあるか。"""
+        mid = (row_s + row_e) / 2
+        return any(rs <= mid <= re for rs, re in v_edge_map.get(col, []))
+
+    # table_border_rects に _borders を付与
+    for tbr in page['table_border_rects']:
+        r, er, c, ec = tbr['_row'], tbr['_end_row'], tbr['_col'], tbr['_end_col']
+        tbr['_borders'] = {
+            'top':    _has_h(r,  c, ec),
+            'bottom': _has_h(er, c, ec),
+            'left':   _has_v(c,  r, er),
+            'right':  _has_v(ec, r, er),
+        }
+
+    # rects にも _borders を付与（矩形枠の各辺）
+    for rect in page['rects']:
+        r, er = rect['_row'], rect['_end_row']
+        c, ec = rect['_col'], rect['_end_col']
+        rect['_borders'] = {
+            'top':    _has_h(r,  c, ec),
+            'bottom': _has_h(er, c, ec),
+            'left':   _has_v(c,  r, er),
+            'right':  _has_v(ec, r, er),
+        }
+
+    # ---------------------------------------------------------------------------------
+
     # 以下はグリッド座標計算には使用したが LLM には渡さない
     page.pop('table_cells', None)
     page.pop('table_data', None)
     page.pop('table_row_y_positions', None)
+    page.pop('h_edges', None)
+    page.pop('v_edges', None)
 
 logger = get_logger(__name__)
 
@@ -231,6 +308,19 @@ class SheetlingPipeline:
 
         input_data_str = json.dumps(extracted_data, indent=2, ensure_ascii=False)
 
+        # Step 1.5 用スリム版: words の text/_row/_col のみ（トークン削減）
+        slim_data = {"pages": [
+            {
+                "page_number": p["page_number"],
+                "words": [
+                    {"text": w.get("text", ""), "_row": w["_row"], "_col": w["_col"]}
+                    for w in p.get("words", [])
+                ]
+            }
+            for p in extracted_data["pages"]
+        ]}
+        slim_input_data_str = json.dumps(slim_data, indent=2, ensure_ascii=False)
+
         # Step 1: 列アンカー確定プロンプト（PDF解析データを直接埋め込む）
         prompt_1 = TABLE_ANCHOR_PROMPT.format(
             input_data=input_data_str,
@@ -239,7 +329,7 @@ class SheetlingPipeline:
 
         # Step 1.5: レイアウトJSON検証・補正プロンプト（Step 1の出力を貼り付けるプレースホルダー）
         prompt_1_5 = LAYOUT_REVIEW_PROMPT.format(
-            input_data=input_data_str,
+            input_data=slim_input_data_str,
             step1_output="[ここにSTEP 1の出力（JSON部分のみ）を貼り付けてください]",
             **grid_params
         )
