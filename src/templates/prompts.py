@@ -301,7 +301,8 @@ elif item["type"] == "border_rect":
 - 行の高さ設定範囲（`row_dimensions`）は `総ページ数 × {max_rows}` まで適用すること。ただし**印刷範囲はこの値を使わず**、上記の「実際に使用されている最大行」に基づくこと。データの最終使用行に定数を加算するバッファ処理は**禁止**。
 
 ## 技術的制約
-- `True`/`False`（Python形式）を使用。JSONの`true`/`false`は禁止
+- `True`/`False`（Python形式）を使用。JSONの`true`/`false`は**絶対に禁止**（`NameError: name 'true' is not defined` の原因）
+- `data = [...]` リストの末尾は必ず `]` で終わること。余分な `}` を付加しないこと（`SyntaxError: unmatched '}'` の原因）
 - `[cite: ...]` のようなアノテーションタグは絶対に含めない（SyntaxErrorの原因）
 - 出力ファイル名: `output.xlsx`
 - `ws.page_margins` への dict 代入は**絶対に禁止**（`AttributeError: 'dict' object has no attribute 'to_tree'` の原因）。必ず属性代入形式を使用すること:

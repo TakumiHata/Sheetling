@@ -1,0 +1,4626 @@
+あなたはPDF解析データからExcelレイアウト仕様を生成する設計者です。
+
+## 座標について（最重要）
+
+入力データの各要素には **事前計算済みのExcel座標** が付与されています。
+独自に座標を計算せず、必ず以下のフィールドをそのまま参照してください。
+
+| フィールド | 意味 |
+|---|---|
+| `words[i]._row` | テキストのExcel行番号 |
+| `words[i]._col` | テキストのExcel列番号（開始） |
+| `words[i].is_vertical` | 縦文字かどうか（`true` の場合のみ存在） |
+| `words[i]._end_row` | 縦文字の下端行番号（`is_vertical=true` の場合のみ存在） |
+| `rects[i]._row` / `_end_row` | 矩形の開始・終了行番号（テーブル外） |
+| `rects[i]._col` / `_end_col` | 矩形の開始・終了列番号（テーブル外） |
+| `rects[i]._borders` | 矩形枠の各辺に罫線があるか `{top, bottom, left, right}` |
+| `table_border_rects[i]._row` / `_end_row` | テーブルセルの開始・終了行番号 |
+| `table_border_rects[i]._col` / `_end_col` | テーブルセルの開始・終了列番号 |
+| `table_border_rects[i]._borders` | セルの各辺に罫線があるか `{top, bottom, left, right}` |
+
+## 処理手順
+
+### Step 1: border_rect 要素の生成
+
+**テーブルセル（`table_border_rects`）：**
+- `table_border_rects` の各エントリを `border_rect` 要素として出力する
+- 各エントリの `_row`, `_end_row`, `_col`, `_end_col` をそのまま使用する
+- 各エントリの `_borders` を `borders` フィールドとしてそのまま出力する
+- **隣接するセル同士で共有辺の `_borders` が両方 `false` の場合、それらは視覚的に1つのセルである可能性が高い。確信が持てる場合は統合して1つの `border_rect` にまとめよ**（統合後の row/col は最小値、end_row/end_col は最大値、borders は外周辺のみ true）
+
+**テーブル外の矩形（`rects`）：**
+- 各 rect の `_row`, `_col`, `_end_row`, `_end_col` をそのまま使用する
+- 各 rect の `_borders` を `borders` フィールドとしてそのまま出力する
+
+### Step 2: テキスト要素の生成
+
+`words` を **`(_row, _col)` の組み合わせ** でグループ化し、同一 `(_row, _col)` のwordを1つの `text` 要素にまとめる。
+これにより、テーブル内の各列セルが別々の `text` 要素として保持される（行単位の結合は禁止）。
+
+- `row` = グループの `_row` 値
+- `col` = グループの `_col` 値
+- `content` = グループ内のwordを左から順に結合したテキスト（日本語文字＝漢字・ひらがな・カタカナを含む場合はスペースなし、英数字のみの場合は半角スペースで結合）
+- `end_col` = `col` + `content` の文字数（概算）
+- `font_color` = グループ内最初のwordの `font_color`（存在し、かつ黒 `"000000"` でない場合のみ含める）
+- `font_size` = グループ内最初のwordの `font_size`（存在する場合のみ含める）
+
+**縦文字（`is_vertical=true`）の扱い：**
+- `is_vertical=true` のwordは他のwordとグループ化せず、単独で `text` 要素にする
+- `is_vertical: true` を要素に含める
+- `_end_row` が存在する場合は `end_row` として含める（縦方向の占有範囲）
+- `end_col` は `col + 1`（縦文字は1列幅）
+
+## 出力フォーマット
+
+[
+  {
+    "page_number": 1,
+    "elements": [
+      {
+        "type": "text",
+        "content": "請求書",
+        "row": 2,
+        "col": 20,
+        "end_col": 28,
+        "font_color": "FF0000",
+        "font_size": 14
+      },
+      {
+        "type": "text",
+        "content": "合計金額",
+        "row": 5,
+        "col": 3,
+        "end_col": 9
+      },
+      {
+        "type": "text",
+        "content": "承認",
+        "row": 10,
+        "col": 58,
+        "end_col": 59,
+        "end_row": 14,
+        "is_vertical": true
+      },
+      {
+        "type": "border_rect",
+        "row": 8,
+        "end_row": 9,
+        "col": 18,
+        "end_col": 27,
+        "borders": {"top": true, "bottom": true, "left": false, "right": true}
+      }
+    ]
+  }
+]
+
+入力データ:
+{
+  "pages": [
+    {
+      "page_number": 1,
+      "words": [
+        {
+          "text": "（",
+          "font_size": 10.6,
+          "_row": 1,
+          "_col": 5
+        },
+        {
+          "text": "参考資料１）",
+          "font_size": 12.0,
+          "_row": 1,
+          "_col": 5
+        },
+        {
+          "text": "管理委託契約締結前の現況確認方法の例",
+          "font_size": 12.0,
+          "_row": 1,
+          "_col": 10
+        },
+        {
+          "text": "空き家管理作業",
+          "font_size": 14.0,
+          "_row": 2,
+          "_col": 11
+        },
+        {
+          "text": "受託前現況確認表",
+          "font_size": 14.0,
+          "_row": 2,
+          "_col": 18
+        },
+        {
+          "text": "依頼主名",
+          "font_size": 12.0,
+          "_row": 4,
+          "_col": 5
+        },
+        {
+          "text": "：",
+          "font_size": 12.0,
+          "_row": 4,
+          "_col": 9
+        },
+        {
+          "text": "物件所在地：",
+          "font_size": 12.0,
+          "_row": 7,
+          "_col": 5
+        },
+        {
+          "text": "訪問日時",
+          "font_size": 9.0,
+          "_row": 8,
+          "_col": 6
+        },
+        {
+          "text": "年",
+          "font_size": 9.0,
+          "_row": 8,
+          "_col": 12
+        },
+        {
+          "text": "月",
+          "font_size": 9.0,
+          "_row": 8,
+          "_col": 15
+        },
+        {
+          "text": "日",
+          "font_size": 9.0,
+          "_row": 8,
+          "_col": 18
+        },
+        {
+          "text": "（",
+          "font_size": 9.0,
+          "_row": 8,
+          "_col": 21
+        },
+        {
+          "text": "：",
+          "font_size": 9.0,
+          "_row": 8,
+          "_col": 23
+        },
+        {
+          "text": "）～（",
+          "font_size": 9.0,
+          "_row": 8,
+          "_col": 24
+        },
+        {
+          "text": "：",
+          "font_size": 9.0,
+          "_row": 8,
+          "_col": 27
+        },
+        {
+          "text": "）",
+          "font_size": 9.0,
+          "_row": 8,
+          "_col": 28
+        },
+        {
+          "text": "社名・所属",
+          "font_size": 9.0,
+          "_row": 9,
+          "_col": 6
+        },
+        {
+          "text": "担当者",
+          "font_size": 9.0,
+          "_row": 10,
+          "_col": 7
+        },
+        {
+          "text": "（氏名）",
+          "font_size": 9.0,
+          "_row": 10,
+          "_col": 10
+        },
+        {
+          "text": "（連絡先）",
+          "font_size": 9.0,
+          "_row": 10,
+          "_col": 19
+        },
+        {
+          "text": "確認箇所",
+          "font_size": 10.0,
+          "_row": 13,
+          "_col": 5
+        },
+        {
+          "text": "項目有無",
+          "font_size": 10.0,
+          "_row": 13,
+          "_col": 15
+        },
+        {
+          "text": "異常有無",
+          "font_size": 10.0,
+          "_row": 13,
+          "_col": 17
+        },
+        {
+          "text": "備考（",
+          "font_size": 10.0,
+          "_row": 13,
+          "_col": 21
+        },
+        {
+          "text": "腐朽・破損・雨漏り箇所や残置物等",
+          "font_size": 8.0,
+          "_row": 13,
+          "_col": 22
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 13,
+          "_col": 30
+        },
+        {
+          "text": "門扉等",
+          "font_size": 10.0,
+          "_row": 14,
+          "_col": 5
+        },
+        {
+          "text": "門扉",
+          "font_size": 10.0,
+          "_row": 14,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 14,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 14,
+          "_col": 17
+        },
+        {
+          "text": "不法侵入の形跡（有・無）",
+          "font_size": 9.0,
+          "_row": 14,
+          "_col": 22
+        },
+        {
+          "text": "駐車場出入口",
+          "font_size": 10.0,
+          "_row": 15,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 15,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 15,
+          "_col": 17
+        },
+        {
+          "text": "不法侵入の形跡（有・無）",
+          "font_size": 9.0,
+          "_row": 15,
+          "_col": 22
+        },
+        {
+          "text": "玄関ドア",
+          "font_size": 10.0,
+          "_row": 16,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 16,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 16,
+          "_col": 17
+        },
+        {
+          "text": "不法侵入の形跡（有・無）",
+          "font_size": 9.0,
+          "_row": 16,
+          "_col": 22
+        },
+        {
+          "text": "勝手口",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 17
+        },
+        {
+          "text": "不法侵入の形跡（有・無）",
+          "font_size": 9.0,
+          "_row": 17,
+          "_col": 22
+        },
+        {
+          "text": "その他（",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 8
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 11
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 17
+        },
+        {
+          "text": "建物外観",
+          "font_size": 10.0,
+          "_row": 19,
+          "_col": 5
+        },
+        {
+          "text": "建物全体",
+          "font_size": 10.0,
+          "_row": 19,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 19,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 19,
+          "_col": 17
+        },
+        {
+          "text": "建物の傾斜（有・無）",
+          "font_size": 9.0,
+          "_row": 19,
+          "_col": 23
+        },
+        {
+          "text": "１階窓ガラス",
+          "font_size": 10.0,
+          "_row": 20,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 20,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 20,
+          "_col": 17
+        },
+        {
+          "text": "１階雨戸",
+          "font_size": 10.0,
+          "_row": 21,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 21,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 21,
+          "_col": 17
+        },
+        {
+          "text": "２階窓ガラス",
+          "font_size": 10.0,
+          "_row": 22,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 22,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 22,
+          "_col": 17
+        },
+        {
+          "text": "２階雨戸",
+          "font_size": 10.0,
+          "_row": 22,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 22,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 22,
+          "_col": 17
+        },
+        {
+          "text": "外壁",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 17
+        },
+        {
+          "text": "外装材剥落・脱落（有・無）",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 21
+        },
+        {
+          "text": "屋根",
+          "font_size": 10.0,
+          "_row": 24,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 24,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 24,
+          "_col": 17
+        },
+        {
+          "text": "変形（有・無）",
+          "font_size": 10.0,
+          "_row": 24,
+          "_col": 24
+        },
+        {
+          "text": "雨樋",
+          "font_size": 10.0,
+          "_row": 25,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 25,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 25,
+          "_col": 17
+        },
+        {
+          "text": "テレビアンテナ",
+          "font_size": 10.0,
+          "_row": 26,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 26,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 26,
+          "_col": 17
+        },
+        {
+          "text": "その他（",
+          "font_size": 10.0,
+          "_row": 27,
+          "_col": 8
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 27,
+          "_col": 11
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 27,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 27,
+          "_col": 17
+        },
+        {
+          "text": "敷地",
+          "font_size": 10.0,
+          "_row": 28,
+          "_col": 5
+        },
+        {
+          "text": "・",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 5
+        },
+        {
+          "text": "外構",
+          "font_size": 10.0,
+          "_row": 30,
+          "_col": 5
+        },
+        {
+          "text": "フェンス・ブロック塀",
+          "font_size": 10.0,
+          "_row": 28,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 28,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 28,
+          "_col": 17
+        },
+        {
+          "text": "擁壁",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 17
+        },
+        {
+          "text": "庭・樹木等",
+          "font_size": 10.0,
+          "_row": 30,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 30,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 30,
+          "_col": 17
+        },
+        {
+          "text": "雑草等繁茂（有・無）",
+          "font_size": 9.0,
+          "_row": 30,
+          "_col": 20
+        },
+        {
+          "text": "樹木等はみ出し（有・無）",
+          "font_size": 8.0,
+          "_row": 30,
+          "_col": 26
+        },
+        {
+          "text": "敷地周り・外構",
+          "font_size": 10.0,
+          "_row": 31,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 31,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 31,
+          "_col": 17
+        },
+        {
+          "text": "不法投棄等（有・無）",
+          "font_size": 9.0,
+          "_row": 31,
+          "_col": 23
+        },
+        {
+          "text": "屋外水栓",
+          "font_size": 10.0,
+          "_row": 32,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 32,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 32,
+          "_col": 17
+        },
+        {
+          "text": "駐車場・駐輪場",
+          "font_size": 10.0,
+          "_row": 33,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 33,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 33,
+          "_col": 17
+        },
+        {
+          "text": "その他（",
+          "font_size": 10.0,
+          "_row": 33,
+          "_col": 8
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 33,
+          "_col": 11
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 33,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 33,
+          "_col": 17
+        },
+        {
+          "text": "郵便",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 5
+        },
+        {
+          "text": "・",
+          "font_size": 10.0,
+          "_row": 36,
+          "_col": 5
+        },
+        {
+          "text": "ライフ",
+          "font_size": 10.0,
+          "_row": 37,
+          "_col": 5
+        },
+        {
+          "text": "ライン",
+          "font_size": 10.0,
+          "_row": 38,
+          "_col": 5
+        },
+        {
+          "text": "郵便受け",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 17
+        },
+        {
+          "text": "転送サービス（有・無）",
+          "font_size": 9.0,
+          "_row": 35,
+          "_col": 23
+        },
+        {
+          "text": "電気",
+          "font_size": 10.0,
+          "_row": 36,
+          "_col": 8
+        },
+        {
+          "text": "通電中・停止中",
+          "font_size": 6.0,
+          "_row": 36,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 36,
+          "_col": 17
+        },
+        {
+          "text": "メーター異常（有・無）",
+          "font_size": 9.0,
+          "_row": 36,
+          "_col": 23
+        },
+        {
+          "text": "ガス",
+          "font_size": 10.0,
+          "_row": 37,
+          "_col": 8
+        },
+        {
+          "text": "開栓中・停止中",
+          "font_size": 6.0,
+          "_row": 37,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 37,
+          "_col": 17
+        },
+        {
+          "text": "メーター異常（有・無）",
+          "font_size": 9.0,
+          "_row": 37,
+          "_col": 23
+        },
+        {
+          "text": "水道",
+          "font_size": 10.0,
+          "_row": 38,
+          "_col": 8
+        },
+        {
+          "text": "通水中・停止中",
+          "font_size": 6.0,
+          "_row": 38,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 38,
+          "_col": 17
+        },
+        {
+          "text": "メーター異常（有・無）",
+          "font_size": 9.0,
+          "_row": 38,
+          "_col": 23
+        },
+        {
+          "text": "建物内部",
+          "font_size": 10.0,
+          "_row": 41,
+          "_col": 5
+        },
+        {
+          "text": "玄関",
+          "font_size": 10.0,
+          "_row": 39,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 39,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 39,
+          "_col": 17
+        },
+        {
+          "text": "廊下",
+          "font_size": 10.0,
+          "_row": 39,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 39,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 39,
+          "_col": 17
+        },
+        {
+          "text": "台所",
+          "font_size": 10.0,
+          "_row": 40,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 40,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 40,
+          "_col": 17
+        },
+        {
+          "text": "洗面所・脱衣所",
+          "font_size": 10.0,
+          "_row": 41,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 41,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 41,
+          "_col": 17
+        },
+        {
+          "text": "風呂場",
+          "font_size": 10.0,
+          "_row": 42,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 42,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 42,
+          "_col": 17
+        },
+        {
+          "text": "便所",
+          "font_size": 10.0,
+          "_row": 43,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 43,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 43,
+          "_col": 17
+        },
+        {
+          "text": "排水設備",
+          "font_size": 10.0,
+          "_row": 44,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 44,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 44,
+          "_col": 17
+        },
+        {
+          "text": "浄化槽（有・使用休止届出済・無）",
+          "font_size": 10.0,
+          "_row": 44,
+          "_col": 21
+        }
+      ],
+      "table_border_rects": [
+        {
+          "_row": 8,
+          "_end_row": 9,
+          "_col": 5,
+          "_end_col": 10,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 8,
+          "_end_row": 9,
+          "_col": 10,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 5,
+          "_end_col": 10,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 10,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 10,
+          "_end_row": 11,
+          "_col": 5,
+          "_end_col": 10,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 10,
+          "_end_row": 11,
+          "_col": 10,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 14,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": false
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 14,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": false,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 14,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 14,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 14,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 14,
+          "_end_row": 15,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 14,
+          "_end_row": 15,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 14,
+          "_end_row": 15,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 14,
+          "_end_row": 15,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 14,
+          "_end_row": 15,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 15,
+          "_end_row": 16,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 15,
+          "_end_row": 16,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 15,
+          "_end_row": 16,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 15,
+          "_end_row": 16,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 15,
+          "_end_row": 16,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 16,
+          "_end_row": 17,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 16,
+          "_end_row": 17,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 16,
+          "_end_row": 17,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 16,
+          "_end_row": 17,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 16,
+          "_end_row": 17,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 17,
+          "_end_row": 18,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 17,
+          "_end_row": 18,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 17,
+          "_end_row": 18,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 17,
+          "_end_row": 18,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 17,
+          "_end_row": 18,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 18,
+          "_end_row": 19,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 18,
+          "_end_row": 19,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 18,
+          "_end_row": 19,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 18,
+          "_end_row": 19,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 18,
+          "_end_row": 19,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 19,
+          "_end_row": 20,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 19,
+          "_end_row": 20,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 19,
+          "_end_row": 20,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 19,
+          "_end_row": 20,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 19,
+          "_end_row": 20,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 20,
+          "_end_row": 21,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 20,
+          "_end_row": 21,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 20,
+          "_end_row": 21,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 20,
+          "_end_row": 21,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 20,
+          "_end_row": 21,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 21,
+          "_end_row": 22,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 21,
+          "_end_row": 22,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 21,
+          "_end_row": 22,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 21,
+          "_end_row": 22,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 21,
+          "_end_row": 22,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 23,
+          "_end_row": 24,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 23,
+          "_end_row": 24,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 23,
+          "_end_row": 24,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 23,
+          "_end_row": 24,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 23,
+          "_end_row": 24,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 24,
+          "_end_row": 25,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 24,
+          "_end_row": 25,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 24,
+          "_end_row": 25,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 24,
+          "_end_row": 25,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 24,
+          "_end_row": 25,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 25,
+          "_end_row": 26,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 25,
+          "_end_row": 26,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 25,
+          "_end_row": 26,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 25,
+          "_end_row": 26,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 25,
+          "_end_row": 26,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 26,
+          "_end_row": 27,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 26,
+          "_end_row": 27,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 26,
+          "_end_row": 27,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 26,
+          "_end_row": 27,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 26,
+          "_end_row": 27,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 27,
+          "_end_row": 28,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 27,
+          "_end_row": 28,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 27,
+          "_end_row": 28,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 27,
+          "_end_row": 28,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 27,
+          "_end_row": 28,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 28,
+          "_end_row": 29,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 28,
+          "_end_row": 29,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 28,
+          "_end_row": 29,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 28,
+          "_end_row": 29,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 28,
+          "_end_row": 29,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 29,
+          "_end_row": 30,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 29,
+          "_end_row": 30,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 29,
+          "_end_row": 30,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 29,
+          "_end_row": 30,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 29,
+          "_end_row": 30,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 30,
+          "_end_row": 31,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 30,
+          "_end_row": 31,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 30,
+          "_end_row": 31,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 30,
+          "_end_row": 31,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 30,
+          "_end_row": 31,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 31,
+          "_end_row": 32,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 31,
+          "_end_row": 32,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 31,
+          "_end_row": 32,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 31,
+          "_end_row": 32,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 31,
+          "_end_row": 32,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 32,
+          "_end_row": 33,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 32,
+          "_end_row": 33,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 32,
+          "_end_row": 33,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 32,
+          "_end_row": 33,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 32,
+          "_end_row": 33,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 33,
+          "_end_row": 34,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 33,
+          "_end_row": 34,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 33,
+          "_end_row": 34,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 33,
+          "_end_row": 34,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 33,
+          "_end_row": 34,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 34,
+          "_end_row": 35,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 34,
+          "_end_row": 35,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 34,
+          "_end_row": 35,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 34,
+          "_end_row": 35,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 34,
+          "_end_row": 35,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 35,
+          "_end_row": 36,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 35,
+          "_end_row": 36,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 35,
+          "_end_row": 36,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 35,
+          "_end_row": 36,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 35,
+          "_end_row": 36,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 36,
+          "_end_row": 37,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 36,
+          "_end_row": 37,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 36,
+          "_end_row": 37,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 36,
+          "_end_row": 37,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 36,
+          "_end_row": 37,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 37,
+          "_end_row": 38,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 37,
+          "_end_row": 38,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 37,
+          "_end_row": 38,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 37,
+          "_end_row": 38,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 37,
+          "_end_row": 38,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 38,
+          "_end_row": 39,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 38,
+          "_end_row": 39,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 38,
+          "_end_row": 39,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 38,
+          "_end_row": 39,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 38,
+          "_end_row": 39,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 40,
+          "_end_row": 41,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 40,
+          "_end_row": 41,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 40,
+          "_end_row": 41,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 40,
+          "_end_row": 41,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 40,
+          "_end_row": 41,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 41,
+          "_end_row": 42,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 41,
+          "_end_row": 42,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 41,
+          "_end_row": 42,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 41,
+          "_end_row": 42,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 41,
+          "_end_row": 42,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 42,
+          "_end_row": 43,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 42,
+          "_end_row": 43,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 42,
+          "_end_row": 43,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 42,
+          "_end_row": 43,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 42,
+          "_end_row": 43,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 43,
+          "_end_row": 44,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 43,
+          "_end_row": 44,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 43,
+          "_end_row": 44,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 43,
+          "_end_row": 44,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 43,
+          "_end_row": 44,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 44,
+          "_end_row": 45,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 44,
+          "_end_row": 45,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 44,
+          "_end_row": 45,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 44,
+          "_end_row": 45,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 44,
+          "_end_row": 45,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 45,
+          "_end_row": 46,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 45,
+          "_end_row": 46,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 45,
+          "_end_row": 46,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 45,
+          "_end_row": 46,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 45,
+          "_end_row": 46,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 46,
+          "_end_row": 47,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 46,
+          "_end_row": 47,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 46,
+          "_end_row": 47,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 46,
+          "_end_row": 47,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 46,
+          "_end_row": 47,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 47,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        }
+      ],
+      "rects": [
+        {
+          "_row": 5,
+          "_end_row": 5,
+          "_col": 5,
+          "_end_col": 24,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 7,
+          "_end_row": 7,
+          "_col": 5,
+          "_end_col": 24,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 13,
+          "_col": 5,
+          "_end_col": 5,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 13,
+          "_col": 5,
+          "_end_col": 5,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 13,
+          "_col": 5,
+          "_end_col": 5,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 13,
+          "_col": 5,
+          "_end_col": 5,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 13,
+          "_col": 15,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 13,
+          "_col": 17,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 13,
+          "_col": 20,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 13,
+          "_col": 31,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 13,
+          "_col": 31,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        }
+      ]
+    },
+    {
+      "page_number": 2,
+      "words": [
+        {
+          "text": "部屋①（",
+          "font_size": 10.0,
+          "_row": 1,
+          "_col": 8
+        },
+        {
+          "text": "階・東・西・南・北",
+          "font_size": 6.0,
+          "_row": 1,
+          "_col": 11
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 1,
+          "_col": 14
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 1,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 1,
+          "_col": 17
+        },
+        {
+          "text": "部屋②（",
+          "font_size": 10.0,
+          "_row": 2,
+          "_col": 8
+        },
+        {
+          "text": "階・東・西・南・北",
+          "font_size": 6.0,
+          "_row": 2,
+          "_col": 11
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 2,
+          "_col": 14
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 2,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 2,
+          "_col": 17
+        },
+        {
+          "text": "部屋③（",
+          "font_size": 10.0,
+          "_row": 3,
+          "_col": 8
+        },
+        {
+          "text": "階・東・西・南・北",
+          "font_size": 6.0,
+          "_row": 3,
+          "_col": 11
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 3,
+          "_col": 14
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 3,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 3,
+          "_col": 17
+        },
+        {
+          "text": "部屋④（",
+          "font_size": 10.0,
+          "_row": 4,
+          "_col": 8
+        },
+        {
+          "text": "階・東・西・南・北",
+          "font_size": 6.0,
+          "_row": 4,
+          "_col": 11
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 4,
+          "_col": 14
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 4,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 4,
+          "_col": 17
+        },
+        {
+          "text": "部屋⑤（",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 8
+        },
+        {
+          "text": "階・東・西・南・北",
+          "font_size": 6.0,
+          "_row": 5,
+          "_col": 11
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 14
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 17
+        },
+        {
+          "text": "部屋⑥（",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 8
+        },
+        {
+          "text": "階・東・西・南・北",
+          "font_size": 6.0,
+          "_row": 6,
+          "_col": 11
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 14
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 17
+        },
+        {
+          "text": "その他（",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 8
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 12
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 17
+        },
+        {
+          "text": "その他",
+          "font_size": 10.0,
+          "_row": 9,
+          "_col": 5
+        },
+        {
+          "text": "ベランダ・バルコニー",
+          "font_size": 10.0,
+          "_row": 8,
+          "_col": 8
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 8,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 8,
+          "_col": 17
+        },
+        {
+          "text": "傾き・破損・腐食等（有・無）",
+          "font_size": 10.0,
+          "_row": 8,
+          "_col": 21
+        },
+        {
+          "text": "その他（",
+          "font_size": 10.0,
+          "_row": 9,
+          "_col": 8
+        },
+        {
+          "text": "）",
+          "font_size": 10.0,
+          "_row": 9,
+          "_col": 11
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 9,
+          "_col": 15
+        },
+        {
+          "text": "有・無",
+          "font_size": 10.0,
+          "_row": 9,
+          "_col": 17
+        },
+        {
+          "text": "全体",
+          "font_size": 10.0,
+          "_row": 12,
+          "_col": 5
+        },
+        {
+          "text": "詳細",
+          "font_size": 10.0,
+          "_row": 12,
+          "_col": 11
+        },
+        {
+          "text": "近隣への影響",
+          "font_size": 10.0,
+          "_row": 14,
+          "_col": 5
+        },
+        {
+          "text": "・汚水等の流出（有・無）",
+          "font_size": 10.0,
+          "_row": 13,
+          "_col": 11
+        },
+        {
+          "text": "・害虫等の発生（有・無）",
+          "font_size": 10.0,
+          "_row": 14,
+          "_col": 11
+        },
+        {
+          "text": "・動物の糞尿や棲みつき（有・無）",
+          "font_size": 10.0,
+          "_row": 15,
+          "_col": 11
+        },
+        {
+          "text": "・悪臭の発生（有・無）",
+          "font_size": 10.0,
+          "_row": 15,
+          "_col": 11
+        },
+        {
+          "text": "その他",
+          "font_size": 10.0,
+          "_row": 16,
+          "_col": 5
+        },
+        {
+          "text": "備考・提案等",
+          "font_size": 9.0,
+          "_row": 19,
+          "_col": 5
+        },
+        {
+          "text": "写真貼付欄",
+          "font_size": 9.0,
+          "_row": 31,
+          "_col": 5
+        }
+      ],
+      "table_border_rects": [
+        {
+          "_row": 1,
+          "_end_row": 2,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 1,
+          "_end_row": 2,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 1,
+          "_end_row": 2,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 1,
+          "_end_row": 2,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 1,
+          "_end_row": 2,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 2,
+          "_end_row": 3,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 2,
+          "_end_row": 3,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 2,
+          "_end_row": 3,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 2,
+          "_end_row": 3,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 2,
+          "_end_row": 3,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 3,
+          "_end_row": 4,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 3,
+          "_end_row": 4,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 3,
+          "_end_row": 4,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 3,
+          "_end_row": 4,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 3,
+          "_end_row": 4,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 4,
+          "_end_row": 5,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 4,
+          "_end_row": 5,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 4,
+          "_end_row": 5,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 4,
+          "_end_row": 5,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 4,
+          "_end_row": 5,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 5,
+          "_end_row": 6,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 5,
+          "_end_row": 6,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 5,
+          "_end_row": 6,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 5,
+          "_end_row": 6,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 5,
+          "_end_row": 6,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 6,
+          "_end_row": 7,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 6,
+          "_end_row": 7,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 6,
+          "_end_row": 7,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 6,
+          "_end_row": 7,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 6,
+          "_end_row": 7,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 7,
+          "_end_row": 8,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 7,
+          "_end_row": 8,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 7,
+          "_end_row": 8,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 7,
+          "_end_row": 8,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 7,
+          "_end_row": 8,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 8,
+          "_end_row": 9,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 8,
+          "_end_row": 9,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 8,
+          "_end_row": 9,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 8,
+          "_end_row": 9,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 8,
+          "_end_row": 9,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 10,
+          "_end_row": 11,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": false,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 10,
+          "_end_row": 11,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 10,
+          "_end_row": 11,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 10,
+          "_end_row": 11,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 10,
+          "_end_row": 11,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 11,
+          "_end_row": 12,
+          "_col": 5,
+          "_end_col": 8,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 11,
+          "_end_row": 12,
+          "_col": 8,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 11,
+          "_end_row": 12,
+          "_col": 15,
+          "_end_col": 17,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 11,
+          "_end_row": 12,
+          "_col": 17,
+          "_end_col": 20,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 11,
+          "_end_row": 12,
+          "_col": 20,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 12,
+          "_end_row": 13,
+          "_col": 5,
+          "_end_col": 11,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 12,
+          "_end_row": 13,
+          "_col": 11,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 16,
+          "_col": 5,
+          "_end_col": 11,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 16,
+          "_col": 11,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 16,
+          "_end_row": 17,
+          "_col": 5,
+          "_end_col": 11,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 16,
+          "_end_row": 17,
+          "_col": 11,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 19,
+          "_end_row": 20,
+          "_col": 5,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 20,
+          "_end_row": 31,
+          "_col": 5,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 31,
+          "_end_row": 32,
+          "_col": 5,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 32,
+          "_end_row": 44,
+          "_col": 5,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        }
+      ],
+      "rects": [
+        {
+          "_row": 12,
+          "_end_row": 12,
+          "_col": 5,
+          "_end_col": 5,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 12,
+          "_end_row": 12,
+          "_col": 5,
+          "_end_col": 5,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 12,
+          "_end_row": 12,
+          "_col": 11,
+          "_end_col": 11,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 12,
+          "_end_row": 12,
+          "_col": 31,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 12,
+          "_end_row": 12,
+          "_col": 31,
+          "_end_col": 31,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        }
+      ]
+    }
+  ]
+}
+
+【最重要】出力は `[` で始まり `]` で終わる純粋なJSON配列文字列のみとしてください。Markdownのコードブロック(```json等)、前後の説明文、思考プロセス、検証コメントは一切含めないでください。JSON以外の文字を1文字でも出力するとSTEP 1.5で処理できなくなります。
