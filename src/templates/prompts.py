@@ -302,7 +302,7 @@ elif item["type"] == "border_rect":
 
 ## 技術的制約
 - `True`/`False`（Python形式）を使用。JSONの`true`/`false`は**絶対に禁止**（`NameError: name 'true' is not defined` の原因）
-- `data = [...]` リストの末尾は必ず `]` で終わること。余分な `}` を付加しないこと（`SyntaxError: unmatched '}'` の原因）
+- `data = [...]` リストの末尾は必ず `]` で終わること。余分な `}}` を付加しないこと（`SyntaxError: unmatched '}}'` の原因）
 - `[cite: ...]` のようなアノテーションタグは絶対に含めない（SyntaxErrorの原因）
 - 出力ファイル名: `output.xlsx`
 - `ws.page_margins` への dict 代入は**絶対に禁止**（`AttributeError: 'dict' object has no attribute 'to_tree'` の原因）。必ず属性代入形式を使用すること:

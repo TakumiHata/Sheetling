@@ -624,7 +624,29 @@ class SheetlingPipeline:
         with open(extracted_json_path, "w", encoding="utf-8") as f:
             json.dump(extracted_data, f, indent=2, ensure_ascii=False)
 
-        input_data_str = json.dumps(extracted_data, indent=2, ensure_ascii=False)
+        # Step 1 用スリム版: LLMが参照するフィールドのみ（生座標・中間データを除外してトークン削減）
+        _WORD_KEEP = {"text", "_row", "_col", "font_color", "font_size", "is_vertical", "_end_row"}
+        _TBR_KEEP  = {"_row", "_end_row", "_col", "_end_col", "_borders"}
+        _RECT_KEEP = {"_row", "_col", "_end_row", "_end_col", "_borders"}
+        step1_data = {"pages": [
+            {
+                "page_number": p["page_number"],
+                "words": [
+                    {k: v for k, v in w.items() if k in _WORD_KEEP}
+                    for w in p.get("words", [])
+                ],
+                "table_border_rects": [
+                    {k: v for k, v in r.items() if k in _TBR_KEEP}
+                    for r in p.get("table_border_rects", [])
+                ],
+                "rects": [
+                    {k: v for k, v in r.items() if k in _RECT_KEEP}
+                    for r in p.get("rects", [])
+                ],
+            }
+            for p in extracted_data["pages"]
+        ]}
+        step1_data_str = json.dumps(step1_data, indent=2, ensure_ascii=False)
 
         # Step 1.5 用スリム版: words の text/_row/_col のみ（トークン削減）
         slim_data = {"pages": [
@@ -641,7 +663,7 @@ class SheetlingPipeline:
 
         # Step 1: 列アンカー確定プロンプト（PDF解析データを直接埋め込む）
         prompt_1 = TABLE_ANCHOR_PROMPT.format(
-            input_data=input_data_str,
+            input_data=step1_data_str,
             **grid_params
         )
 
