@@ -14,10 +14,15 @@ STEP 1が生成したレイアウト仕様JSONを検証・補正し、同じフ�
 - `borders` フィールドが存在する場合、値を変更せずそのまま保持すること
 - STEP 1 で隣接セルが統合された場合、統合後の `borders` は外周辺（視覚的に線がある辺）のみ true にすること
 
+### 2.7. ページ間要素混入の検出・修正（最重要）
+- 元のPDF解析データの `page_number` と照合し、あるページのコンテンツが別のページの `elements` に混入していないか確認する
+- 例：元データのページ2に存在する `words` がSTEP 1出力のページ1の `elements` に含まれている場合、それをページ1から削除しページ2の `elements` に移動する
+- 判定基準：元データの `pages[N].words[i].text` が STEP 1 出力の `page_number: M`（M ≠ N+1）の elements に含まれている場合は混入
+
 ### 3. テキスト要素の欠落補完
 以下の元PDF解析データの `words` と照合し、レイアウトJSONに欠落しているテキストを補完する：
-- 元データの各ページの `words` を確認し、対応するページの `text` 要素に含まれていない `text` フィールドの内容を探す
-- 欠落が確認された場合、該当wordの `_row` を `row`、`_col` を `col` として `text` 要素を追加する
+- 元データの各ページの `words` を確認し、**対応するページ**の `text` 要素に含まれていない `text` フィールドの内容を探す（ページ番号を必ず照合すること）
+- 欠落が確認された場合、該当wordの `_row` を `row`、`_col` を `col` として **同じページ番号** の `text` 要素を追加する
 - `end_col` = `col` + `text` の文字数（概算）
 - 空白・記号のみのword（`text` が空文字、スペースのみ、または1文字以下の記号）は無視してよい
 
@@ -1083,4558 +1088,3784 @@ STEP 1が生成したレイアウト仕様JSONを検証・補正し、同じフ�
 ## STEP 1の出力（検証・修正対象）
 
 [
-  {
-    "page_number": 1,
-    "elements": [
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 5,
-        "end_col": 10,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 10,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 5,
-        "end_col": 10,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 10,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 5,
-        "end_col": 10,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 10,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 14,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": true, "left": true, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 14,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": false, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 14,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 14,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 14,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 14,
-        "end_row": 15,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 14,
-        "end_row": 15,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 14,
-        "end_row": 15,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 14,
-        "end_row": 15,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 14,
-        "end_row": 15,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 15,
-        "end_row": 16,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 15,
-        "end_row": 16,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 15,
-        "end_row": 16,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 15,
-        "end_row": 16,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 15,
-        "end_row": 16,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 16,
-        "end_row": 17,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 16,
-        "end_row": 17,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 16,
-        "end_row": 17,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 16,
-        "end_row": 17,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 16,
-        "end_row": 17,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 17,
-        "end_row": 18,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 17,
-        "end_row": 18,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 17,
-        "end_row": 18,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 17,
-        "end_row": 18,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 17,
-        "end_row": 18,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 18,
-        "end_row": 19,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 18,
-        "end_row": 19,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 18,
-        "end_row": 19,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 18,
-        "end_row": 19,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 18,
-        "end_row": 19,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 19,
-        "end_row": 20,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 19,
-        "end_row": 20,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 19,
-        "end_row": 20,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 19,
-        "end_row": 20,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 19,
-        "end_row": 20,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 20,
-        "end_row": 21,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 20,
-        "end_row": 21,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 20,
-        "end_row": 21,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 20,
-        "end_row": 21,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 20,
-        "end_row": 21,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 21,
-        "end_row": 22,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 21,
-        "end_row": 22,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 21,
-        "end_row": 22,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 21,
-        "end_row": 22,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 21,
-        "end_row": 22,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 22,
-        "end_row": 23,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 22,
-        "end_row": 23,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 22,
-        "end_row": 23,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 22,
-        "end_row": 23,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 22,
-        "end_row": 23,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 23,
-        "end_row": 24,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 23,
-        "end_row": 24,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 23,
-        "end_row": 24,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 23,
-        "end_row": 24,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 23,
-        "end_row": 24,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 24,
-        "end_row": 25,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 24,
-        "end_row": 25,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 24,
-        "end_row": 25,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 24,
-        "end_row": 25,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 24,
-        "end_row": 25,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 25,
-        "end_row": 26,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 25,
-        "end_row": 26,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 25,
-        "end_row": 26,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 25,
-        "end_row": 26,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 25,
-        "end_row": 26,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 26,
-        "end_row": 27,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 26,
-        "end_row": 27,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 26,
-        "end_row": 27,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 26,
-        "end_row": 27,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 26,
-        "end_row": 27,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 27,
-        "end_row": 28,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 27,
-        "end_row": 28,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 27,
-        "end_row": 28,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 27,
-        "end_row": 28,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 27,
-        "end_row": 28,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 28,
-        "end_row": 29,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 28,
-        "end_row": 29,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 28,
-        "end_row": 29,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 28,
-        "end_row": 29,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 28,
-        "end_row": 29,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 29,
-        "end_row": 30,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 29,
-        "end_row": 30,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 29,
-        "end_row": 30,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 29,
-        "end_row": 30,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 29,
-        "end_row": 30,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 30,
-        "end_row": 31,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 30,
-        "end_row": 31,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 30,
-        "end_row": 31,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 30,
-        "end_row": 31,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 30,
-        "end_row": 31,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 31,
-        "end_row": 32,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 31,
-        "end_row": 32,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 31,
-        "end_row": 32,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 31,
-        "end_row": 32,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 31,
-        "end_row": 32,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 32,
-        "end_row": 33,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 32,
-        "end_row": 33,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 32,
-        "end_row": 33,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 32,
-        "end_row": 33,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 32,
-        "end_row": 33,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 33,
-        "end_row": 34,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 33,
-        "end_row": 34,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 33,
-        "end_row": 34,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 33,
-        "end_row": 34,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 33,
-        "end_row": 34,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 34,
-        "end_row": 35,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 34,
-        "end_row": 35,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 34,
-        "end_row": 35,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 34,
-        "end_row": 35,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 34,
-        "end_row": 35,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 35,
-        "end_row": 36,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 35,
-        "end_row": 36,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 35,
-        "end_row": 36,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 35,
-        "end_row": 36,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 35,
-        "end_row": 36,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 36,
-        "end_row": 37,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 36,
-        "end_row": 37,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 36,
-        "end_row": 37,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 36,
-        "end_row": 37,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 36,
-        "end_row": 37,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 37,
-        "end_row": 38,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 37,
-        "end_row": 38,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 37,
-        "end_row": 38,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 37,
-        "end_row": 38,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 37,
-        "end_row": 38,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 38,
-        "end_row": 39,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 38,
-        "end_row": 39,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 38,
-        "end_row": 39,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 38,
-        "end_row": 39,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 38,
-        "end_row": 39,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 39,
-        "end_row": 40,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 39,
-        "end_row": 40,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 39,
-        "end_row": 40,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 39,
-        "end_row": 40,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 39,
-        "end_row": 40,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 40,
-        "end_row": 41,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 40,
-        "end_row": 41,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 40,
-        "end_row": 41,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 40,
-        "end_row": 41,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 40,
-        "end_row": 41,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 41,
-        "end_row": 42,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 41,
-        "end_row": 42,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 41,
-        "end_row": 42,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 41,
-        "end_row": 42,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 41,
-        "end_row": 42,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 42,
-        "end_row": 43,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 42,
-        "end_row": 43,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 42,
-        "end_row": 43,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 42,
-        "end_row": 43,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 42,
-        "end_row": 43,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 43,
-        "end_row": 44,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 43,
-        "end_row": 44,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 43,
-        "end_row": 44,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 43,
-        "end_row": 44,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 43,
-        "end_row": 44,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 44,
-        "end_row": 45,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 44,
-        "end_row": 45,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 44,
-        "end_row": 45,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 44,
-        "end_row": 45,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 44,
-        "end_row": 45,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 45,
-        "end_row": 46,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 45,
-        "end_row": 46,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 45,
-        "end_row": 46,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 45,
-        "end_row": 46,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 45,
-        "end_row": 46,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 46,
-        "end_row": 47,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 46,
-        "end_row": 47,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 46,
-        "end_row": 47,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 46,
-        "end_row": 47,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 46,
-        "end_row": 47,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 47,
-        "end_row": 47,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": false, "bottom": false, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 5,
-        "col": 5,
-        "end_col": 24,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 7,
-        "end_row": 7,
-        "col": 5,
-        "end_col": 24,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 13,
-        "col": 5,
-        "end_col": 5,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 13,
-        "col": 15,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 13,
-        "col": 17,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 13,
-        "col": 20,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 13,
-        "col": 31,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "text",
-        "content": "（参考資料１）",
-        "row": 1,
-        "col": 5,
-        "end_col": 10
-      },
-      {
-        "type": "text",
-        "content": "管理委託契約締結前の現況確認方法の例",
-        "row": 1,
-        "col": 10,
-        "end_col": 20
-      },
-      {
-        "type": "text",
-        "content": "空き家管理作業",
-        "row": 2,
-        "col": 11,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "受託前現況確認表",
-        "row": 2,
-        "col": 18,
-        "end_col": 27
-      },
-      {
-        "type": "text",
-        "content": "依頼主名",
-        "row": 4,
-        "col": 5,
-        "end_col": 9
-      },
-      {
-        "type": "text",
-        "content": "：",
-        "row": 4,
-        "col": 9,
-        "end_col": 10
-      },
-      {
-        "type": "text",
-        "content": "物件所在地",
-        "row": 7,
-        "col": 5,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "：",
-        "row": 7,
-        "col": 11,
-        "end_col": 12
-      },
-      {
-        "type": "text",
-        "content": "訪問日時",
-        "row": 8,
-        "col": 6,
-        "end_col": 10
-      },
-      {
-        "type": "text",
-        "content": "年",
-        "row": 8,
-        "col": 12,
-        "end_col": 13
-      },
-      {
-        "type": "text",
-        "content": "月",
-        "row": 8,
-        "col": 15,
-        "end_col": 16
-      },
-      {
-        "type": "text",
-        "content": "日",
-        "row": 8,
-        "col": 18,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 8,
-        "col": 21,
-        "end_col": 22
-      },
-      {
-        "type": "text",
-        "content": "：",
-        "row": 8,
-        "col": 23,
-        "end_col": 24
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 8,
-        "col": 28,
-        "end_col": 29
-      },
-      {
-        "type": "text",
-        "content": "～",
-        "row": 8,
-        "col": 29,
-        "end_col": 30
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 8,
-        "col": 30,
-        "end_col": 31
-      },
-      {
-        "type": "text",
-        "content": "：",
-        "row": 8,
-        "col": 31,
-        "end_col": 32
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 8,
-        "col": 32,
-        "end_col": 33
-      },
-      {
-        "type": "text",
-        "content": "社名・所属",
-        "row": 9,
-        "col": 6,
-        "end_col": 10
-      },
-      {
-        "type": "text",
-        "content": "担当者",
-        "row": 10,
-        "col": 7,
-        "end_col": 9
-      },
-      {
-        "type": "text",
-        "content": "（氏名）",
-        "row": 10,
-        "col": 10,
-        "end_col": 13
-      },
-      {
-        "type": "text",
-        "content": "（連絡先）",
-        "row": 10,
-        "col": 19,
-        "end_col": 23
-      },
-      {
-        "type": "text",
-        "content": "確認箇所",
-        "row": 13,
-        "col": 5,
-        "end_col": 8
-      },
-      {
-        "type": "text",
-        "content": "項目有無",
-        "row": 13,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "異常有無",
-        "row": 13,
-        "col": 17,
-        "end_col": 20
-      },
-      {
-        "type": "text",
-        "content": "備考（",
-        "row": 13,
-        "col": 21,
-        "end_col": 24
-      },
-      {
-        "type": "text",
-        "content": "腐朽・破損・雨漏り箇所や残置物等",
-        "row": 13,
-        "col": 22,
-        "end_col": 30
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 13,
-        "col": 30,
-        "end_col": 31
-      },
-      {
-        "type": "text",
-        "content": "門扉等",
-        "row": 14,
-        "col": 5,
-        "end_col": 8
-      },
-      {
-        "type": "text",
-        "content": "門扉",
-        "row": 14,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 14,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 14,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "不法侵入の形跡（有・無）",
-        "row": 14,
-        "col": 22,
-        "end_col": 28
-      },
-      {
-        "type": "text",
-        "content": "駐車場出入口",
-        "row": 15,
-        "col": 8,
-        "end_col": 14
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 15,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 15,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "不法侵入の形跡（有・無）",
-        "row": 15,
-        "col": 22,
-        "end_col": 28
-      },
-      {
-        "type": "text",
-        "content": "玄関ドア",
-        "row": 16,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 16,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 16,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "不法侵入の形跡（有・無）",
-        "row": 16,
-        "col": 22,
-        "end_col": 28
-      },
-      {
-        "type": "text",
-        "content": "勝手口",
-        "row": 17,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 17,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 17,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "不法侵入の形跡（有・無）",
-        "row": 17,
-        "col": 22,
-        "end_col": 28
-      },
-      {
-        "type": "text",
-        "content": "その他（",
-        "row": 17,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 17,
-        "col": 11,
-        "end_col": 12
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 17,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 17,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "建物外観",
-        "row": 19,
-        "col": 5,
-        "end_col": 8
-      },
-      {
-        "type": "text",
-        "content": "建物全体",
-        "row": 19,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 19,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 19,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "建物の傾斜（有・無）",
-        "row": 19,
-        "col": 23,
-        "end_col": 29
-      },
-      {
-        "type": "text",
-        "content": "１階窓ガラス",
-        "row": 20,
-        "col": 8,
-        "end_col": 13
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 20,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 20,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "１階雨戸",
-        "row": 21,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 21,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 21,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "２階窓ガラス",
-        "row": 22,
-        "col": 8,
-        "end_col": 13
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 22,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 22,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "２階雨戸",
-        "row": 22,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 22,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 22,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "外壁",
-        "row": 23,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 23,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 23,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "外装材剥落・脱落（有・無）",
-        "row": 23,
-        "col": 21,
-        "end_col": 29
-      },
-      {
-        "type": "text",
-        "content": "屋根",
-        "row": 24,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 24,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 24,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "変形（有・無）",
-        "row": 24,
-        "col": 24,
-        "end_col": 29
-      },
-      {
-        "type": "text",
-        "content": "雨樋",
-        "row": 25,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 25,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 25,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "テレビアンテナ",
-        "row": 26,
-        "col": 8,
-        "end_col": 14
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 26,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 26,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "その他（",
-        "row": 27,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 27,
-        "col": 11,
-        "end_col": 12
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 27,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 27,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "敷地",
-        "row": 28,
-        "col": 5,
-        "end_col": 7
-      },
-      {
-        "type": "text",
-        "content": "・",
-        "row": 29,
-        "col": 5,
-        "end_col": 6
-      },
-      {
-        "type": "text",
-        "content": "外構",
-        "row": 30,
-        "col": 5,
-        "end_col": 7
-      },
-      {
-        "type": "text",
-        "content": "フェンス・ブロック塀",
-        "row": 28,
-        "col": 8,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 28,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 28,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "擁壁",
-        "row": 29,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 29,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 29,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "庭・樹木等",
-        "row": 30,
-        "col": 8,
-        "end_col": 13
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 30,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 30,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "雑草等繁茂（有・無）",
-        "row": 30,
-        "col": 20,
-        "end_col": 26
-      },
-      {
-        "type": "text",
-        "content": "樹木等はみ出し（有・無）",
-        "row": 30,
-        "col": 26,
-        "end_col": 31
-      },
-      {
-        "type": "text",
-        "content": "敷地周り・外構",
-        "row": 31,
-        "col": 8,
-        "end_col": 14
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 31,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 31,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "不法投棄等（有・無）",
-        "row": 31,
-        "col": 23,
-        "end_col": 29
-      },
-      {
-        "type": "text",
-        "content": "屋外水栓",
-        "row": 32,
-        "col": 8,
-        "end_col": 12
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 32,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 32,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "駐車場・駐輪場",
-        "row": 33,
-        "col": 8,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 33,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 33,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "その他（",
-        "row": 33,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 33,
-        "col": 11,
-        "end_col": 12
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 33,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 33,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "郵便",
-        "row": 35,
-        "col": 5,
-        "end_col": 7
-      },
-      {
-        "type": "text",
-        "content": "・",
-        "row": 36,
-        "col": 5,
-        "end_col": 6
-      },
-      {
-        "type": "text",
-        "content": "ライフ",
-        "row": 37,
-        "col": 5,
-        "end_col": 8
-      },
-      {
-        "type": "text",
-        "content": "ライン",
-        "row": 38,
-        "col": 5,
-        "end_col": 8
-      },
-      {
-        "type": "text",
-        "content": "郵便受け",
-        "row": 35,
-        "col": 8,
-        "end_col": 12
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 35,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 35,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "転送サービス（有・無）",
-        "row": 35,
-        "col": 23,
-        "end_col": 29
-      },
-      {
-        "type": "text",
-        "content": "電気",
-        "row": 36,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "通電中・停止中",
-        "row": 36,
-        "col": 15,
-        "end_col": 20
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 36,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "メーター異常（有・無）",
-        "row": 36,
-        "col": 23,
-        "end_col": 29
-      },
-      {
-        "type": "text",
-        "content": "ガス",
-        "row": 37,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "開栓中・停止中",
-        "row": 37,
-        "col": 15,
-        "end_col": 20
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 37,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "メーター異常（有・無）",
-        "row": 37,
-        "col": 23,
-        "end_col": 29
-      },
-      {
-        "type": "text",
-        "content": "水道",
-        "row": 38,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "通水中・停止中",
-        "row": 38,
-        "col": 15,
-        "end_col": 20
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 38,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "メーター異常（有・無）",
-        "row": 38,
-        "col": 23,
-        "end_col": 29
-      },
-      {
-        "type": "text",
-        "content": "建物内部",
-        "row": 41,
-        "col": 5,
-        "end_col": 9
-      },
-      {
-        "type": "text",
-        "content": "玄関",
-        "row": 39,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 39,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 39,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "廊下",
-        "row": 39,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 39,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 39,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "台所",
-        "row": 40,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 40,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 40,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "洗面所・脱衣所",
-        "row": 41,
-        "col": 8,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 41,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 41,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "風呂場",
-        "row": 42,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 42,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 42,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "便所",
-        "row": 43,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 43,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 43,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "排水設備",
-        "row": 44,
-        "col": 8,
-        "end_col": 13
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 44,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 44,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "浄化槽（有・使用休止届出済・無）",
-        "row": 44,
-        "col": 21,
-        "end_col": 31
-      },
-      {
-        "type": "border_rect",
-        "row": 1,
-        "end_row": 2,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 1,
-        "end_row": 2,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 1,
-        "end_row": 2,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 1,
-        "end_row": 2,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 1,
-        "end_row": 2,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 2,
-        "end_row": 3,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 2,
-        "end_row": 3,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 2,
-        "end_row": 3,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 2,
-        "end_row": 3,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 2,
-        "end_row": 3,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 3,
-        "end_row": 4,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 3,
-        "end_row": 4,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 3,
-        "end_row": 4,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 3,
-        "end_row": 4,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 3,
-        "end_row": 4,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 4,
-        "end_row": 5,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 4,
-        "end_row": 5,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 4,
-        "end_row": 5,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 4,
-        "end_row": 5,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 4,
-        "end_row": 5,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 6,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 6,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 6,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 6,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 6,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 6,
-        "end_row": 7,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 6,
-        "end_row": 7,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 6,
-        "end_row": 7,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 6,
-        "end_row": 7,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 6,
-        "end_row": 7,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 7,
-        "end_row": 8,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 7,
-        "end_row": 8,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 7,
-        "end_row": 8,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 7,
-        "end_row": 8,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 7,
-        "end_row": 8,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 11,
-        "end_row": 12,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": true, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 11,
-        "end_row": 12,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 11,
-        "end_row": 12,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 11,
-        "end_row": 12,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 11,
-        "end_row": 12,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 12,
-        "end_row": 13,
-        "col": 5,
-        "end_col": 11,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 12,
-        "end_row": 13,
-        "col": 11,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 16,
-        "col": 5,
-        "end_col": 11,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 16,
-        "col": 11,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 16,
-        "end_row": 17,
-        "col": 5,
-        "end_col": 11,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 16,
-        "end_row": 17,
-        "col": 11,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 19,
-        "end_row": 20,
-        "col": 5,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 20,
-        "end_row": 31,
-        "col": 5,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 31,
-        "end_row": 32,
-        "col": 5,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 32,
-        "end_row": 44,
-        "col": 5,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "text",
-        "content": "部屋①",
-        "row": 1,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 1,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 1,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 1,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 1,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 1,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "部屋②",
-        "row": 2,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 2,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 2,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 2,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 2,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 2,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "部屋③",
-        "row": 3,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 3,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 3,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 3,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 3,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 3,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "部屋④",
-        "row": 4,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 4,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 4,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 4,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 4,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 4,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "部屋⑤",
-        "row": 5,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 5,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 5,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 5,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 5,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 5,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "部屋⑥",
-        "row": 6,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 6,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 6,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 6,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 6,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 6,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "その他（",
-        "row": 6,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 6,
-        "col": 12,
-        "end_col": 13
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 6,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 6,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "その他",
-        "row": 9,
-        "col": 5,
-        "end_col": 8
-      },
-      {
-        "type": "text",
-        "content": "ベランダ・バルコニー",
-        "row": 8,
-        "col": 8,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 8,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 8,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "傾き・破損・腐食等（有・無）",
-        "row": 8,
-        "col": 21,
-        "end_col": 30
-      },
-      {
-        "type": "text",
-        "content": "その他（",
-        "row": 9,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 9,
-        "col": 11,
-        "end_col": 12
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 9,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 9,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "全体",
-        "row": 12,
-        "col": 5,
-        "end_col": 8
-      },
-      {
-        "type": "text",
-        "content": "詳細",
-        "row": 12,
-        "col": 11,
-        "end_col": 14
-      },
-      {
-        "type": "text",
-        "content": "近隣への影響",
-        "row": 14,
-        "col": 5,
-        "end_col": 10
-      },
-      {
-        "type": "text",
-        "content": "・汚水等の流出（有・無）",
-        "row": 13,
-        "col": 11,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "・害虫等の発生（有・無）",
-        "row": 14,
-        "col": 11,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "・動物の糞尿や棲みつき（有・無）",
-        "row": 15,
-        "col": 11,
-        "end_col": 20
-      },
-      {
-        "type": "text",
-        "content": "・悪臭の発生（有・無）",
-        "row": 15,
-        "col": 11,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "その他",
-        "row": 16,
-        "col": 5,
-        "end_col": 8
-      },
-      {
-        "type": "text",
-        "content": "備考・提案等",
-        "row": 19,
-        "col": 5,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "写真貼付欄",
-        "row": 31,
-        "col": 5,
-        "end_col": 10
-      }
-    ]
-  },
-  {
-    "page_number": 2,
-    "elements": [
-      {
-        "type": "border_rect",
-        "row": 1,
-        "end_row": 2,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 1,
-        "end_row": 2,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 1,
-        "end_row": 2,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 1,
-        "end_row": 2,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 1,
-        "end_row": 2,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 2,
-        "end_row": 3,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 2,
-        "end_row": 3,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 2,
-        "end_row": 3,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 2,
-        "end_row": 3,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 2,
-        "end_row": 3,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 3,
-        "end_row": 4,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 3,
-        "end_row": 4,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 3,
-        "end_row": 4,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 3,
-        "end_row": 4,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 3,
-        "end_row": 4,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 4,
-        "end_row": 5,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 4,
-        "end_row": 5,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 4,
-        "end_row": 5,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 4,
-        "end_row": 5,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 4,
-        "end_row": 5,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 6,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 6,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 6,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 6,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 6,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 6,
-        "end_row": 7,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 6,
-        "end_row": 7,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 6,
-        "end_row": 7,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 6,
-        "end_row": 7,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 6,
-        "end_row": 7,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 7,
-        "end_row": 8,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 7,
-        "end_row": 8,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 7,
-        "end_row": 8,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 7,
-        "end_row": 8,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 7,
-        "end_row": 8,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": false, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 9,
-        "end_row": 10,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": false, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 10,
-        "end_row": 11,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 11,
-        "end_row": 12,
-        "col": 5,
-        "end_col": 8,
-        "borders": {"top": true, "bottom": true, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 11,
-        "end_row": 12,
-        "col": 8,
-        "end_col": 15,
-        "borders": {"top": true, "bottom": true, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 11,
-        "end_row": 12,
-        "col": 15,
-        "end_col": 17,
-        "borders": {"top": true, "bottom": true, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 11,
-        "end_row": 12,
-        "col": 17,
-        "end_col": 20,
-        "borders": {"top": true, "bottom": true, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 11,
-        "end_row": 12,
-        "col": 20,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": false, "right": false}
-      },
-      {
-        "type": "border_rect",
-        "row": 12,
-        "end_row": 13,
-        "col": 5,
-        "end_col": 11,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 12,
-        "end_row": 13,
-        "col": 11,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 16,
-        "col": 5,
-        "end_col": 11,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 13,
-        "end_row": 16,
-        "col": 11,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 16,
-        "end_row": 17,
-        "col": 5,
-        "end_col": 11,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 16,
-        "end_row": 17,
-        "col": 11,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 19,
-        "end_row": 20,
-        "col": 5,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 20,
-        "end_row": 31,
-        "col": 5,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 31,
-        "end_row": 32,
-        "col": 5,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "border_rect",
-        "row": 32,
-        "end_row": 44,
-        "col": 5,
-        "end_col": 31,
-        "borders": {"top": true, "bottom": true, "left": true, "right": true}
-      },
-      {
-        "type": "text",
-        "content": "部屋①",
-        "row": 1,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 1,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 1,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 1,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 1,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 1,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "部屋②",
-        "row": 2,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 2,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 2,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 2,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 2,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 2,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "部屋③",
-        "row": 3,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 3,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 3,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 3,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 3,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 3,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "部屋④",
-        "row": 4,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 4,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 4,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 4,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 4,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 4,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "部屋⑤",
-        "row": 5,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 5,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 5,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 5,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 5,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 5,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "部屋⑥",
-        "row": 6,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "（",
-        "row": 6,
-        "col": 10,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "階・東・西・南・北",
-        "row": 6,
-        "col": 11,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 6,
-        "col": 14,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 6,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 6,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "その他（",
-        "row": 6,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 6,
-        "col": 12,
-        "end_col": 13
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 6,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 6,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "その他",
-        "row": 9,
-        "col": 5,
-        "end_col": 8
-      },
-      {
-        "type": "text",
-        "content": "ベランダ・バルコニー",
-        "row": 8,
-        "col": 8,
-        "end_col": 15
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 8,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 8,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "傾き・破損・腐食等（有・無）",
-        "row": 8,
-        "col": 21,
-        "end_col": 30
-      },
-      {
-        "type": "text",
-        "content": "その他（",
-        "row": 9,
-        "col": 8,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "）",
-        "row": 9,
-        "col": 11,
-        "end_col": 12
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 9,
-        "col": 15,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "有・無",
-        "row": 9,
-        "col": 17,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "全体",
-        "row": 12,
-        "col": 5,
-        "end_col": 8
-      },
-      {
-        "type": "text",
-        "content": "詳細",
-        "row": 12,
-        "col": 11,
-        "end_col": 14
-      },
-      {
-        "type": "text",
-        "content": "近隣への影響",
-        "row": 14,
-        "col": 5,
-        "end_col": 10
-      },
-      {
-        "type": "text",
-        "content": "・汚水等の流出（有・無）",
-        "row": 13,
-        "col": 11,
-        "end_col": 19
-      },
-      {
-        "type": "text",
-        "content": "・害虫等の発生（有・無）",
-        "row": 14,
-        "col": 11,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "・動物の糞尿や棲みつき（有・無）",
-        "row": 15,
-        "col": 11,
-        "end_col": 20
-      },
-      {
-        "type": "text",
-        "content": "・悪臭の発生（有・無）",
-        "row": 15,
-        "col": 11,
-        "end_col": 17
-      },
-      {
-        "type": "text",
-        "content": "その他",
-        "row": 16,
-        "col": 5,
-        "end_col": 8
-      },
-      {
-        "type": "text",
-        "content": "備考・提案等",
-        "row": 19,
-        "col": 5,
-        "end_col": 11
-      },
-      {
-        "type": "text",
-        "content": "写真貼付欄",
-        "row": 31,
-        "col": 5,
-        "end_col": 10
-      }
-    ]
-  }
+{
+"page_number": 1,
+"elements": [
+{
+"type": "text",
+"content": "（参考資料１）",
+"row": 1,
+"col": 5,
+"end_col": 10,
+"font_size": 12.0
+},
+{
+"type": "text",
+"content": "管理委託契約締結前の現況確認方法の例",
+"row": 1,
+"col": 10,
+"end_col": 23,
+"font_size": 12.0
+},
+{
+"type": "text",
+"content": "空き家管理作業",
+"row": 2,
+"col": 11,
+"end_col": 16,
+"font_size": 14.0
+},
+{
+"type": "text",
+"content": "受託前現況確認表",
+"row": 2,
+"col": 18,
+"end_col": 25,
+"font_size": 14.0
+},
+{
+"type": "text",
+"content": "依頼主名",
+"row": 4,
+"col": 5,
+"end_col": 8,
+"font_size": 12.0
+},
+{
+"type": "text",
+"content": "：",
+"row": 4,
+"col": 9,
+"end_col": 10,
+"font_size": 12.0
+},
+{
+"type": "text",
+"content": "物件所在地",
+"row": 7,
+"col": 5,
+"end_col": 9,
+"font_size": 12.0
+},
+{
+"type": "text",
+"content": "：",
+"row": 7,
+"col": 10,
+"end_col": 11,
+"font_size": 12.0
+},
+{
+"type": "text",
+"content": "訪問日時",
+"row": 8,
+"col": 6,
+"end_col": 9,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "年",
+"row": 8,
+"col": 12,
+"end_col": 13,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "月",
+"row": 8,
+"col": 15,
+"end_col": 16,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "日",
+"row": 8,
+"col": 18,
+"end_col": 19,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "（",
+"row": 8,
+"col": 21,
+"end_col": 22,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "：",
+"row": 8,
+"col": 23,
+"end_col": 24,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "）～（",
+"row": 8,
+"col": 24,
+"end_col": 27,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "：",
+"row": 8,
+"col": 27,
+"end_col": 28,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 8,
+"col": 28,
+"end_col": 29,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "社名・所属",
+"row": 9,
+"col": 6,
+"end_col": 9,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "担当者",
+"row": 10,
+"col": 7,
+"end_col": 9,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "（氏名）",
+"row": 10,
+"col": 10,
+"end_col": 12,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "（連絡先）",
+"row": 10,
+"col": 19,
+"end_col": 22,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "確認箇所",
+"row": 13,
+"col": 5,
+"end_col": 8,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "項目有無",
+"row": 13,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "異常有無",
+"row": 13,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "備考（",
+"row": 13,
+"col": 21,
+"end_col": 23,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "腐朽・破損・雨漏り箇所や残置物等",
+"row": 13,
+"col": 22,
+"end_col": 29,
+"font_size": 8.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 13,
+"col": 30,
+"end_col": 31,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "門扉等",
+"row": 14,
+"col": 5,
+"end_col": 7,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "門扉",
+"row": 14,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 14,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 14,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "不法侵入の形跡（有・無）",
+"row": 14,
+"col": 22,
+"end_col": 27,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "駐車場出入口",
+"row": 15,
+"col": 8,
+"end_col": 11,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 15,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 15,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "不法侵入の形跡（有・無）",
+"row": 15,
+"col": 22,
+"end_col": 27,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "玄関ドア",
+"row": 16,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 16,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 16,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "不法侵入の形跡（有・無）",
+"row": 16,
+"col": 22,
+"end_col": 27,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "勝手口",
+"row": 17,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 17,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 17,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "不法侵入の形跡（有・無）",
+"row": 17,
+"col": 22,
+"end_col": 27,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "その他（",
+"row": 17,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 17,
+"col": 11,
+"end_col": 12,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 17,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 17,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "建物外観",
+"row": 19,
+"col": 5,
+"end_col": 8,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "建物全体",
+"row": 19,
+"col": 8,
+"end_col": 11,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 19,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 19,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "建物の傾斜（有・無）",
+"row": 19,
+"col": 23,
+"end_col": 27,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "１階窓ガラス",
+"row": 20,
+"col": 8,
+"end_col": 11,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 20,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 20,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "１階雨戸",
+"row": 21,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 21,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 21,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "２階窓ガラス",
+"row": 22,
+"col": 8,
+"end_col": 11,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 22,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 22,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "２階雨戸",
+"row": 22,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 22,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 22,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "外壁",
+"row": 23,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 23,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 23,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "外装材剥落・脱落（有・無）",
+"row": 23,
+"col": 21,
+"end_col": 27,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "屋根",
+"row": 24,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 24,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 24,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "変形（有・無）",
+"row": 24,
+"col": 24,
+"end_col": 27,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "雨樋",
+"row": 25,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 25,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 25,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "テレビアンテナ",
+"row": 26,
+"col": 8,
+"end_col": 11,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 26,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 26,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "その他（",
+"row": 27,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 27,
+"col": 11,
+"end_col": 12,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 27,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 27,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "敷地",
+"row": 28,
+"col": 5,
+"end_col": 6,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "・",
+"row": 29,
+"col": 5,
+"end_col": 6,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "外構",
+"row": 30,
+"col": 5,
+"end_col": 7,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "フェンス・ブロック塀",
+"row": 28,
+"col": 8,
+"end_col": 13,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 28,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 28,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "擁壁",
+"row": 29,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 29,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 29,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "庭・樹木等",
+"row": 30,
+"col": 8,
+"end_col": 11,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 30,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 30,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "雑草等繁茂（有・無）",
+"row": 30,
+"col": 20,
+"end_col": 25,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "樹木等はみ出し（有・無）",
+"row": 30,
+"col": 26,
+"end_col": 30,
+"font_size": 8.0
+},
+{
+"type": "text",
+"content": "敷地周り・外構",
+"row": 31,
+"col": 8,
+"end_col": 12,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 31,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 31,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "不法投棄等（有・無）",
+"row": 31,
+"col": 23,
+"end_col": 27,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "屋外水栓",
+"row": 32,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 32,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 32,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "駐車場・駐輪場",
+"row": 33,
+"col": 8,
+"end_col": 12,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 33,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 33,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "その他（",
+"row": 33,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 33,
+"col": 11,
+"end_col": 12,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 33,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 33,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "郵便",
+"row": 35,
+"col": 5,
+"end_col": 6,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "・",
+"row": 36,
+"col": 5,
+"end_col": 6,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "ライフ",
+"row": 37,
+"col": 5,
+"end_col": 7,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "ライン",
+"row": 38,
+"col": 5,
+"end_col": 7,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "郵便受け",
+"row": 35,
+"col": 8,
+"end_col": 11,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 35,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 35,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "転送サービス（有・無）",
+"row": 35,
+"col": 23,
+"end_col": 27,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "電気",
+"row": 36,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "通電中・停止中",
+"row": 36,
+"col": 15,
+"end_col": 19,
+"font_size": 6.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 36,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "メーター異常（有・無）",
+"row": 36,
+"col": 23,
+"end_col": 27,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "ガス",
+"row": 37,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "開栓中・停止中",
+"row": 37,
+"col": 15,
+"end_col": 19,
+"font_size": 6.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 37,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "メーター異常（有・無）",
+"row": 37,
+"col": 23,
+"end_col": 27,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "水道",
+"row": 38,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "通水中・停止中",
+"row": 38,
+"col": 15,
+"end_col": 19,
+"font_size": 6.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 38,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "メーター異常（有・無）",
+"row": 38,
+"col": 23,
+"end_col": 27,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "建物内部",
+"row": 41,
+"col": 5,
+"end_col": 8,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "玄関",
+"row": 39,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 39,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 39,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "廊下",
+"row": 39,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 39,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 39,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "台所",
+"row": 40,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 40,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 40,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "洗面所・脱衣所",
+"row": 41,
+"col": 8,
+"end_col": 12,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 41,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 41,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "風呂場",
+"row": 42,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 42,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 42,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "便所",
+"row": 43,
+"col": 8,
+"end_col": 9,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 43,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 43,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "排水設備",
+"row": 44,
+"col": 8,
+"end_col": 11,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 44,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 44,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "浄化槽（有・使用休止届出済・無）",
+"row": 44,
+"col": 21,
+"end_col": 30,
+"font_size": 10.0
+},
+{
+"type": "border_rect",
+"row": 8,
+"end_row": 9,
+"col": 5,
+"end_col": 10,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 8,
+"end_row": 11,
+"col": 10,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 9,
+"end_row": 10,
+"col": 5,
+"end_col": 10,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 10,
+"end_row": 11,
+"col": 5,
+"end_col": 10,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 13,
+"end_row": 14,
+"col": 5,
+"end_col": 8,
+"borders": {"top": true, "bottom": true, "left": true, "right": false}
+},
+{
+"type": "border_rect",
+"row": 13,
+"end_row": 14,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": false, "right": true}
+},
+{
+"type": "border_rect",
+"row": 13,
+"end_row": 14,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 13,
+"end_row": 14,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 13,
+"end_row": 14,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 14,
+"end_row": 15,
+"col": 5,
+"end_col": 8,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 14,
+"end_row": 15,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 14,
+"end_row": 15,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 14,
+"end_row": 15,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 14,
+"end_row": 15,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 15,
+"end_row": 16,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 15,
+"end_row": 16,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 15,
+"end_row": 16,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 15,
+"end_row": 16,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 15,
+"end_row": 16,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 16,
+"end_row": 17,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 16,
+"end_row": 17,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 16,
+"end_row": 17,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 16,
+"end_row": 17,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 16,
+"end_row": 17,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 17,
+"end_row": 18,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 17,
+"end_row": 18,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 17,
+"end_row": 18,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 17,
+"end_row": 18,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 17,
+"end_row": 18,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 18,
+"end_row": 19,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 18,
+"end_row": 19,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 18,
+"end_row": 19,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 18,
+"end_row": 19,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 18,
+"end_row": 19,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 19,
+"end_row": 20,
+"col": 5,
+"end_col": 8,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 19,
+"end_row": 20,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 19,
+"end_row": 20,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 19,
+"end_row": 20,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 19,
+"end_row": 20,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 20,
+"end_row": 21,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 20,
+"end_row": 21,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 20,
+"end_row": 21,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 20,
+"end_row": 21,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 20,
+"end_row": 21,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 21,
+"end_row": 22,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 21,
+"end_row": 22,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 21,
+"end_row": 22,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 21,
+"end_row": 22,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 21,
+"end_row": 22,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 22,
+"end_row": 23,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 22,
+"end_row": 23,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 22,
+"end_row": 23,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 22,
+"end_row": 23,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 22,
+"end_row": 23,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 23,
+"end_row": 24,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 23,
+"end_row": 24,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 23,
+"end_row": 24,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 23,
+"end_row": 24,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 23,
+"end_row": 24,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 24,
+"end_row": 25,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 24,
+"end_row": 25,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 24,
+"end_row": 25,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 24,
+"end_row": 25,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 24,
+"end_row": 25,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 25,
+"end_row": 26,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 25,
+"end_row": 26,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 25,
+"end_row": 26,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 25,
+"end_row": 26,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 25,
+"end_row": 26,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 26,
+"end_row": 27,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 26,
+"end_row": 27,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 26,
+"end_row": 27,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 26,
+"end_row": 27,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 26,
+"end_row": 27,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 27,
+"end_row": 28,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 27,
+"end_row": 28,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 27,
+"end_row": 28,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 27,
+"end_row": 28,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 27,
+"end_row": 28,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 28,
+"end_row": 29,
+"col": 5,
+"end_col": 8,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 28,
+"end_row": 29,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 28,
+"end_row": 29,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 28,
+"end_row": 29,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 28,
+"end_row": 29,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 29,
+"end_row": 30,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 29,
+"end_row": 30,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 29,
+"end_row": 30,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 29,
+"end_row": 30,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 29,
+"end_row": 30,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 30,
+"end_row": 31,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 30,
+"end_row": 31,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 30,
+"end_row": 31,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 30,
+"end_row": 31,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 30,
+"end_row": 31,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 31,
+"end_row": 32,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 31,
+"end_row": 32,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 31,
+"end_row": 32,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 31,
+"end_row": 32,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 31,
+"end_row": 32,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 32,
+"end_row": 33,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 32,
+"end_row": 33,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 32,
+"end_row": 33,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 32,
+"end_row": 33,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 32,
+"end_row": 33,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 33,
+"end_row": 34,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 33,
+"end_row": 34,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 33,
+"end_row": 34,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 33,
+"end_row": 34,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 33,
+"end_row": 34,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 34,
+"end_row": 35,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 34,
+"end_row": 35,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 34,
+"end_row": 35,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 34,
+"end_row": 35,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 34,
+"end_row": 35,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 35,
+"end_row": 36,
+"col": 5,
+"end_col": 8,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 35,
+"end_row": 36,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 35,
+"end_row": 36,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 35,
+"end_row": 36,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 35,
+"end_row": 36,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 36,
+"end_row": 37,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 36,
+"end_row": 37,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 36,
+"end_row": 37,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 36,
+"end_row": 37,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 36,
+"end_row": 37,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 37,
+"end_row": 38,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 37,
+"end_row": 38,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 37,
+"end_row": 38,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 37,
+"end_row": 38,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 37,
+"end_row": 38,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 38,
+"end_row": 39,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 38,
+"end_row": 39,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 38,
+"end_row": 39,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 38,
+"end_row": 39,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 38,
+"end_row": 39,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 39,
+"end_row": 40,
+"col": 5,
+"end_col": 8,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 39,
+"end_row": 40,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 39,
+"end_row": 40,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 39,
+"end_row": 40,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 39,
+"end_row": 40,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 40,
+"end_row": 41,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 40,
+"end_row": 41,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 40,
+"end_row": 41,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 40,
+"end_row": 41,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 40,
+"end_row": 41,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 41,
+"end_row": 42,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 41,
+"end_row": 42,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 41,
+"end_row": 42,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 41,
+"end_row": 42,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 41,
+"end_row": 42,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 42,
+"end_row": 43,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 42,
+"end_row": 43,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 42,
+"end_row": 43,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 42,
+"end_row": 43,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 42,
+"end_row": 43,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 43,
+"end_row": 44,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 43,
+"end_row": 44,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 43,
+"end_row": 44,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 43,
+"end_row": 44,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 43,
+"end_row": 44,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 44,
+"end_row": 45,
+"col": 5,
+"end_col": 8,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 44,
+"end_row": 45,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 44,
+"end_row": 45,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 44,
+"end_row": 45,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 44,
+"end_row": 45,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 45,
+"end_row": 46,
+"col": 5,
+"end_col": 8,
+"borders": {"top": true, "bottom": false, "left": true, "right": false}
+},
+{
+"type": "border_rect",
+"row": 45,
+"end_row": 46,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 45,
+"end_row": 46,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 45,
+"end_row": 46,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 45,
+"end_row": 46,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 46,
+"end_row": 47,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 46,
+"end_row": 47,
+"col": 8,
+"end_col": 15,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 46,
+"end_row": 47,
+"col": 15,
+"end_col": 17,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 46,
+"end_row": 47,
+"col": 17,
+"end_col": 20,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 46,
+"end_row": 47,
+"col": 20,
+"end_col": 31,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 8,
+"end_col": 15,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 15,
+"end_col": 17,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 17,
+"end_col": 20,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 20,
+"end_col": 31,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 8,
+"end_col": 15,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 15,
+"end_col": 17,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 17,
+"end_col": 20,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 20,
+"end_col": 31,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 8,
+"end_col": 15,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 15,
+"end_col": 17,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 17,
+"end_col": 20,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 47,
+"end_row": 47,
+"col": 20,
+"end_col": 31,
+"borders": {"top": false, "bottom": false, "left": false, "right": false}
+},
+{
+"type": "rect",
+"row": 5,
+"end_row": 5,
+"col": 5,
+"end_col": 24,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "rect",
+"row": 7,
+"end_row": 7,
+"col": 5,
+"end_col": 24,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "rect",
+"row": 13,
+"end_row": 13,
+"col": 5,
+"end_col": 5,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "rect",
+"row": 13,
+"end_row": 13,
+"col": 15,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "rect",
+"row": 13,
+"end_row": 13,
+"col": 17,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "rect",
+"row": 13,
+"end_row": 13,
+"col": 20,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "rect",
+"row": 13,
+"end_row": 13,
+"col": 31,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+}
+]
+},
+{
+"page_number": 2,
+"elements": [
+{
+"type": "text",
+"content": "部屋①（",
+"row": 1,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "階・東・西・南・北",
+"row": 1,
+"col": 11,
+"end_col": 15,
+"font_size": 6.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 1,
+"col": 14,
+"end_col": 15,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 1,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 1,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "部屋②（",
+"row": 2,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "階・東・西・南・北",
+"row": 2,
+"col": 11,
+"end_col": 15,
+"font_size": 6.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 2,
+"col": 14,
+"end_col": 15,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 2,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 2,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "部屋③（",
+"row": 3,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "階・東・西・南・北",
+"row": 3,
+"col": 11,
+"end_col": 15,
+"font_size": 6.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 3,
+"col": 14,
+"end_col": 15,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 3,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 3,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "部屋④（",
+"row": 4,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "階・東・西・南・北",
+"row": 4,
+"col": 11,
+"end_col": 15,
+"font_size": 6.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 4,
+"col": 14,
+"end_col": 15,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 4,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 4,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "部屋⑤（",
+"row": 5,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "階・東・西・南・北",
+"row": 5,
+"col": 11,
+"end_col": 15,
+"font_size": 6.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 5,
+"col": 14,
+"end_col": 15,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 5,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 5,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "部屋⑥（",
+"row": 6,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "階・東・西・南・北",
+"row": 6,
+"col": 11,
+"end_col": 15,
+"font_size": 6.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 6,
+"col": 14,
+"end_col": 15,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 6,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 6,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "その他（",
+"row": 6,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 6,
+"col": 12,
+"end_col": 13,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 6,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 6,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "その他",
+"row": 9,
+"col": 5,
+"end_col": 7,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "ベランダ・バルコニー",
+"row": 8,
+"col": 8,
+"end_col": 13,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 8,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 8,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "傾き・破損・腐食等（有・無）",
+"row": 8,
+"col": 21,
+"end_col": 27,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "その他（",
+"row": 9,
+"col": 8,
+"end_col": 10,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "）",
+"row": 9,
+"col": 11,
+"end_col": 12,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 9,
+"col": 15,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "有・無",
+"row": 9,
+"col": 17,
+"end_col": 19,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "全体",
+"row": 12,
+"col": 5,
+"end_col": 7,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "詳細",
+"row": 12,
+"col": 11,
+"end_col": 13,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "近隣への影響",
+"row": 14,
+"col": 5,
+"end_col": 8,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "・汚水等の流出（有・無）",
+"row": 13,
+"col": 11,
+"end_col": 17,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "・害虫等の発生（有・無）",
+"row": 14,
+"col": 11,
+"end_col": 16,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "・動物の糞尿や棲みつき（有・無）",
+"row": 15,
+"col": 11,
+"end_col": 18,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "・悪臭の発生（有・無）",
+"row": 15,
+"col": 11,
+"end_col": 15,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "その他",
+"row": 16,
+"col": 5,
+"end_col": 7,
+"font_size": 10.0
+},
+{
+"type": "text",
+"content": "備考・提案等",
+"row": 19,
+"col": 5,
+"end_col": 9,
+"font_size": 9.0
+},
+{
+"type": "text",
+"content": "写真貼付欄",
+"row": 31,
+"col": 5,
+"end_col": 8,
+"font_size": 9.0
+},
+{
+"type": "border_rect",
+"row": 1,
+"end_row": 2,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 1,
+"end_row": 2,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 1,
+"end_row": 2,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 1,
+"end_row": 2,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 1,
+"end_row": 2,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 2,
+"end_row": 3,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 2,
+"end_row": 3,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 2,
+"end_row": 3,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 2,
+"end_row": 3,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 2,
+"end_row": 3,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 3,
+"end_row": 4,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 3,
+"end_row": 4,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 3,
+"end_row": 4,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 3,
+"end_row": 4,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 3,
+"end_row": 4,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 4,
+"end_row": 5,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 4,
+"end_row": 5,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 4,
+"end_row": 5,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 4,
+"end_row": 5,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 4,
+"end_row": 5,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 5,
+"end_row": 6,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 5,
+"end_row": 6,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 5,
+"end_row": 6,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 5,
+"end_row": 6,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 5,
+"end_row": 6,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 6,
+"end_row": 7,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 6,
+"end_row": 7,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 6,
+"end_row": 7,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 6,
+"end_row": 7,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 6,
+"end_row": 7,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 7,
+"end_row": 8,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 7,
+"end_row": 8,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 7,
+"end_row": 8,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 7,
+"end_row": 8,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 7,
+"end_row": 8,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 8,
+"end_row": 9,
+"col": 5,
+"end_col": 8,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 8,
+"end_row": 9,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 8,
+"end_row": 9,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 8,
+"end_row": 9,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 8,
+"end_row": 9,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 9,
+"end_row": 10,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 9,
+"end_row": 10,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 9,
+"end_row": 10,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 9,
+"end_row": 10,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 9,
+"end_row": 10,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 10,
+"end_row": 11,
+"col": 5,
+"end_col": 8,
+"borders": {"top": false, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 10,
+"end_row": 11,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 10,
+"end_row": 11,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 10,
+"end_row": 11,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 10,
+"end_row": 11,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 11,
+"end_row": 12,
+"col": 5,
+"end_col": 8,
+"borders": {"top": true, "bottom": true, "left": true, "right": false}
+},
+{
+"type": "border_rect",
+"row": 11,
+"end_row": 12,
+"col": 8,
+"end_col": 15,
+"borders": {"top": true, "bottom": true, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 11,
+"end_row": 12,
+"col": 15,
+"end_col": 17,
+"borders": {"top": true, "bottom": true, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 11,
+"end_row": 12,
+"col": 17,
+"end_col": 20,
+"borders": {"top": true, "bottom": true, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 11,
+"end_row": 12,
+"col": 20,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": false, "right": false}
+},
+{
+"type": "border_rect",
+"row": 12,
+"end_row": 13,
+"col": 5,
+"end_col": 11,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 12,
+"end_row": 13,
+"col": 11,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 13,
+"end_row": 16,
+"col": 5,
+"end_col": 11,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 13,
+"end_row": 16,
+"col": 11,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 16,
+"end_row": 17,
+"col": 5,
+"end_col": 11,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 16,
+"end_row": 17,
+"col": 11,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 19,
+"end_row": 20,
+"col": 5,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 20,
+"end_row": 31,
+"col": 5,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 31,
+"end_row": 32,
+"col": 5,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "border_rect",
+"row": 32,
+"end_row": 44,
+"col": 5,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "rect",
+"row": 12,
+"end_row": 12,
+"col": 5,
+"end_col": 5,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "rect",
+"row": 12,
+"end_row": 12,
+"col": 11,
+"end_col": 11,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+},
+{
+"type": "rect",
+"row": 12,
+"end_row": 12,
+"col": 31,
+"end_col": 31,
+"borders": {"top": true, "bottom": true, "left": true, "right": true}
+}
+]
+}
 ]
 
 【最重要】出力は `[` で始まり `]` で終わる純粋なJSON配列文字列のみとしてください。Markdownのコードブロック(```json等)、前後の説明文、思考プロセス、検証コメントは一切含めないでください。JSON以外の文字を1文字でも出力するとSTEP 2で処理できなくなります。

@@ -18,6 +18,15 @@
 | `table_border_rects[i]._col` / `_end_col` | テーブルセルの開始・終了列番号 |
 | `table_border_rects[i]._borders` | セルの各辺に罫線があるか `{top, bottom, left, right}` |
 
+## 複数ページ処理（最重要）
+
+入力データには複数ページが含まれる場合があります。
+
+- 出力JSONは `page_number` ごとに **必ず独立したオブジェクト** として出力すること
+- ページ1の要素はページ1のオブジェクト内、ページ2の要素はページ2のオブジェクト内に格納する
+- **あるページのコンテンツを別のページのオブジェクトに混入させることは絶対禁止**
+- 各ページの座標（`_row`, `_col`）はそのページ内でリセットされた値（1始まり）である。ページをまたいで座標を統合・変換しないこと
+
 ## 処理手順
 
 ### Step 1: border_rect 要素の生成
@@ -52,6 +61,8 @@
 
 ## 出力フォーマット
 
+複数ページの場合は以下のように **ページ数分のオブジェクトを配列に含める**。各ページの要素は必ず対応する `page_number` のオブジェクト内にのみ格納すること。
+
 [
   {
     "page_number": 1,
@@ -66,28 +77,32 @@
         "font_size": 14
       },
       {
-        "type": "text",
-        "content": "合計金額",
-        "row": 5,
-        "col": 3,
-        "end_col": 9
-      },
-      {
-        "type": "text",
-        "content": "承認",
-        "row": 10,
-        "col": 58,
-        "end_col": 59,
-        "end_row": 14,
-        "is_vertical": true
-      },
-      {
         "type": "border_rect",
         "row": 8,
         "end_row": 9,
         "col": 18,
         "end_col": 27,
         "borders": {"top": true, "bottom": true, "left": false, "right": true}
+      }
+    ]
+  },
+  {
+    "page_number": 2,
+    "elements": [
+      {
+        "type": "text",
+        "content": "明細",
+        "row": 3,
+        "col": 5,
+        "end_col": 7
+      },
+      {
+        "type": "border_rect",
+        "row": 5,
+        "end_row": 10,
+        "col": 3,
+        "end_col": 25,
+        "borders": {"top": true, "bottom": true, "left": true, "right": true}
       }
     ]
   }
