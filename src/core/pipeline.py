@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 from src.parser.pdf_extractor import extract_pdf_data
-from src.templates.prompts import TABLE_ANCHOR_PROMPT, LAYOUT_REVIEW_PROMPT, VISUAL_BORDER_REVIEW_PROMPT, CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GRID_SIZES
+from src.templates.prompts import TABLE_ANCHOR_PROMPT, LAYOUT_REVIEW_PROMPT, CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GRID_SIZES
 from src.utils.logger import get_logger
 
 
@@ -608,20 +608,6 @@ class SheetlingPipeline:
         # PDFから情報を抽出
         extracted_data = extract_pdf_data(pdf_path)
 
-        # ページ画像を PNG として書き出し（Step 1.6 視覚検証用）
-        page_image_paths = []
-        try:
-            import pdfplumber
-            with pdfplumber.open(pdf_path) as pdf_img:
-                images_dir = out_dir / "images"
-                images_dir.mkdir(parents=True, exist_ok=True)
-                for i, pg in enumerate(pdf_img.pages, start=1):
-                    img_path = images_dir / f"{pdf_name}_page{i}.png"
-                    pg.to_image(resolution=150).save(str(img_path))
-                    page_image_paths.append(img_path)
-        except Exception as e:
-            logger.warning(f"ページ画像の出力に失敗しました（Step 1.6 はスキップ可能）: {e}")
-
         first_page = extracted_data['pages'][0]
         grid_params = _setup_grid_params(first_page, grid_size)
 
@@ -666,18 +652,9 @@ class SheetlingPipeline:
             **grid_params
         )
 
-        # Step 1.6: 視覚検証プロンプト（Step 1.5の出力 + ページ画像を使って border_rect を修正）
-        image_note = ""
-        if page_image_paths:
-            image_list = "\n".join(f"  - {p.name}" for p in page_image_paths)
-            image_note = f"\n\n【画像ファイル】このプロンプトと一緒に以下の画像を LLM に添付してください:\n{image_list}"
-        prompt_1_6 = VISUAL_BORDER_REVIEW_PROMPT.format(
-            step1_5_output="[ここにSTEP 1.5の出力（JSON部分のみ）を貼り付けてください]"
-        ) + image_note
-
-        # Step 2: コード生成プロンプト（Step 1.5 or 1.6 の出力を貼り付けるプレースホルダー）
+        # Step 2: コード生成プロンプト（Step 1.5 の出力を貼り付けるプレースホルダー）
         prompt_2 = CODE_GEN_PROMPT.format(
-            input_data="[ここにSTEP 1.5（または1.6）の出力（JSON部分のみ）を貼り付けてください]",
+            input_data="[ここにSTEP 1.5の出力（JSON部分のみ）を貼り付けてください]",
             **grid_params
         )
 
@@ -687,15 +664,12 @@ class SheetlingPipeline:
 
         prompt_1_path = prompts_dir / f"{pdf_name}_prompt_step1.txt"
         prompt_1_5_path = prompts_dir / f"{pdf_name}_prompt_step1_5.txt"
-        prompt_1_6_path = prompts_dir / f"{pdf_name}_prompt_step1_6.txt"
         prompt_2_path = prompts_dir / f"{pdf_name}_prompt_step2.txt"
 
         with open(prompt_1_path, "w", encoding="utf-8") as f:
             f.write(prompt_1)
         with open(prompt_1_5_path, "w", encoding="utf-8") as f:
             f.write(prompt_1_5)
-        with open(prompt_1_6_path, "w", encoding="utf-8") as f:
-            f.write(prompt_1_6)
         with open(prompt_2_path, "w", encoding="utf-8") as f:
             f.write(prompt_2)
 
@@ -709,20 +683,15 @@ class SheetlingPipeline:
         logger.info(f"  抽出データ: {extracted_json_path}")
         logger.info(f"  STEP 1   プロンプト: {prompt_1_path}")
         logger.info(f"  STEP 1.5 プロンプト: {prompt_1_5_path}")
-        logger.info(f"  STEP 1.6 プロンプト: {prompt_1_6_path}（Vision LLM でページ画像と照合・罫線修正）")
         logger.info(f"  STEP 2   プロンプト: {prompt_2_path}")
-        if page_image_paths:
-            logger.info(f"  ページ画像: {', '.join(p.name for p in page_image_paths)}")
-        logger.info(f"  ※ STEP1 → STEP1.5 → STEP1.6（任意・Vision LLM） → STEP2 → コードを {generated_code_path.name} に保存")
+        logger.info(f"  ※ STEP1 → STEP1.5 → fill → STEP2 → コードを {generated_code_path.name} に保存")
 
         return {
             "json_path": str(extracted_json_path),
             "prompt_step1_path": str(prompt_1_path),
             "prompt_step1_5_path": str(prompt_1_5_path),
-            "prompt_step1_6_path": str(prompt_1_6_path),
             "prompt_step2_path": str(prompt_2_path),
             "generated_code_base_path": str(generated_code_path),
-            "page_image_paths": [str(p) for p in page_image_paths],
         }
 
     def fill_layout(self, pdf_name: str, step1_5_json: str, specific_out_dir: str = None) -> str:
@@ -773,7 +742,7 @@ class SheetlingPipeline:
         if prompt_2_path.exists():
             with open(prompt_2_path, "r", encoding="utf-8") as f:
                 prompt_2 = f.read()
-            placeholder = "[ここにSTEP 1.5（または1.6）の出力（JSON部分のみ）を貼り付けてください]"
+            placeholder = "[ここにSTEP 1.5の出力（JSON部分のみ）を貼り付けてください]"
             if placeholder in prompt_2:
                 with open(prompt_2_path, "w", encoding="utf-8") as f:
                     f.write(prompt_2.replace(placeholder, filled_json))
