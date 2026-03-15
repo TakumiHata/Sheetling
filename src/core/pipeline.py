@@ -55,7 +55,7 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
         sorted_vals = sorted(raw_vals)
         clusters: list = []
         for v in sorted_vals:
-            if not clusters or v - clusters[-1][-1] > grid_size * 0.6 or v in anchor_vals:
+            if not clusters or v - clusters[-1][0] > grid_size * 0.5 or v in anchor_vals:
                 clusters.append([v])
             else:
                 clusters[-1].append(v)
@@ -72,6 +72,8 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
     x_vals: set = set()
     # テーブル列境界X座標（クラスタリング時に独立扱いにするため別途保持）
     table_col_x_anchors: set = set()
+    # テーブル行境界Y座標（クラスタリング時に独立扱いにするため別途保持）
+    table_row_y_anchors: set = set()
 
     for w in page['words']:
         y_vals.add(snap(w['top']))
@@ -94,7 +96,9 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
             table_col_x_anchors.add(sx)
     for row_ys in page.get('table_row_y_positions', []):
         for y in row_ys:
-            y_vals.add(snap(y))
+            sy = snap(y)
+            y_vals.add(sy)
+            table_row_y_anchors.add(sy)
     for cells in page.get('table_cells', []):
         for c in cells:
             y_vals.add(snap(c['top']))
@@ -111,7 +115,7 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
         y_vals.add(snap(edge['y0']))
         y_vals.add(snap(edge['y1']))
 
-    y_map = build_cluster_map(y_vals, grid_h, max_rows)
+    y_map = build_cluster_map(y_vals, grid_h, max_rows, anchor_vals=table_row_y_anchors)
     x_map = build_cluster_map(x_vals, grid_w, max_cols, anchor_vals=table_col_x_anchors)
 
     # テーブル列境界が同一グリッド列に潰れた場合の後処理:
@@ -126,6 +130,43 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
             idx = min(idx, max_cols)
             x_map[x] = idx
             prev_idx = idx
+
+    # テーブル行境界が同一グリッド行に潰れた場合の後処理:
+    # 各テーブルの行Y座標を上から順に走査し、前の行と同じグリッド行になっていたら +1 する。
+    for row_ys in page.get('table_row_y_positions', []):
+        snapped_ys = sorted(set(snap(y) for y in row_ys))
+        prev_idx = 0
+        for y in snapped_ys:
+            idx = y_map[y]
+            if idx <= prev_idx:
+                idx = prev_idx + 1
+            idx = min(idx, max_rows)
+            y_map[y] = idx
+            prev_idx = idx
+
+    # テーブル底辺直下の注釈要素がテーブル底辺と同一グリッド行に落ちる場合の補正。
+    # グリッド解像度が低い（行高＞底辺〜注釈上端の間隔）ときに発生する位置重複を解消する。
+    # テーブル境界 y 値（table_row_y_anchors）は除外し、注釈等のコンテンツ y 値のみ対象とする。
+    for row_ys_list in page.get('table_row_y_positions', []):
+        if not row_ys_list:
+            continue
+        table_bottom_y = snap(max(row_ys_list))
+        if table_bottom_y not in y_map:
+            continue
+        table_end_row = y_map[table_bottom_y]
+        # テーブル底辺直下（1グリッド行以内）に非テーブル境界の y 値が同一行に落ちていれば衝突
+        has_collision = any(
+            table_bottom_y < yv <= table_bottom_y + grid_h
+            and y_map[yv] == table_end_row
+            and yv not in table_row_y_anchors
+            for yv in y_map
+        )
+        if not has_collision:
+            continue
+        # 衝突あり: テーブル底辺より下の全 y 値を 1 行ずらして空行を挿入
+        for yv in list(y_map.keys()):
+            if yv > table_bottom_y:
+                y_map[yv] = min(y_map[yv] + 1, max_rows)
 
     # words に付与
     for w in page['words']:
@@ -161,13 +202,22 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
                                page.get('table_row_y_positions', [])):
         col_xs_s = sorted(set(snap(x) for x in col_xs))
         row_ys_s = sorted(set(snap(y) for y in row_ys))
-        for ri in range(len(row_ys_s) - 1):
-            for ci in range(len(col_xs_s) - 1):
+        n_cols = len(col_xs_s) - 1
+        n_rows = len(row_ys_s) - 1
+        for ri in range(n_rows):
+            for ci in range(n_cols):
                 table_border_rects.append({
-                    '_row':     y_map.get(row_ys_s[ri], 1),
-                    '_end_row': y_map.get(row_ys_s[ri + 1], 1),
-                    '_col':     x_map.get(col_xs_s[ci], 1),
-                    '_end_col': x_map.get(col_xs_s[ci + 1], 1),
+                    '_row':        y_map.get(row_ys_s[ri], 1),
+                    '_end_row':    y_map.get(row_ys_s[ri + 1], 1),
+                    '_col':        x_map.get(col_xs_s[ci], 1),
+                    '_end_col':    x_map.get(col_xs_s[ci + 1], 1),
+                    '_pdf_x0':     col_xs_s[ci],
+                    '_pdf_top':    row_ys_s[ri],
+                    '_pdf_x1':     col_xs_s[ci + 1],
+                    '_pdf_bottom': row_ys_s[ri + 1],
+                    # テーブル外周フラグ（描画時の垂直罫線抑制で使用）
+                    '_outer_left':   ci == 0,
+                    '_outer_right':  ci == n_cols - 1,
                 })
     page['table_border_rects'] = table_border_rects
 
@@ -193,21 +243,49 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
         h_edge_map.setdefault(ri, []).append((min(cs, ce), max(cs, ce)))
 
     v_edge_map: dict = {}
+    v_edge_max_span: dict = {}  # col_idx -> その列で検出された垂直エッジの最大スパン(pt)
     for edge in page.get('v_edges', []):
         ci = _nearest_idx(edge['x'], x_map)
         rs = _nearest_idx(edge['y0'], y_map)
         re = _nearest_idx(edge['y1'], y_map)
         v_edge_map.setdefault(ci, []).append((min(rs, re), max(rs, re)))
+        span = edge.get('span', abs(edge['y1'] - edge['y0']))
+        if span > v_edge_max_span.get(ci, 0):
+            v_edge_max_span[ci] = span
+
+    def _overlaps_h(edges: list, col_s: int, col_e: int) -> bool:
+        """エッジリストの中に col_s〜col_e スパンと 50% 以上重複するものがあるか。"""
+        span = col_e - col_s
+        if span <= 0:
+            return any(cs <= col_s <= ce for cs, ce in edges)
+        for cs, ce in edges:
+            overlap = min(ce, col_e) - max(cs, col_s)
+            if overlap >= span * 0.5:
+                return True
+        return False
+
+    def _overlaps_v(edges: list, row_s: int, row_e: int) -> bool:
+        """エッジリストの中に row_s〜row_e スパンと 50% 以上重複するものがあるか。"""
+        span = row_e - row_s
+        if span <= 0:
+            return any(rs <= row_s <= re for rs, re in edges)
+        for rs, re in edges:
+            overlap = min(re, row_e) - max(rs, row_s)
+            if overlap >= span * 0.5:
+                return True
+        return False
 
     def _has_h(row: int, col_s: int, col_e: int) -> bool:
-        """指定行に col_s〜col_e の中央点をカバーする水平エッジがあるか。"""
-        mid = (col_s + col_e) / 2
-        return any(cs <= mid <= ce for cs, ce in h_edge_map.get(row, []))
+        """指定行に col_s〜col_e をカバーする水平エッジがあるか。"""
+        return _overlaps_h(h_edge_map.get(row, []), col_s, col_e)
 
     def _has_v(col: int, row_s: int, row_e: int) -> bool:
-        """指定列に row_s〜row_e の中央点をカバーする垂直エッジがあるか。"""
-        mid = (row_s + row_e) / 2
-        return any(rs <= mid <= re for rs, re in v_edge_map.get(col, []))
+        """指定列に row_s〜row_e をカバーする垂直エッジがあるか。"""
+        return _overlaps_v(v_edge_map.get(col, []), row_s, row_e)
+
+    # 主要垂直境界の閾値(pt): この高さ以上のエッジがある列は月区切り等の主要線とみなす。
+    # 短いセル側辺（≈1行高≈20pt）は除外し、表高の30%超を占める線だけを採用する。
+    _MAJOR_V_SPAN_THRESHOLD = page['height'] * 0.30
 
     # table_border_rects に _borders を付与
     for tbr in page['table_border_rects']:
@@ -218,6 +296,9 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
             'left':   _has_v(c,  r, er),
             'right':  _has_v(ec, r, er),
         }
+        # 主要垂直境界フラグ: 長い縦線（月区切り等）が検出された列か
+        tbr['_major_left']  = v_edge_max_span.get(c,  0) >= _MAJOR_V_SPAN_THRESHOLD
+        tbr['_major_right'] = v_edge_max_span.get(ec, 0) >= _MAJOR_V_SPAN_THRESHOLD
 
     # rects にも _borders を付与（矩形枠の各辺）
     for rect in page['rects']:
@@ -230,9 +311,58 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
             'right':  _has_v(ec, r, er),
         }
 
+    # ---- 隣接セル間の _borders 整合性パス ---------------------------------------
+    # 量子化誤差で A.right と B.left（共有辺）が不一致になる場合を OR で統一する。
+    tbrs = page['table_border_rects']
+    # 水平方向: (row, end_row) -> {col -> tbr}
+    h_band: dict = {}
+    # 垂直方向: (col, end_col) -> {row -> tbr}
+    v_band: dict = {}
+    for tbr in tbrs:
+        h_band.setdefault((tbr['_row'], tbr['_end_row']), {})[tbr['_col']] = tbr
+        v_band.setdefault((tbr['_col'], tbr['_end_col']), {})[tbr['_row']] = tbr
+
+    for tbr in tbrs:
+        # 右隣: 同じ row/end_row 帯で _col == self._end_col
+        right_neighbor = h_band.get((tbr['_row'], tbr['_end_row']), {}).get(tbr['_end_col'])
+        if right_neighbor:
+            merged = tbr['_borders']['right'] or right_neighbor['_borders']['left']
+            tbr['_borders']['right'] = merged
+            right_neighbor['_borders']['left'] = merged
+        # 下隣: 同じ col/end_col 帯で _row == self._end_row
+        bottom_neighbor = v_band.get((tbr['_col'], tbr['_end_col']), {}).get(tbr['_end_row'])
+        if bottom_neighbor:
+            merged = tbr['_borders']['bottom'] or bottom_neighbor['_borders']['top']
+            tbr['_borders']['bottom'] = merged
+            bottom_neighbor['_borders']['top'] = merged
+
     # ---------------------------------------------------------------------------------
 
-    # 以下はグリッド座標計算には使用したが LLM には渡さない
+    # ---- PDF 余白分の空き行を除去するため _row を正規化 --------------------------------
+    # PDF の上部余白（margin_top）がグリッド行として現れ、コンテンツ前に数行の空白が生じる。
+    # 全要素の最小 _row を求め、1 になるようにシフトして空き行を除去する。
+    all_rows = (
+        [w['_row'] for w in page['words'] if '_row' in w]
+        + [r['_row'] for r in page['rects'] if '_row' in r]
+        + [tbr['_row'] for tbr in page['table_border_rects']]
+    )
+    if all_rows:
+        row_shift = min(all_rows) - 1
+        if row_shift > 0:
+            for w in page['words']:
+                if '_row' in w:
+                    w['_row'] -= row_shift
+                    if '_end_row' in w:
+                        w['_end_row'] -= row_shift
+            for r in page['rects']:
+                if '_row' in r:
+                    r['_row'] -= row_shift
+                    r['_end_row'] -= row_shift
+            for tbr in page['table_border_rects']:
+                tbr['_row'] -= row_shift
+                tbr['_end_row'] -= row_shift
+
+    # ---- 以下はグリッド座標計算には使用したが LLM には渡さない -------------------------
     page.pop('table_cells', None)
     page.pop('table_data', None)
     page.pop('table_row_y_positions', None)
@@ -240,6 +370,213 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
     page.pop('v_edges', None)
 
 logger = get_logger(__name__)
+
+
+def _apply_borders_to_xlsx(xlsx_path: str, extracted_data: dict, max_rows: int) -> None:
+    """
+    extracted_data の table_border_rects / rects の _borders を
+    openpyxl で直接 XLSX ファイルに適用する（LLM 非依存の確定的罫線描画）。
+
+    CODE_GEN_PROMPT と同じオフセット定数を使用:
+      COL_OFFSET  = 1  （左1マス余白）
+      ROW_PADDING = 2  （ページ上部2マス余白）
+      row_offset for page N = (N-1) * max_rows + ROW_PADDING
+    """
+    from openpyxl import load_workbook
+    from openpyxl.styles import Border, Side
+
+    COL_OFFSET = 1
+    ROW_PADDING = 2
+
+    wb = load_workbook(xlsx_path)
+    ws = wb.active
+    thin = Side(style='thin')
+
+    def _draw(s_row: int, e_row: int, s_col: int, e_col: int, borders: dict) -> None:
+        has_top    = borders.get('top',    True)
+        has_bottom = borders.get('bottom', True)
+        has_left   = borders.get('left',   True)
+        has_right  = borders.get('right',  True)
+        for r in range(s_row, e_row + 1):
+            for c in range(s_col, e_col + 1):
+                try:
+                    cell = ws.cell(row=r, column=c)
+                    # 既存の Border オブジェクトを読み取り、各辺を個別にマージ書き込み
+                    # （完全上書きすると他のセルが書いた辺を消してしまうため）
+                    existing = cell.border
+                    new_top    = thin if (r == s_row and has_top)    else existing.top
+                    new_bottom = thin if (r == e_row and has_bottom) else existing.bottom
+                    new_left   = thin if (c == s_col and has_left)   else existing.left
+                    new_right  = thin if (c == e_col and has_right)  else existing.right
+                    cell.border = Border(top=new_top, bottom=new_bottom,
+                                         left=new_left, right=new_right)
+                except AttributeError:
+                    pass
+
+    total = 0
+    for page in extracted_data.get('pages', []):
+        page_number = page.get('page_number', 1)
+        row_offset = (page_number - 1) * max_rows + ROW_PADDING
+
+        for tbr in page.get('table_border_rects', []):
+            borders = tbr.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
+            # ガントチャート等の細幅セル（Excel 2列以下）は内側の垂直罫線を抑制する。
+            # ただし以下は例外として縦線を保持する:
+            #   - テーブル外周（_outer_left/_outer_right）
+            #   - 主要境界（_major_left/_major_right）: 月区切り等の長いエッジが検出された列
+            col_span = tbr['_end_col'] - tbr['_col']
+            if col_span <= 2:
+                borders = dict(borders)
+                if not tbr.get('_outer_left', False) and not tbr.get('_major_left', False):
+                    borders['left'] = False
+                if not tbr.get('_outer_right', False) and not tbr.get('_major_right', False):
+                    borders['right'] = False
+            _draw(
+                tbr['_row'] + row_offset, tbr['_end_row'] + row_offset,
+                tbr['_col'] + COL_OFFSET, tbr['_end_col'] + COL_OFFSET,
+                borders,
+            )
+            total += 1
+
+        for rect in page.get('rects', []):
+            if '_row' not in rect:
+                continue
+            _draw(
+                rect['_row'] + row_offset, rect['_end_row'] + row_offset,
+                rect['_col'] + COL_OFFSET, rect['_end_col'] + COL_OFFSET,
+                rect.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True}),
+            )
+            total += 1
+
+    wb.save(xlsx_path)
+    logger.info(f"[apply_borders] {total} 個の罫線要素を適用しました")
+
+
+def _has_japanese(text: str) -> bool:
+    """文字列に日本語文字（漢字・ひらがな・カタカナ・全角記号）が含まれるか判定する。"""
+    return any(
+        '\u3040' <= c <= '\u30ff'  # ひらがな・カタカナ
+        or '\u4e00' <= c <= '\u9fff'  # CJK 統合漢字
+        or '\uff00' <= c <= '\uffef'  # 全角英数・記号
+        for c in text
+    )
+
+
+def _join_word_texts(texts: list) -> str:
+    """
+    word テキストのリストを結合する。
+    TABLE_ANCHOR_PROMPT と同じルール:
+      - 日本語文字を含む場合はスペースなし
+      - 英数字のみの場合は半角スペースで結合
+    """
+    combined = ''.join(texts)
+    if _has_japanese(combined):
+        return combined
+    return ' '.join(t for t in texts if t.strip())
+
+
+def _fill_missing_text(layout_json_str: str, extracted_data: dict) -> str:
+    """
+    LLMが生成したレイアウトJSONに対し、extracted_dataのwordsと照合して
+    欠落しているテキスト要素をプログラム的に補完する。
+
+    Step 1 / Step 1.5 の LLM が見落とした word を確実に補う。
+    既に text 要素が存在する (row, col) には追加しない（上書き禁止）。
+    """
+    try:
+        layout = json.loads(layout_json_str)
+    except (json.JSONDecodeError, ValueError):
+        return layout_json_str  # パース失敗時はそのまま返す
+
+    total_added = 0
+    for page_layout in layout:
+        page_num = page_layout.get('page_number', 1)
+        page_data = next(
+            (p for p in extracted_data['pages'] if p['page_number'] == page_num),
+            None,
+        )
+        if not page_data:
+            continue
+
+        # 既存 text 要素の (row, col) を収集
+        existing: set = set()
+        for elem in page_layout.get('elements', []):
+            if elem.get('type') == 'text' and 'row' in elem and 'col' in elem:
+                existing.add((elem['row'], elem['col']))
+
+        # words を (_row, _col) でグループ化
+        groups: dict = {}
+        for w in page_data.get('words', []):
+            if '_row' not in w or '_col' not in w:
+                continue
+            key = (w['_row'], w['_col'])
+            groups.setdefault(key, []).append(w)
+
+        added = []
+        for (row, col), words in sorted(groups.items()):
+            if (row, col) in existing:
+                continue
+            content = _join_word_texts([w.get('text', '') for w in words])
+            stripped = content.strip()
+            # 空白・純粋な区切り記号（ASCII句読点の1文字）はスキップ
+            # ただし △▼○● 等の図形記号・日本語1文字は意味があるため残す
+            if not stripped or (len(stripped) == 1 and stripped in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'):
+                continue
+            elem: dict = {
+                'type': 'text',
+                'content': content,
+                'row': row,
+                'col': col,
+                'end_col': col + len(content),
+            }
+            first = words[0]
+            if first.get('font_color') and first['font_color'] != '000000':
+                elem['font_color'] = first['font_color']
+            if first.get('font_size'):
+                elem['font_size'] = first['font_size']
+            added.append(elem)
+
+        if added:
+            page_layout['elements'].extend(added)
+            total_added += len(added)
+
+    if total_added:
+        logger.info(f"[fill_missing_text] {total_added} 個の欠落テキスト要素を補完しました")
+
+    return json.dumps(layout, ensure_ascii=False)
+
+
+# A4 縦の基準サイズ (pt) — GRID_SIZES のセル密度はこのサイズを基準に調整されている
+_A4_W_PT: float = 595.28
+_A4_H_PT: float = 841.89
+
+
+def _setup_grid_params(first_page: dict, grid_size: str) -> dict:
+    """
+    ページ寸法に基づいてグリッドパラメータを設定する。
+
+    GRID_SIZES の A4 基準値から 1グリッドセルあたりのポイント数を算出し、
+    実際のページ寸法に比例して max_cols / max_rows を動的計算する。
+    これにより A4 以外の用紙サイズ（A3 など）にも正しく対応できる。
+    """
+    ref = GRID_SIZES.get(grid_size, GRID_SIZES["small"])
+    grid_params = dict(ref)
+
+    # 実ページ寸法から max_cols / max_rows を動的計算
+    pt_per_col = _A4_W_PT / ref['max_cols']
+    pt_per_row = _A4_H_PT / ref['max_rows']
+    grid_params['max_cols'] = max(1, round(first_page['width'] / pt_per_col))
+    grid_params['max_rows'] = max(1, round(first_page['height'] / pt_per_row))
+
+    # 用紙サイズ検出（long side > 1000pt → A3）
+    max_dim_pt = max(first_page['width'], first_page['height'])
+    grid_params['paper_size'] = 8 if max_dim_pt > 1000 else 9  # 8=A3, 9=A4
+
+    # 向き
+    is_landscape = first_page['width'] > first_page['height']
+    grid_params['orientation'] = 'landscape' if is_landscape else 'portrait'
+
+    return grid_params
 
 
 class SheetlingPipeline:
@@ -285,26 +622,21 @@ class SheetlingPipeline:
         except Exception as e:
             logger.warning(f"ページ画像の出力に失敗しました（Step 1.6 はスキップ可能）: {e}")
 
-        extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
-        with open(extracted_json_path, "w", encoding="utf-8") as f:
-            json.dump(extracted_data, f, indent=2, ensure_ascii=False)
-
-        grid_params = dict(GRID_SIZES.get(grid_size, GRID_SIZES["small"]))
-
-        # ページの向きを検出（最初のページの width > height なら横向き）
         first_page = extracted_data['pages'][0]
-        is_landscape = first_page['width'] > first_page['height']
-        if is_landscape:
-            grid_params['max_rows'], grid_params['max_cols'] = grid_params['max_cols'], grid_params['max_rows']
-            # A4 landscape 高さ = 595pt。(max_rows + row_padding) 行がちょうど収まるよう行高をスケール
-            # row_padding=2 は CODE_GEN_PROMPT と合わせた定数
-            _row_padding = 2
-            grid_params['excel_row_height'] = round(595.0 / (grid_params['max_rows'] + _row_padding), 2)
-        grid_params['orientation'] = 'landscape' if is_landscape else 'portrait'
+        grid_params = _setup_grid_params(first_page, grid_size)
+
+        # Phase 3（render_excel）の罫線後処理で参照するためメタデータとして保存
+        with open(out_dir / f"{pdf_name}_grid_params.json", "w", encoding="utf-8") as f:
+            json.dump(grid_params, f, ensure_ascii=False)
 
         # Y・X座標のクラスタリングを行い、各要素に事前計算済みExcel座標を付与
         for page in extracted_data['pages']:
             _compute_grid_coords(page, grid_params['max_rows'], grid_params['max_cols'])
+
+        # グリッド座標付与済みの状態で保存（_row/_col をデバッグ用ファイルに含める）
+        extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
+        with open(extracted_json_path, "w", encoding="utf-8") as f:
+            json.dump(extracted_data, f, indent=2, ensure_ascii=False)
 
         input_data_str = json.dumps(extracted_data, indent=2, ensure_ascii=False)
 
@@ -393,6 +725,62 @@ class SheetlingPipeline:
             "page_image_paths": [str(p) for p in page_image_paths],
         }
 
+    def fill_layout(self, pdf_name: str, step1_5_json: str, specific_out_dir: str = None) -> str:
+        """
+        手動パイプライン用: STEP 1.5 の LLM 出力に対してプログラム的テキスト補完を適用する。
+
+        STEP 1.5 の LLM が見落とした word を extracted_data と照合して補完し、
+        補完済み JSON を prompts/{pdf_name}_step1_5_output.json として保存する。
+        また、STEP 2 プロンプトを補完済み JSON で更新して保存する。
+
+        Args:
+            pdf_name:        PDF ファイル名（拡張子なし）
+            step1_5_json:    STEP 1.5 の LLM 出力 JSON 文字列
+            specific_out_dir: 出力ディレクトリ（省略時は data/out/{pdf_name}）
+
+        Returns:
+            補完済みレイアウト JSON 文字列
+        """
+        if specific_out_dir:
+            out_dir = Path(specific_out_dir)
+        else:
+            out_dir = self.output_base_dir / pdf_name
+
+        # extracted.json を読み込む（グリッド座標付与済み）
+        extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
+        if not extracted_json_path.exists():
+            raise FileNotFoundError(
+                f"extracted.json が見つかりません: {extracted_json_path}. "
+                "generate_prompts() を先に実行してください。"
+            )
+
+        with open(extracted_json_path, "r", encoding="utf-8") as f:
+            extracted_data = json.load(f)
+
+        # テキスト補完を適用
+        filled_json = _fill_missing_text(step1_5_json, extracted_data)
+
+        # 補完済み JSON を保存
+        prompts_dir = out_dir / "prompts"
+        prompts_dir.mkdir(parents=True, exist_ok=True)
+        filled_json_path = prompts_dir / f"{pdf_name}_step1_5_output.json"
+        with open(filled_json_path, "w", encoding="utf-8") as f:
+            f.write(filled_json)
+        logger.info(f"[fill_layout] 補完済みレイアウト JSON を保存しました: {filled_json_path}")
+
+        # STEP 2 プロンプトのプレースホルダーを補完済み JSON で置換して保存
+        prompt_2_path = prompts_dir / f"{pdf_name}_prompt_step2.txt"
+        if prompt_2_path.exists():
+            with open(prompt_2_path, "r", encoding="utf-8") as f:
+                prompt_2 = f.read()
+            placeholder = "[ここにSTEP 1.5（または1.6）の出力（JSON部分のみ）を貼り付けてください]"
+            if placeholder in prompt_2:
+                with open(prompt_2_path, "w", encoding="utf-8") as f:
+                    f.write(prompt_2.replace(placeholder, filled_json))
+                logger.info(f"[fill_layout] STEP 2 プロンプトを補完済み JSON で更新しました: {prompt_2_path}")
+
+        return filled_json
+
     def render_excel(self, pdf_name: str, specific_out_dir: str = None) -> str:
         """
         Phase 3: AI出力の生成コードを読み込み、Excel方眼紙を描画する。
@@ -445,6 +833,20 @@ class SheetlingPipeline:
                         temp_xlsx = out_dir / "output.xlsx"
                         if temp_xlsx.exists():
                             temp_xlsx.replace(output_xlsx_path)
+                            # 罫線を Python で直接適用（LLM 生成コードの罫線を上書き補正）
+                            extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
+                            grid_params_path = out_dir / f"{pdf_name}_grid_params.json"
+                            if extracted_json_path.exists() and grid_params_path.exists():
+                                try:
+                                    with open(extracted_json_path, "r", encoding="utf-8") as f:
+                                        extracted_data = json.load(f)
+                                    with open(grid_params_path, "r", encoding="utf-8") as f:
+                                        grid_params = json.load(f)
+                                    _apply_borders_to_xlsx(
+                                        str(output_xlsx_path), extracted_data, grid_params['max_rows']
+                                    )
+                                except Exception as e:
+                                    logger.warning(f"罫線後処理に失敗しました（Excel は生成済み）: {e}")
                             logger.info(f"✅ Phase 3 完了: {output_xlsx_path}")
                             return str(output_xlsx_path)
                         else:
