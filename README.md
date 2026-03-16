@@ -1,36 +1,44 @@
 # Sheetling
 
-PDFを解析し、LLMが生成したPythonコードを実行することで、**任意のPDFレイアウトを維持したままA4方眼Excelに変換**するツールです。
-2ステップ・パイプライン方式（列アンカー確定 → コード生成）により、テーブルの列ズレのない高精度な方眼紙レイアウトへの変換を実現します。
+PDFを解析し、LLMが生成したPythonコードを実行することで、**任意のPDFレイアウトを維持したままA4/A3方眼Excelに変換**するツールです。
+4ステップ・パイプライン方式により、テーブルの列ズレのない高精度な方眼紙レイアウトへの変換を実現します。
 
 ---
 
-## 仕組み（2フェーズ・2ステップ構成）
+## 仕組み（3フェーズ・4ステップ構成）
 
 ```
-PDF → [Phase 1] 解析・プロンプト生成 → [Phase 2] LLMによる2段階の推論とコード生成（手動） → [Phase 3] Excel描画
+PDF → [Phase 1] 解析・プロンプト生成
+         ↓
+      [Phase 2] LLMによる推論とコード生成（手動・社内AIチャット等）
+        STEP 1: レイアウトJSON生成
+        STEP 1.5: JSON検証・補正
+        ↓
+      [fill] テキスト補完 & STEP 2プロンプト更新（スクリプト自動）
+        ↓
+        STEP 2: Pythonコード生成
+         ↓
+      [Phase 3] Excel描画 + 確定的ボーダー後処理
 ```
 
-| フェーズ | 実行者 | 内容 |
-|----------|--------|------|
-| Phase 1 | スクリプト | `pdfplumber`でPDFを解析し、LLM用の2段階プロンプトと抽出データを生成。`data/out/<pdf_name>/prompts/` にファイルを出力 |
-| Phase 2 | 人間 + LLM | STEP 1・2のプロンプトを順にLLMに投入し、最終的にExcel生成用Pythonスクリプトを出力 |
-| Phase 3 | スクリプト | 保存したスクリプト（`_gen.py`）を環境上で実行し、方眼Excelを出力 |
+| フェーズ | コマンド | 実行者 | 内容 |
+|----------|---------|--------|------|
+| Phase 1 | `extract` | スクリプト | `pdfplumber` でPDFを解析。Excel グリッド座標を事前計算し、LLM用プロンプト・抽出データを `data/out/<pdf_name>/` に出力 |
+| Phase 2 STEP 1〜1.5 | — | 人間 + LLM | STEP 1・1.5 のプロンプトを順にLLMに投入し、レイアウトJSONを生成・補正 |
+| fill | `fill` | スクリプト | STEP 1.5 出力JSONに欠落テキストを自動補完し、STEP 2 プロンプトを更新 |
+| Phase 2 STEP 2 | — | 人間 + LLM | STEP 2 プロンプト（補完済みJSON入り）をLLMに投入し、Excel生成Pythonコードを取得 |
+| Phase 3 | `generate` | スクリプト | 生成コード（`_gen.py`）を実行してExcelを出力。罫線を確定的に後処理で上書き適用 |
 
 ---
 
 ## セットアップ
-
-実行環境に合わせて、Dockerを使用するか、ローカルのPython環境を使用するか選択できます。
 
 ### Docker環境を使用する場合
 ```bash
 docker compose up -d --build
 ```
 
-### ローカルのPython環境を使用する場合（Dockerなし）
-Python環境および `pip` がインストールされていることを前提とします。
-以下のコマンドで必要なパッケージをインストールしてください。
+### ローカルのPython環境を使用する場合
 ```bash
 pip install -r requirements.txt
 ```
@@ -41,78 +49,244 @@ pip install -r requirements.txt
 
 ### Phase 1：PDF解析 & プロンプト生成
 
-`data/in/` に対象のPDFを置いて、以下のコマンドを実行します：
+`data/in/` に対象のPDFを置いて実行します：
 
 ```bash
-# Docker環境の場合
-docker compose exec app python -m src.main extract [--grid-size <size>]
-
-# ローカルのPython環境の場合
+# 全PDF一括処理
 python -m src.main extract [--grid-size <size>]
-```
-- `--grid-size <size>`：生成する方眼のサイズを指定できます。
-  - `small`（デフォルト）
-  - `medium`
-  - `large`
-- `--pdf <path>`：特定のPDFのみ実行する場合に付与します（例: `--pdf data/in/sample.pdf`）。
 
-`data/out/<pdf_name>/` に以下の構成でファイルが生成されます：
+# 特定PDFのみ
+python -m src.main extract --pdf data/in/sample.pdf [--grid-size <size>]
+```
+
+**オプション：**
+
+| オプション | デフォルト | 説明 |
+|-----------|----------|------|
+| `--grid-size` | `small` | 方眼サイズ（`small` / `medium` / `large`） |
+| `--pdf` | なし（全PDF） | 処理対象PDFのパス |
+
+実行後、`data/out/<pdf_name>/` に以下が生成されます：
 
 ```text
 data/out/<pdf_name>/
-├── <pdf_name>_extracted.json    # PDFから抽出した生データ
-├── <pdf_name>_gen.py           # (空) Phase 2で生成したコードをここに貼り付ける
-└── prompts/                    # 各ステップ用プロンプトファイル
-    ├── <pdf_name>_prompt_step1.txt   # 列アンカー確定プロンプト（抽出データ込み）
-    └── <pdf_name>_prompt_step2.txt   # Pythonコード生成プロンプト
+├── <pdf_name>_extracted.json      # PDFから抽出した生データ（グリッド座標付き）
+├── <pdf_name>_grid_params.json    # グリッドパラメータ（Phase 3 罫線後処理用）
+├── <pdf_name>_gen.py              # (空) Phase 2で生成したコードをここに貼り付ける
+└── prompts/
+    ├── <pdf_name>_prompt_step1.txt    # STEP 1: レイアウトJSON生成プロンプト
+    ├── <pdf_name>_prompt_step1_5.txt  # STEP 1.5: JSON検証・補正プロンプト
+    └── <pdf_name>_prompt_step2.txt    # STEP 2: Pythonコード生成プロンプト
 ```
+
+---
 
 ### Phase 2：LLMによる描画スクリプト生成（手動）
 
-1. `*_prompt_step1.txt` の内容をLLM（Gemini 2.5 Flash等）に入力します。
-2. LLMが出力したJSON配列をコピーし、`*_prompt_step2.txt` 内の `[ここにSTEP 1の出力...]` の部分を書き換えて、再度LLMに入力します。
-3. STEP 2で出力された**Pythonコード**全体をコピーし、`data/out/<pdf_name>/<pdf_name>_gen.py` に貼り付けて保存します。
+Phase 2 では、Phase 1 が生成したプロンプトを社内AIチャット等のLLMに**順番に**投入します。LLMはPDFのレイアウト構造を理解し、最終的に `openpyxl` で実行可能なPythonコードを出力します。
+
+> [!IMPORTANT]
+> Phase 2 はすべて**手動操作**です。スクリプトは実行しません。
+
+---
+
+#### STEP 1 — レイアウトJSON生成
+
+**目的：** Phase 1 が抽出した座標データをもとに、LLMにExcel方眼紙上のレイアウト仕様JSONを生成させる。
+
+**プロンプトの内容（`_prompt_step1.txt`）：**
+
+Phase 1 が出力した `_extracted.json` の内容が埋め込まれています。データには以下が含まれます：
+
+- `words`：PDFテキストの文字列・位置・フォント情報 ＋ 対応するExcel行列番号（`_row` / `_col`）
+- `table_border_rects`：テーブルセル境界の矩形 ＋ 対応するExcel行列番号
+- `rects`：矩形枠 ＋ 対応するExcel行列番号
+
+**LLMが出力するJSON（イメージ）：**
+
+```json
+[
+  {
+    "page_number": 1,
+    "elements": [
+      {
+        "type": "text",
+        "row": 3,
+        "col": 5,
+        "value": "氏名",
+        "font_size": 9
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 4,
+        "col": 5,
+        "end_col": 12,
+        "borders": { "top": true, "bottom": true, "left": true, "right": true }
+      }
+    ]
+  }
+]
+```
+
+要素は `text`（テキスト配置）と `border_rect`（罫線矩形）の2種類のみです。LLMは `_extracted.json` の座標をそのまま使用し、PDFのレイアウトをExcelグリッド上に再現するJSONを生成します。
+
+**操作手順：**
+
+1. `prompts/<pdf_name>_prompt_step1.txt` の内容をLLMに貼り付ける
+2. LLMが出力したJSON配列（`[` から `]` まで）をコピーしておく
+
+---
+
+#### STEP 1.5 — JSON検証・補正
+
+**目的：** STEP 1 の出力JSONに含まれる誤り（座標ズレ・重複・欠落・範囲外座標）をLLMに自己検証・補正させる。
+
+**なぜ必要か：**
+LLMは複雑なレイアウトで座標を誤ったり、要素を重複させたりすることがあります。STEP 1.5 では別のプロンプトで再度LLMに検証させることで、これらの誤りを修正します。
+
+**LLMが行うチェック：**
+
+- `row < end_row`、`col < end_col` の整合性確認
+- グリッド範囲外座標のクランプ（上限・下限への丸め込み）
+- 重複要素の除去
+- 明らかな欠落テキストの補完
+
+**操作手順：**
+
+1. `prompts/<pdf_name>_prompt_step1_5.txt` を開く
+2. `[ここにSTEP 1の出力...]` をSTEP 1で得たJSONに置き換えてLLMに貼り付ける
+3. LLMが出力した補正済みJSONをコピーし、**以下のパスに保存する**：
+
+```
+data/out/<pdf_name>/prompts/<pdf_name>_step1_5_input.json
+```
+
+> [!NOTE]
+> このファイル名・保存先は固定です。次の `fill` コマンドがこのパスを参照します。
+
+---
+
+### fill：テキスト補完 & STEP 2プロンプト更新
+
+**目的：** LLMが見落としたテキストを機械的に補完し、STEP 2 用プロンプトを自動更新する。
+
+**なぜ必要か：**
+LLMは大量のテキスト要素が並ぶレイアウトで一部を見落とすことがあります。`fill` コマンドはLLMに依存せず、Phase 1 の確定データ（`_extracted.json`）と STEP 1.5 の出力（`_step1_5_input.json`）を機械的に照合することで、欠落テキストを**確実に**補完します。
+
+```bash
+# 特定PDFのみ
+python -m src.main fill --pdf sample
+
+# data/out/ 以下の全 *_step1_5_input.json を一括処理
+python -m src.main fill
+```
+
+**処理内容（自動）：**
+
+1. `_step1_5_input.json` の `text` 要素と `_extracted.json` の `words` を座標で照合
+2. JSONに存在しないテキストを自動補完（`_extracted.json` の座標・フォント情報をそのまま使用）
+3. 補完済みJSONを `prompts/<pdf_name>_step1_5_output.json` として保存
+4. `prompts/<pdf_name>_prompt_step2.txt` のプレースホルダーを補完済みJSONで自動置換
+
+実行後、`_prompt_step2.txt` は STEP 2 で即座にLLMへ投入できる状態になります。
+
+**オプション：**
+
+| オプション | デフォルト | 説明 |
+|-----------|----------|------|
+| `--pdf` | なし（全対象） | PDF名（拡張子なし）または PDFファイルパス |
+
+> [!WARNING]
+> `_step1_5_input.json` が存在しない場合は警告を出して終了します。必ずSTEP 1.5の出力を保存してから実行してください。
+
+---
+
+### Phase 2（続き）：STEP 2
+
+#### STEP 2 — Pythonコード生成
+
+**目的：** 補完済みレイアウト仕様JSONをもとに、LLMに `openpyxl` で動作するExcel生成スクリプトを出力させる。
+
+**プロンプトの内容（`_prompt_step2.txt`）：**
+
+`fill` コマンドによって補完済みJSONが埋め込み済みです。LLMはこのJSONを読み取り、各要素（テキスト配置・罫線描画・セル結合など）を `openpyxl` のAPI呼び出しに変換した、そのまま実行可能なPythonスクリプトを生成します。
+
+**操作手順：**
+
+1. `prompts/<pdf_name>_prompt_step2.txt`（fillにより補完済みJSONが埋め込まれている）をLLMに貼り付ける
+2. 出力されたPythonコード全体を `data/out/<pdf_name>/<pdf_name>_gen.py` に貼り付けて保存する
+
+---
 
 ### Phase 3：Excel生成
 
-以下のコマンドを実行してExcelを描画します：
-
 ```bash
-# Docker環境の場合
-docker compose exec app python -m src.main generate
-
-# ローカルのPython環境の場合
+# data/out/ 以下の全 *_gen.py を一括処理
 python -m src.main generate
+
+# （--pdf オプションは generate では不要・全自動）
 ```
 
 `data/out/<pdf_name>/<pdf_name>.xlsx` が生成されます。
 
-生成されるExcelファイルは、指定された**A4方眼紙レイアウト（完全に縦横比が1:1のピクセル設定）**上に適切に値の入力が行われます。縮尺が変更されたりスケールダウンが発生したりすることなく、100%等倍でA4用紙に印刷できます。
-
-#### 方眼サイズ（`--grid-size`）の詳細仕様
-
-絶対等倍でのA4出力を保証するため、各サイズには数学的に計算された最大グリッド数が設定されています。
-
-| グリッドサイズ | 方眼の大きさ (mm) | 最大列数 (A4縦) | 最大行数 (A4縦) | Excel設定値 (幅/高さ) |
-| :--- | :--- | :--- | :--- | :--- |
-| **`small`** | **約 4.0 mm** | **62 列** | **76 行** | 幅: 1.45 / 高さ: 11.34 |
-| **`medium`** | **約 6.0 mm** | **36 列** | **50 行** | 幅: 2.53 / 高さ: 17.01 |
-| **`large`** | **約 8.0 mm** | **26 列** | **38 行** | 幅: 3.61 / 高さ: 22.68 |
-
-> [!NOTE]
-> これらの数値は、A4用紙の物理的な印字可能領域（余白を除いた約180mm x 270mm）を基準に、各サイズの正方形グリッドを敷き詰めた際の理論限界値です。
+**処理内容：**
+- `_gen.py` を実行してExcelを生成
+- `_extracted.json` と `_grid_params.json` を参照し、罫線を確定的に後処理で上書き適用（LLM生成コードのボーダー誤りを自動修正）
+- エラー発生時は `prompts/<pdf_name>_prompt_error_fix.txt` にエラー修正用プロンプトを出力
 
 ---
 
-## パイプラインの各ステップ（STEP 1〜2）詳解
+## CLIリファレンス
 
-Phase 2でLLMに実行させる2つのプロンプトステップには、それぞれ明確な役割（責務）が定義されています。
+```
+python -m src.main <phase> [options]
+```
 
-1. **Step 1（レイアウト仕様JSON生成）**
-   pdfplumberが抽出した `words`（テキスト・フォント色・サイズ）と `rects`（矩形枠・背景色）に、事前計算済みのExcel行列番号（`_row`/`_col`等）が付与されています。LLMはこの座標をそのまま使用して `text` 要素と `border_rect` 要素のみからなるレイアウト仕様JSONを出力します。
+| phase | 説明 |
+|-------|------|
+| `extract` | Phase 1: PDF解析 & プロンプト生成 |
+| `fill` | Phase 1.5後処理: テキスト補完 & STEP 2プロンプト更新 |
+| `generate` | Phase 3: 生成コードを実行してExcel出力 |
 
-2. **Step 2（コード生成 - Code Generation）**
-   Step 1のレイアウト仕様JSONをもとに、Python（`openpyxl`ベース）の実行可能な描画スクリプト（`_gen.py`）を生成します。`text` はセルへの値書き込み・フォント設定、`border_rect` は外枠罫線と背景色の塗りつぶしとして描画されます。
+| オプション | 対象phase | 説明 |
+|-----------|----------|------|
+| `--pdf <path>` | `extract`, `fill` | 処理対象PDFのパスまたはPDF名（省略時は全対象を処理） |
+| `--grid-size <size>` | `extract` | 方眼サイズ: `small`（デフォルト）/ `medium` / `large` |
+
+---
+
+## パイプラインのステップ詳解
+
+### STEP 1（レイアウトJSON生成）
+`pdfplumber` が抽出した `words`（テキスト・フォント色・サイズ）と `table_border_rects`（テーブルセル境界）、`rects`（矩形枠）に、事前計算済みのExcel行列番号（`_row`/`_col`等）が付与されています。LLMはこの座標をそのまま使用して `text` 要素と `border_rect` 要素のみからなるレイアウト仕様JSONを出力します。
+
+### STEP 1.5（JSON検証・補正）
+STEP 1の出力を検証・補正します。座標の整合性チェック、重複除去、欠落テキストの補完、座標のクランプを行います。
+
+### fill（テキスト補完・自動）
+STEP 1.5のLLM出力に対し、`_extracted.json` の `words` と照合して欠落テキストを確実に補完します。LLMへの依存なしに動作するため、LLMが見落としたテキストを毎回漏れなく補完できます。
+
+### STEP 2（Pythonコード生成）
+補正済みレイアウト仕様JSONをもとに、`openpyxl` ベースの実行可能な描画スクリプトを生成します。
+
+### Phase 3（確定的ボーダー後処理）
+`_gen.py` 実行後、`_extracted.json` から得た罫線データを `openpyxl` で直接適用し、LLM生成コードのボーダー誤りを上書き修正します。
+
+---
+
+## 方眼サイズ（`--grid-size`）の詳細仕様
+
+絶対等倍でのA4出力を保証するため、各サイズには数学的に計算された最大グリッド数が設定されています。A3など他の用紙サイズには動的に比例計算して対応します。
+
+| グリッドサイズ | 方眼の大きさ (mm) | 最大列数 (A4縦) | 最大行数 (A4縦) | Excel設定値 (幅/高さ) | デフォルトフォント |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`small`** | **約 4.0 mm** | **62 列** | **76 行** | 幅: 1.45 / 高さ: 11.34 | 7pt |
+| **`medium`** | **約 6.0 mm** | **36 列** | **50 行** | 幅: 2.53 / 高さ: 17.01 | 9pt |
+| **`large`** | **約 8.0 mm** | **26 列** | **38 行** | 幅: 3.61 / 高さ: 22.68 | 11pt |
+
+> [!NOTE]
+> これらの数値は、A4用紙の物理的な印字可能領域（余白を除いた約180mm x 270mm）を基準に、各サイズの正方形グリッドを敷き詰めた際の理論限界値です。A3等の他の用紙サイズはページ寸法に比例して自動計算されます。
 
 ---
 
@@ -121,21 +295,21 @@ Phase 2でLLMに実行させる2つのプロンプトステップには、それ
 ```text
 Sheetling/
 ├── src/
-│   ├── main.py             # 実行エントリポイント
+│   ├── main.py              # CLI エントリポイント（extract / fill / generate）
+│   ├── core/
+│   │   └── pipeline.py      # フェーズ全体のフロー制御・グリッド座標計算・ボーダー後処理
 │   ├── parser/
 │   │   └── pdf_extractor.py # Phase 1: PDFデータ抽出 (pdfplumber)
 │   ├── templates/
-│   │   └── prompts.py       # Phase 1: 各ステップのLLMプロンプト定義
-│   ├── core/
-│   │   └── pipeline.py      # フェーズ全体のフロー制御
+│   │   └── prompts.py       # LLMプロンプト定義・グリッドサイズ設定
 │   └── utils/
 │       └── logger.py        # ログ出力管理
 ├── data/
 │   ├── in/                  # 入力PDFディレクトリ
 │   └── out/                 # 出力ディレクトリ（解析結果・Excel）
-├── Dockerfile               # 環境構築用
-├── docker-compose.yml       # サービス実行定義
-└── requirements.txt         # 依存ライブラリ
+├── Dockerfile
+├── docker-compose.yml
+└── requirements.txt
 ```
 
 ---
@@ -149,6 +323,19 @@ Sheetling/
 
 ---
 
+## よく発生するエラー（Phase 3）
+
+Phase 3 でエラーが発生した場合、`prompts/<pdf_name>_prompt_error_fix.txt` が出力されます。その内容をLLMに投入してコードを再生成し、`_gen.py` に上書き保存してから再度 `generate` を実行してください。
+
+| エラー | 原因 | 対処 |
+|--------|------|------|
+| `NameError: name 'thin' is not defined` | LLM生成コードで `Side(style='thin')` 等の `openpyxl.styles.Side` オブジェクトを定義せずに変数参照している | `_prompt_error_fix.txt` をLLMに投入して再生成 |
+| `NameError: name 'true' is not defined. Did you mean: 'True'?` | LLM生成コードにJSONリテラル由来の `true`/`false`（小文字）が混入している。Pythonの予約語は `True`/`False`（先頭大文字） | `_prompt_error_fix.txt` をLLMに投入して再生成 |
+
+---
+
 ## 開発メモ
 
 - `src/` と `data/` はコンテナにボリュームマウントされており、ホスト側の変更が即時反映されます。
+- `fill` コマンドは `_step1_5_input.json` が存在しない場合は警告を出して終了します。必ずSTEP 1.5の出力を保存してから実行してください。
+- Phase 3 の罫線後処理は `_grid_params.json` が存在する場合のみ実行されます（Phase 1 を実行していれば自動生成されます）。

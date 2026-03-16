@@ -1,0 +1,3671 @@
+あなたはPDF解析データからExcelレイアウト仕様を生成する設計者です。
+
+## 座標について（最重要）
+
+入力データの各要素には **事前計算済みのExcel座標** が付与されています。
+独自に座標を計算せず、必ず以下のフィールドをそのまま参照してください。
+
+| フィールド | 意味 |
+|---|---|
+| `words[i]._row` | テキストのExcel行番号 |
+| `words[i]._col` | テキストのExcel列番号（開始） |
+| `words[i].is_vertical` | 縦文字かどうか（`true` の場合のみ存在） |
+| `words[i]._end_row` | 縦文字の下端行番号（`is_vertical=true` の場合のみ存在） |
+| `rects[i]._row` / `_end_row` | 矩形の開始・終了行番号（テーブル外） |
+| `rects[i]._col` / `_end_col` | 矩形の開始・終了列番号（テーブル外） |
+| `rects[i]._borders` | 矩形枠の各辺に罫線があるか `{top, bottom, left, right}` |
+| `table_border_rects[i]._row` / `_end_row` | テーブルセルの開始・終了行番号 |
+| `table_border_rects[i]._col` / `_end_col` | テーブルセルの開始・終了列番号 |
+| `table_border_rects[i]._borders` | セルの各辺に罫線があるか `{top, bottom, left, right}` |
+
+## 複数ページ処理（最重要）
+
+入力データには複数ページが含まれる場合があります。
+
+- 出力JSONは `page_number` ごとに **必ず独立したオブジェクト** として出力すること
+- ページ1の要素はページ1のオブジェクト内、ページ2の要素はページ2のオブジェクト内に格納する
+- **あるページのコンテンツを別のページのオブジェクトに混入させることは絶対禁止**
+- 各ページの座標（`_row`, `_col`）はそのページ内でリセットされた値（1始まり）である。ページをまたいで座標を統合・変換しないこと
+
+## 処理手順
+
+### Step 1: border_rect 要素の生成
+
+**テーブルセル（`table_border_rects`）：**
+- `table_border_rects` の各エントリを `border_rect` 要素として出力する
+- 各エントリの `_row`, `_end_row`, `_col`, `_end_col` をそのまま使用する
+- 各エントリの `_borders` を `borders` フィールドとしてそのまま出力する
+- **隣接するセル同士で共有辺の `_borders` が両方 `false` の場合、それらは視覚的に1つのセルである可能性が高い。確信が持てる場合は統合して1つの `border_rect` にまとめよ**（統合後の row/col は最小値、end_row/end_col は最大値、borders は外周辺のみ true）
+
+**テーブル外の矩形（`rects`）：**
+- 各 rect の `_row`, `_col`, `_end_row`, `_end_col` をそのまま使用する
+- 各 rect の `_borders` を `borders` フィールドとしてそのまま出力する
+
+### Step 2: テキスト要素の生成
+
+`words` を **`(_row, _col)` の組み合わせ** でグループ化し、同一 `(_row, _col)` のwordを1つの `text` 要素にまとめる。
+これにより、テーブル内の各列セルが別々の `text` 要素として保持される（行単位の結合は禁止）。
+
+- `row` = グループの `_row` 値
+- `col` = グループの `_col` 値
+- `content` = グループ内のwordを左から順に結合したテキスト（日本語文字＝漢字・ひらがな・カタカナを含む場合はスペースなし、英数字のみの場合は半角スペースで結合）
+- `end_col` = `col` + `content` の文字数（概算）
+- `font_color` = グループ内最初のwordの `font_color`（存在し、かつ黒 `"000000"` でない場合のみ含める）
+- `font_size` = グループ内最初のwordの `font_size`（存在する場合のみ含める）
+
+**縦文字（`is_vertical=true`）の扱い：**
+- `is_vertical=true` のwordは他のwordとグループ化せず、単独で `text` 要素にする
+- `is_vertical: true` を要素に含める
+- `_end_row` が存在する場合は `end_row` として含める（縦方向の占有範囲）
+- `end_col` は `col + 1`（縦文字は1列幅）
+
+## 出力フォーマット
+
+複数ページの場合は以下のように **ページ数分のオブジェクトを配列に含める**。各ページの要素は必ず対応する `page_number` のオブジェクト内にのみ格納すること。
+
+[
+  {
+    "page_number": 1,
+    "elements": [
+      {
+        "type": "text",
+        "content": "請求書",
+        "row": 2,
+        "col": 20,
+        "end_col": 28,
+        "font_color": "FF0000",
+        "font_size": 14
+      },
+      {
+        "type": "border_rect",
+        "row": 8,
+        "end_row": 9,
+        "col": 18,
+        "end_col": 27,
+        "borders": {"top": true, "bottom": true, "left": false, "right": true}
+      }
+    ]
+  },
+  {
+    "page_number": 2,
+    "elements": [
+      {
+        "type": "text",
+        "content": "明細",
+        "row": 3,
+        "col": 5,
+        "end_col": 7
+      },
+      {
+        "type": "border_rect",
+        "row": 5,
+        "end_row": 10,
+        "col": 3,
+        "end_col": 25,
+        "borders": {"top": true, "bottom": true, "left": true, "right": true}
+      }
+    ]
+  }
+]
+
+入力データ:
+{
+  "pages": [
+    {
+      "page_number": 1,
+      "words": [
+        {
+          "text": "表１－１",
+          "font_size": 12.0,
+          "_row": 1,
+          "_col": 5
+        },
+        {
+          "text": "管理施設数（国土交通省管理分）",
+          "font_size": 12.0,
+          "_row": 1,
+          "_col": 8
+        },
+        {
+          "text": "平成30年3月31日時点",
+          "font_size": 10.0,
+          "_row": 2,
+          "_col": 26
+        },
+        {
+          "text": "所在する都道府県",
+          "font_size": 10.0,
+          "_row": 3,
+          "_col": 6
+        },
+        {
+          "text": "橋梁",
+          "font_size": 10.0,
+          "_row": 3,
+          "_col": 14
+        },
+        {
+          "text": "トンネル",
+          "font_size": 10.0,
+          "_row": 3,
+          "_col": 21
+        },
+        {
+          "text": "道路附属物等",
+          "font_size": 10.0,
+          "_row": 3,
+          "_col": 27
+        },
+        {
+          "text": "北海道",
+          "font_size": 10.0,
+          "_row": 4,
+          "_col": 7
+        },
+        {
+          "text": "4,276",
+          "font_size": 10.0,
+          "_row": 4,
+          "_col": 14
+        },
+        {
+          "text": "273",
+          "font_size": 10.0,
+          "_row": 4,
+          "_col": 22
+        },
+        {
+          "text": "1,922",
+          "font_size": 10.0,
+          "_row": 4,
+          "_col": 28
+        },
+        {
+          "text": "青森県",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 7
+        },
+        {
+          "text": "319",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 14
+        },
+        {
+          "text": "7",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 22
+        },
+        {
+          "text": "137",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 28
+        },
+        {
+          "text": "岩手県",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 7
+        },
+        {
+          "text": "570",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 14
+        },
+        {
+          "text": "71",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 22
+        },
+        {
+          "text": "190",
+          "font_size": 10.0,
+          "_row": 5,
+          "_col": 28
+        },
+        {
+          "text": "宮城県",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 7
+        },
+        {
+          "text": "790",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 14
+        },
+        {
+          "text": "27",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 22
+        },
+        {
+          "text": "177",
+          "font_size": 10.0,
+          "_row": 6,
+          "_col": 28
+        },
+        {
+          "text": "秋田県",
+          "font_size": 10.0,
+          "_row": 7,
+          "_col": 7
+        },
+        {
+          "text": "689",
+          "font_size": 10.0,
+          "_row": 7,
+          "_col": 14
+        },
+        {
+          "text": "29",
+          "font_size": 10.0,
+          "_row": 7,
+          "_col": 22
+        },
+        {
+          "text": "177",
+          "font_size": 10.0,
+          "_row": 7,
+          "_col": 28
+        },
+        {
+          "text": "山形県",
+          "font_size": 10.0,
+          "_row": 8,
+          "_col": 7
+        },
+        {
+          "text": "885",
+          "font_size": 10.0,
+          "_row": 8,
+          "_col": 14
+        },
+        {
+          "text": "45",
+          "font_size": 10.0,
+          "_row": 8,
+          "_col": 22
+        },
+        {
+          "text": "199",
+          "font_size": 10.0,
+          "_row": 8,
+          "_col": 28
+        },
+        {
+          "text": "福島県",
+          "font_size": 10.0,
+          "_row": 9,
+          "_col": 7
+        },
+        {
+          "text": "873",
+          "font_size": 10.0,
+          "_row": 9,
+          "_col": 14
+        },
+        {
+          "text": "51",
+          "font_size": 10.0,
+          "_row": 9,
+          "_col": 22
+        },
+        {
+          "text": "157",
+          "font_size": 10.0,
+          "_row": 9,
+          "_col": 28
+        },
+        {
+          "text": "茨城県",
+          "font_size": 10.0,
+          "_row": 10,
+          "_col": 7
+        },
+        {
+          "text": "301",
+          "font_size": 10.0,
+          "_row": 10,
+          "_col": 14
+        },
+        {
+          "text": "0",
+          "font_size": 10.0,
+          "_row": 10,
+          "_col": 22
+        },
+        {
+          "text": "218",
+          "font_size": 10.0,
+          "_row": 10,
+          "_col": 28
+        },
+        {
+          "text": "栃木県",
+          "font_size": 10.0,
+          "_row": 11,
+          "_col": 7
+        },
+        {
+          "text": "220",
+          "font_size": 10.0,
+          "_row": 11,
+          "_col": 14
+        },
+        {
+          "text": "0",
+          "font_size": 10.0,
+          "_row": 11,
+          "_col": 22
+        },
+        {
+          "text": "149",
+          "font_size": 10.0,
+          "_row": 11,
+          "_col": 28
+        },
+        {
+          "text": "群馬県",
+          "font_size": 10.0,
+          "_row": 11,
+          "_col": 7
+        },
+        {
+          "text": "294",
+          "font_size": 10.0,
+          "_row": 11,
+          "_col": 14
+        },
+        {
+          "text": "3",
+          "font_size": 10.0,
+          "_row": 11,
+          "_col": 22
+        },
+        {
+          "text": "135",
+          "font_size": 10.0,
+          "_row": 11,
+          "_col": 28
+        },
+        {
+          "text": "埼玉県",
+          "font_size": 10.0,
+          "_row": 12,
+          "_col": 7
+        },
+        {
+          "text": "545",
+          "font_size": 10.0,
+          "_row": 12,
+          "_col": 14
+        },
+        {
+          "text": "0",
+          "font_size": 10.0,
+          "_row": 12,
+          "_col": 22
+        },
+        {
+          "text": "417",
+          "font_size": 10.0,
+          "_row": 12,
+          "_col": 28
+        },
+        {
+          "text": "千葉県",
+          "font_size": 10.0,
+          "_row": 13,
+          "_col": 7
+        },
+        {
+          "text": "418",
+          "font_size": 10.0,
+          "_row": 13,
+          "_col": 14
+        },
+        {
+          "text": "26",
+          "font_size": 10.0,
+          "_row": 13,
+          "_col": 22
+        },
+        {
+          "text": "253",
+          "font_size": 10.0,
+          "_row": 13,
+          "_col": 28
+        },
+        {
+          "text": "東京都",
+          "font_size": 10.0,
+          "_row": 14,
+          "_col": 7
+        },
+        {
+          "text": "296",
+          "font_size": 10.0,
+          "_row": 14,
+          "_col": 14
+        },
+        {
+          "text": "3",
+          "font_size": 10.0,
+          "_row": 14,
+          "_col": 22
+        },
+        {
+          "text": "485",
+          "font_size": 10.0,
+          "_row": 14,
+          "_col": 28
+        },
+        {
+          "text": "神奈川県",
+          "font_size": 10.0,
+          "_row": 15,
+          "_col": 7
+        },
+        {
+          "text": "409",
+          "font_size": 10.0,
+          "_row": 15,
+          "_col": 14
+        },
+        {
+          "text": "26",
+          "font_size": 10.0,
+          "_row": 15,
+          "_col": 22
+        },
+        {
+          "text": "316",
+          "font_size": 10.0,
+          "_row": 15,
+          "_col": 28
+        },
+        {
+          "text": "新潟県",
+          "font_size": 10.0,
+          "_row": 16,
+          "_col": 7
+        },
+        {
+          "text": "1,663",
+          "font_size": 10.0,
+          "_row": 16,
+          "_col": 14
+        },
+        {
+          "text": "47",
+          "font_size": 10.0,
+          "_row": 16,
+          "_col": 22
+        },
+        {
+          "text": "414",
+          "font_size": 10.0,
+          "_row": 16,
+          "_col": 28
+        },
+        {
+          "text": "富山県",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 7
+        },
+        {
+          "text": "912",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 14
+        },
+        {
+          "text": "29",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 22
+        },
+        {
+          "text": "120",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 28
+        },
+        {
+          "text": "石川県",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 7
+        },
+        {
+          "text": "880",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 14
+        },
+        {
+          "text": "18",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 22
+        },
+        {
+          "text": "139",
+          "font_size": 10.0,
+          "_row": 17,
+          "_col": 28
+        },
+        {
+          "text": "福井県",
+          "font_size": 10.0,
+          "_row": 18,
+          "_col": 7
+        },
+        {
+          "text": "487",
+          "font_size": 10.0,
+          "_row": 18,
+          "_col": 14
+        },
+        {
+          "text": "32",
+          "font_size": 10.0,
+          "_row": 18,
+          "_col": 22
+        },
+        {
+          "text": "71",
+          "font_size": 10.0,
+          "_row": 18,
+          "_col": 29
+        },
+        {
+          "text": "山梨県",
+          "font_size": 10.0,
+          "_row": 19,
+          "_col": 7
+        },
+        {
+          "text": "342",
+          "font_size": 10.0,
+          "_row": 19,
+          "_col": 14
+        },
+        {
+          "text": "13",
+          "font_size": 10.0,
+          "_row": 19,
+          "_col": 22
+        },
+        {
+          "text": "94",
+          "font_size": 10.0,
+          "_row": 19,
+          "_col": 29
+        },
+        {
+          "text": "長野県",
+          "font_size": 10.0,
+          "_row": 20,
+          "_col": 7
+        },
+        {
+          "text": "818",
+          "font_size": 10.0,
+          "_row": 20,
+          "_col": 14
+        },
+        {
+          "text": "28",
+          "font_size": 10.0,
+          "_row": 20,
+          "_col": 22
+        },
+        {
+          "text": "229",
+          "font_size": 10.0,
+          "_row": 20,
+          "_col": 28
+        },
+        {
+          "text": "岐阜県",
+          "font_size": 10.0,
+          "_row": 21,
+          "_col": 7
+        },
+        {
+          "text": "1,070",
+          "font_size": 10.0,
+          "_row": 21,
+          "_col": 14
+        },
+        {
+          "text": "36",
+          "font_size": 10.0,
+          "_row": 21,
+          "_col": 22
+        },
+        {
+          "text": "481",
+          "font_size": 10.0,
+          "_row": 21,
+          "_col": 28
+        },
+        {
+          "text": "静岡県",
+          "font_size": 10.0,
+          "_row": 22,
+          "_col": 7
+        },
+        {
+          "text": "1,176",
+          "font_size": 10.0,
+          "_row": 22,
+          "_col": 14
+        },
+        {
+          "text": "28",
+          "font_size": 10.0,
+          "_row": 22,
+          "_col": 22
+        },
+        {
+          "text": "329",
+          "font_size": 10.0,
+          "_row": 22,
+          "_col": 28
+        },
+        {
+          "text": "愛知県",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 7
+        },
+        {
+          "text": "1,460",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 14
+        },
+        {
+          "text": "13",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 22
+        },
+        {
+          "text": "706",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 28
+        },
+        {
+          "text": "三重県",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 7
+        },
+        {
+          "text": "1,461",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 14
+        },
+        {
+          "text": "38",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 22
+        },
+        {
+          "text": "287",
+          "font_size": 10.0,
+          "_row": 23,
+          "_col": 28
+        },
+        {
+          "text": "滋賀県",
+          "font_size": 10.0,
+          "_row": 24,
+          "_col": 7
+        },
+        {
+          "text": "800",
+          "font_size": 10.0,
+          "_row": 24,
+          "_col": 14
+        },
+        {
+          "text": "10",
+          "font_size": 10.0,
+          "_row": 24,
+          "_col": 22
+        },
+        {
+          "text": "99",
+          "font_size": 10.0,
+          "_row": 24,
+          "_col": 29
+        },
+        {
+          "text": "京都府",
+          "font_size": 10.0,
+          "_row": 25,
+          "_col": 7
+        },
+        {
+          "text": "699",
+          "font_size": 10.0,
+          "_row": 25,
+          "_col": 14
+        },
+        {
+          "text": "10",
+          "font_size": 10.0,
+          "_row": 25,
+          "_col": 22
+        },
+        {
+          "text": "180",
+          "font_size": 10.0,
+          "_row": 25,
+          "_col": 28
+        },
+        {
+          "text": "大阪府",
+          "font_size": 10.0,
+          "_row": 26,
+          "_col": 7
+        },
+        {
+          "text": "460",
+          "font_size": 10.0,
+          "_row": 26,
+          "_col": 14
+        },
+        {
+          "text": "16",
+          "font_size": 10.0,
+          "_row": 26,
+          "_col": 22
+        },
+        {
+          "text": "480",
+          "font_size": 10.0,
+          "_row": 26,
+          "_col": 28
+        },
+        {
+          "text": "兵庫県",
+          "font_size": 10.0,
+          "_row": 27,
+          "_col": 7
+        },
+        {
+          "text": "1,254",
+          "font_size": 10.0,
+          "_row": 27,
+          "_col": 14
+        },
+        {
+          "text": "58",
+          "font_size": 10.0,
+          "_row": 27,
+          "_col": 22
+        },
+        {
+          "text": "439",
+          "font_size": 10.0,
+          "_row": 27,
+          "_col": 28
+        },
+        {
+          "text": "奈良県",
+          "font_size": 10.0,
+          "_row": 28,
+          "_col": 7
+        },
+        {
+          "text": "463",
+          "font_size": 10.0,
+          "_row": 28,
+          "_col": 14
+        },
+        {
+          "text": "7",
+          "font_size": 10.0,
+          "_row": 28,
+          "_col": 22
+        },
+        {
+          "text": "137",
+          "font_size": 10.0,
+          "_row": 28,
+          "_col": 28
+        },
+        {
+          "text": "和歌山県",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 7
+        },
+        {
+          "text": "701",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 14
+        },
+        {
+          "text": "80",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 22
+        },
+        {
+          "text": "144",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 28
+        },
+        {
+          "text": "鳥取県",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 7
+        },
+        {
+          "text": "761",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 14
+        },
+        {
+          "text": "39",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 22
+        },
+        {
+          "text": "92",
+          "font_size": 10.0,
+          "_row": 29,
+          "_col": 29
+        },
+        {
+          "text": "島根県",
+          "font_size": 10.0,
+          "_row": 30,
+          "_col": 7
+        },
+        {
+          "text": "707",
+          "font_size": 10.0,
+          "_row": 30,
+          "_col": 14
+        },
+        {
+          "text": "52",
+          "font_size": 10.0,
+          "_row": 30,
+          "_col": 22
+        },
+        {
+          "text": "165",
+          "font_size": 10.0,
+          "_row": 30,
+          "_col": 28
+        },
+        {
+          "text": "岡山県",
+          "font_size": 10.0,
+          "_row": 31,
+          "_col": 7
+        },
+        {
+          "text": "1,065",
+          "font_size": 10.0,
+          "_row": 31,
+          "_col": 14
+        },
+        {
+          "text": "21",
+          "font_size": 10.0,
+          "_row": 31,
+          "_col": 22
+        },
+        {
+          "text": "172",
+          "font_size": 10.0,
+          "_row": 31,
+          "_col": 28
+        },
+        {
+          "text": "広島県",
+          "font_size": 10.0,
+          "_row": 32,
+          "_col": 7
+        },
+        {
+          "text": "995",
+          "font_size": 10.0,
+          "_row": 32,
+          "_col": 14
+        },
+        {
+          "text": "90",
+          "font_size": 10.0,
+          "_row": 32,
+          "_col": 22
+        },
+        {
+          "text": "262",
+          "font_size": 10.0,
+          "_row": 32,
+          "_col": 28
+        },
+        {
+          "text": "山口県",
+          "font_size": 10.0,
+          "_row": 33,
+          "_col": 7
+        },
+        {
+          "text": "1,351",
+          "font_size": 10.0,
+          "_row": 33,
+          "_col": 14
+        },
+        {
+          "text": "40",
+          "font_size": 10.0,
+          "_row": 33,
+          "_col": 22
+        },
+        {
+          "text": "196",
+          "font_size": 10.0,
+          "_row": 33,
+          "_col": 28
+        },
+        {
+          "text": "徳島県",
+          "font_size": 10.0,
+          "_row": 34,
+          "_col": 7
+        },
+        {
+          "text": "442",
+          "font_size": 10.0,
+          "_row": 34,
+          "_col": 14
+        },
+        {
+          "text": "33",
+          "font_size": 10.0,
+          "_row": 34,
+          "_col": 22
+        },
+        {
+          "text": "153",
+          "font_size": 10.0,
+          "_row": 34,
+          "_col": 28
+        },
+        {
+          "text": "香川県",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 7
+        },
+        {
+          "text": "471",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 14
+        },
+        {
+          "text": "9",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 22
+        },
+        {
+          "text": "186",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 28
+        },
+        {
+          "text": "愛媛県",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 7
+        },
+        {
+          "text": "906",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 14
+        },
+        {
+          "text": "56",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 22
+        },
+        {
+          "text": "255",
+          "font_size": 10.0,
+          "_row": 35,
+          "_col": 28
+        },
+        {
+          "text": "高知県",
+          "font_size": 10.0,
+          "_row": 36,
+          "_col": 7
+        },
+        {
+          "text": "853",
+          "font_size": 10.0,
+          "_row": 36,
+          "_col": 14
+        },
+        {
+          "text": "70",
+          "font_size": 10.0,
+          "_row": 36,
+          "_col": 22
+        },
+        {
+          "text": "199",
+          "font_size": 10.0,
+          "_row": 36,
+          "_col": 28
+        },
+        {
+          "text": "福岡県",
+          "font_size": 10.0,
+          "_row": 37,
+          "_col": 7
+        },
+        {
+          "text": "1,299",
+          "font_size": 10.0,
+          "_row": 37,
+          "_col": 14
+        },
+        {
+          "text": "15",
+          "font_size": 10.0,
+          "_row": 37,
+          "_col": 22
+        },
+        {
+          "text": "181",
+          "font_size": 10.0,
+          "_row": 37,
+          "_col": 28
+        },
+        {
+          "text": "佐賀県",
+          "font_size": 10.0,
+          "_row": 38,
+          "_col": 7
+        },
+        {
+          "text": "783",
+          "font_size": 10.0,
+          "_row": 38,
+          "_col": 14
+        },
+        {
+          "text": "12",
+          "font_size": 10.0,
+          "_row": 38,
+          "_col": 22
+        },
+        {
+          "text": "88",
+          "font_size": 10.0,
+          "_row": 38,
+          "_col": 29
+        },
+        {
+          "text": "長崎県",
+          "font_size": 10.0,
+          "_row": 39,
+          "_col": 7
+        },
+        {
+          "text": "249",
+          "font_size": 10.0,
+          "_row": 39,
+          "_col": 14
+        },
+        {
+          "text": "8",
+          "font_size": 10.0,
+          "_row": 39,
+          "_col": 22
+        },
+        {
+          "text": "66",
+          "font_size": 10.0,
+          "_row": 39,
+          "_col": 29
+        },
+        {
+          "text": "熊本県",
+          "font_size": 10.0,
+          "_row": 40,
+          "_col": 7
+        },
+        {
+          "text": "546",
+          "font_size": 10.0,
+          "_row": 40,
+          "_col": 14
+        },
+        {
+          "text": "15",
+          "font_size": 10.0,
+          "_row": 40,
+          "_col": 22
+        },
+        {
+          "text": "151",
+          "font_size": 10.0,
+          "_row": 40,
+          "_col": 28
+        },
+        {
+          "text": "大分県",
+          "font_size": 10.0,
+          "_row": 40,
+          "_col": 7
+        },
+        {
+          "text": "543",
+          "font_size": 10.0,
+          "_row": 40,
+          "_col": 14
+        },
+        {
+          "text": "48",
+          "font_size": 10.0,
+          "_row": 40,
+          "_col": 22
+        },
+        {
+          "text": "110",
+          "font_size": 10.0,
+          "_row": 40,
+          "_col": 28
+        },
+        {
+          "text": "宮崎県",
+          "font_size": 10.0,
+          "_row": 41,
+          "_col": 7
+        },
+        {
+          "text": "540",
+          "font_size": 10.0,
+          "_row": 41,
+          "_col": 14
+        },
+        {
+          "text": "44",
+          "font_size": 10.0,
+          "_row": 41,
+          "_col": 22
+        },
+        {
+          "text": "153",
+          "font_size": 10.0,
+          "_row": 41,
+          "_col": 28
+        },
+        {
+          "text": "鹿児島県",
+          "font_size": 10.0,
+          "_row": 42,
+          "_col": 7
+        },
+        {
+          "text": "552",
+          "font_size": 10.0,
+          "_row": 42,
+          "_col": 14
+        },
+        {
+          "text": "15",
+          "font_size": 10.0,
+          "_row": 42,
+          "_col": 22
+        },
+        {
+          "text": "108",
+          "font_size": 10.0,
+          "_row": 42,
+          "_col": 28
+        },
+        {
+          "text": "沖縄県",
+          "font_size": 10.0,
+          "_row": 43,
+          "_col": 7
+        },
+        {
+          "text": "398",
+          "font_size": 10.0,
+          "_row": 43,
+          "_col": 14
+        },
+        {
+          "text": "19",
+          "font_size": 10.0,
+          "_row": 43,
+          "_col": 22
+        },
+        {
+          "text": "127",
+          "font_size": 10.0,
+          "_row": 43,
+          "_col": 28
+        },
+        {
+          "text": "合計",
+          "font_size": 10.0,
+          "_row": 44,
+          "_col": 8
+        },
+        {
+          "text": "37,992",
+          "font_size": 10.0,
+          "_row": 44,
+          "_col": 14
+        },
+        {
+          "text": "1,610",
+          "font_size": 10.0,
+          "_row": 44,
+          "_col": 21
+        },
+        {
+          "text": "11,945",
+          "font_size": 10.0,
+          "_row": 44,
+          "_col": 28
+        }
+      ],
+      "table_border_rects": [
+        {
+          "_row": 3,
+          "_end_row": 4,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 3,
+          "_end_row": 4,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 3,
+          "_end_row": 4,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 3,
+          "_end_row": 4,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 4,
+          "_end_row": 5,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 4,
+          "_end_row": 5,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 4,
+          "_end_row": 5,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 4,
+          "_end_row": 5,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 5,
+          "_end_row": 6,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 5,
+          "_end_row": 6,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 5,
+          "_end_row": 6,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 5,
+          "_end_row": 6,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 6,
+          "_end_row": 7,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 6,
+          "_end_row": 7,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 6,
+          "_end_row": 7,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 6,
+          "_end_row": 7,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 7,
+          "_end_row": 8,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 7,
+          "_end_row": 8,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 7,
+          "_end_row": 8,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 7,
+          "_end_row": 8,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 8,
+          "_end_row": 9,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 8,
+          "_end_row": 9,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 8,
+          "_end_row": 9,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 8,
+          "_end_row": 9,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 10,
+          "_end_row": 11,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 10,
+          "_end_row": 11,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 10,
+          "_end_row": 11,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 10,
+          "_end_row": 11,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 11,
+          "_end_row": 12,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 11,
+          "_end_row": 12,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 11,
+          "_end_row": 12,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 11,
+          "_end_row": 12,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 12,
+          "_end_row": 13,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 12,
+          "_end_row": 13,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 12,
+          "_end_row": 13,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 12,
+          "_end_row": 13,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 14,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 14,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 14,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 13,
+          "_end_row": 14,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 14,
+          "_end_row": 15,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 14,
+          "_end_row": 15,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 14,
+          "_end_row": 15,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 14,
+          "_end_row": 15,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 15,
+          "_end_row": 16,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 15,
+          "_end_row": 16,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 15,
+          "_end_row": 16,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 15,
+          "_end_row": 16,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 16,
+          "_end_row": 17,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 16,
+          "_end_row": 17,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 16,
+          "_end_row": 17,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 16,
+          "_end_row": 17,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 17,
+          "_end_row": 18,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 17,
+          "_end_row": 18,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 17,
+          "_end_row": 18,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 17,
+          "_end_row": 18,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 18,
+          "_end_row": 19,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 18,
+          "_end_row": 19,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 18,
+          "_end_row": 19,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 18,
+          "_end_row": 19,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 19,
+          "_end_row": 20,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 19,
+          "_end_row": 20,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 19,
+          "_end_row": 20,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 19,
+          "_end_row": 20,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 20,
+          "_end_row": 21,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 20,
+          "_end_row": 21,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 20,
+          "_end_row": 21,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 20,
+          "_end_row": 21,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 21,
+          "_end_row": 22,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 21,
+          "_end_row": 22,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 21,
+          "_end_row": 22,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 21,
+          "_end_row": 22,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 23,
+          "_end_row": 24,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 23,
+          "_end_row": 24,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 23,
+          "_end_row": 24,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 23,
+          "_end_row": 24,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 24,
+          "_end_row": 25,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 24,
+          "_end_row": 25,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 24,
+          "_end_row": 25,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 24,
+          "_end_row": 25,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 25,
+          "_end_row": 26,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 25,
+          "_end_row": 26,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 25,
+          "_end_row": 26,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 25,
+          "_end_row": 26,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 26,
+          "_end_row": 27,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 26,
+          "_end_row": 27,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 26,
+          "_end_row": 27,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 26,
+          "_end_row": 27,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 27,
+          "_end_row": 28,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 27,
+          "_end_row": 28,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 27,
+          "_end_row": 28,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 27,
+          "_end_row": 28,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 28,
+          "_end_row": 29,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 28,
+          "_end_row": 29,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 28,
+          "_end_row": 29,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 28,
+          "_end_row": 29,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 29,
+          "_end_row": 30,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 29,
+          "_end_row": 30,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 29,
+          "_end_row": 30,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 29,
+          "_end_row": 30,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 30,
+          "_end_row": 31,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 30,
+          "_end_row": 31,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 30,
+          "_end_row": 31,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 30,
+          "_end_row": 31,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 31,
+          "_end_row": 32,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 31,
+          "_end_row": 32,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 31,
+          "_end_row": 32,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 31,
+          "_end_row": 32,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 32,
+          "_end_row": 33,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 32,
+          "_end_row": 33,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 32,
+          "_end_row": 33,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 32,
+          "_end_row": 33,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 33,
+          "_end_row": 34,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 33,
+          "_end_row": 34,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 33,
+          "_end_row": 34,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 33,
+          "_end_row": 34,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 34,
+          "_end_row": 35,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 34,
+          "_end_row": 35,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 34,
+          "_end_row": 35,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 34,
+          "_end_row": 35,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 35,
+          "_end_row": 36,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 35,
+          "_end_row": 36,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 35,
+          "_end_row": 36,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 35,
+          "_end_row": 36,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 36,
+          "_end_row": 37,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 36,
+          "_end_row": 37,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 36,
+          "_end_row": 37,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 36,
+          "_end_row": 37,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 37,
+          "_end_row": 38,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 37,
+          "_end_row": 38,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 37,
+          "_end_row": 38,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 37,
+          "_end_row": 38,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 38,
+          "_end_row": 39,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 38,
+          "_end_row": 39,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 38,
+          "_end_row": 39,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 38,
+          "_end_row": 39,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 40,
+          "_end_row": 41,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 40,
+          "_end_row": 41,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 40,
+          "_end_row": 41,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 40,
+          "_end_row": 41,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 41,
+          "_end_row": 42,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 41,
+          "_end_row": 42,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 41,
+          "_end_row": 42,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 41,
+          "_end_row": 42,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 42,
+          "_end_row": 43,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 42,
+          "_end_row": 43,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 42,
+          "_end_row": 43,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 42,
+          "_end_row": 43,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 43,
+          "_end_row": 44,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 43,
+          "_end_row": 44,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 43,
+          "_end_row": 44,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 43,
+          "_end_row": 44,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 44,
+          "_end_row": 45,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 44,
+          "_end_row": 45,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 44,
+          "_end_row": 45,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 44,
+          "_end_row": 45,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "_row": 45,
+          "_end_row": 46,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 45,
+          "_end_row": 46,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 45,
+          "_end_row": 46,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 45,
+          "_end_row": 46,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 46,
+          "_end_row": 47,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 46,
+          "_end_row": 47,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 46,
+          "_end_row": 47,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 46,
+          "_end_row": 47,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 48,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 48,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 48,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 47,
+          "_end_row": 48,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 5,
+          "_end_col": 12,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 12,
+          "_end_col": 18,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 18,
+          "_end_col": 25,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        },
+        {
+          "_row": 48,
+          "_end_row": 48,
+          "_col": 25,
+          "_end_col": 32,
+          "_borders": {
+            "top": false,
+            "bottom": false,
+            "left": false,
+            "right": false
+          }
+        }
+      ],
+      "rects": []
+    }
+  ]
+}
+
+【最重要】出力は `[` で始まり `]` で終わる純粋なJSON配列文字列のみとしてください。Markdownのコードブロック(```json等)、前後の説明文、思考プロセス、検証コメントは一切含めないでください。JSON以外の文字を1文字でも出力するとSTEP 1.5で処理できなくなります。

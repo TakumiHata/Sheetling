@@ -71,7 +71,21 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
             )
             
             # 表データの抽出
-            tables = page.find_tables()
+            # snap_tolerance: 近接する平行エッジを同一線にまとめる距離(pt)。
+            #   デフォルト3pt だと隣接セルの左辺・右辺が2本として認識され列が倍増するため大きめに設定。
+            # edge_min_length: この長さ未満のエッジを無視する(pt)。
+            #   短い装飾的な線分がテーブル境界として誤検出されるのを抑制する。
+            _table_settings = {
+                "snap_tolerance": 5,
+                "snap_y_tolerance": 5,
+                "join_tolerance": 5,
+                "join_y_tolerance": 5,
+                "edge_min_length": 20,
+                "intersection_tolerance": 5,
+                "intersection_x_tolerance": 5,
+                "intersection_y_tolerance": 5,
+            }
+            tables = page.find_tables(table_settings=_table_settings)
             table_bboxes = [table.bbox for table in tables]
             # 各テーブルの列境界X座標リスト・行境界Y座標リスト（グリッド生成用）
             table_col_x_positions = []
@@ -113,8 +127,51 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                     word['font_size'] = round(float(raw_size), 1)
                 words.append(word)
 
-            # 表の内部構造（2次元配列）の取得
-            table_data = page.extract_tables()
+            # 縦文字の抽出（upright=False の文字を x 位置でグループ化）
+            # extract_words() は水平テキスト前提のため、縦文字は page.chars から別途収集する
+            non_upright = [
+                c for c in page.chars
+                if not c.get('upright', True) and c.get('text', '').strip()
+            ]
+            if non_upright:
+                groups: list[list] = []
+                for ch in sorted(non_upright, key=lambda c: float(c['x0'])):
+                    cx = (float(ch['x0']) + float(ch['x1'])) / 2
+                    sz = float(ch.get('size', 10))
+                    placed = False
+                    for g in groups:
+                        gx = (float(g[0]['x0']) + float(g[0]['x1'])) / 2
+                        if abs(cx - gx) < sz:  # font size を近接判定の閾値に使う
+                            g.append(ch)
+                            placed = True
+                            break
+                    if not placed:
+                        groups.append([ch])
+                for g in groups:
+                    g_sorted = sorted(g, key=lambda c: float(c.get('top', c.get('y0', 0))))
+                    content = ''.join(c.get('text', '') for c in g_sorted)
+                    if not content.strip():
+                        continue
+                    first, last = g_sorted[0], g_sorted[-1]
+                    v_entry: dict = {
+                        'x0':          float(first['x0']),
+                        'top':         float(first.get('top', first.get('y0', 0))),
+                        'x1':          float(last['x1']),
+                        'bottom':      float(last.get('bottom', last.get('y1', 0))),
+                        'text':        content,
+                        'is_vertical': True,
+                    }
+                    raw_color = first.get('non_stroking_color')
+                    hex_c = _to_hex_color(raw_color)
+                    if hex_c:
+                        v_entry['font_color'] = hex_c
+                    raw_sz = first.get('size')
+                    if raw_sz:
+                        v_entry['font_size'] = round(float(raw_sz), 1)
+                    words.append(v_entry)
+
+            # 表の内部構造（2次元配列）の取得（find_tables と同じ設定を使う）
+            table_data = page.extract_tables(table_settings=_table_settings)
             # 扱いやすくするため、改行文字等が含まれていたら除去
             cleaned_tables = []
             for table in table_data:
@@ -135,18 +192,49 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
             for r in page.rects:
                 rect_area = (r['x1'] - r['x0']) * (r['bottom'] - r['top'])
                 if rect_area < 0.85 * page_area:
-                    rect_entry = {
+                    rects.append({
                         'x0': float(r['x0']),
                         'top': float(r['top']),
                         'x1': float(r['x1']),
                         'bottom': float(r['bottom'])
-                    }
-                    fill_hex = _to_hex_color(r.get('non_stroking_color'))
-                    if fill_hex is not None:
-                        rect_entry['fill_color'] = fill_hex
-                    rects.append(rect_entry)
+                    })
 
             rects = _remove_containing_rects(rects)
+
+            # 水平・垂直エッジの抽出（罫線辺ごとの精度向上のため）
+            # page.lines（明示的な線分）と page.rects の4辺を収集する
+            h_edges: list = []  # 水平エッジ: {'x0', 'x1', 'y'}
+            v_edges: list = []  # 垂直エッジ: {'x', 'y0', 'y1'}
+
+            for line in page.lines:
+                lx0 = float(line['x0'])
+                lx1 = float(line['x1'])
+                lt  = float(line.get('top',    line.get('y0', 0)))
+                lb  = float(line.get('bottom', line.get('y1', lt)))
+                if abs(lb - lt) < 2.0 and abs(lx1 - lx0) > 2.0:   # 水平線
+                    h_edges.append({'x0': min(lx0, lx1), 'x1': max(lx0, lx1), 'y': (lt + lb) / 2})
+                elif abs(lx1 - lx0) < 2.0 and abs(lb - lt) > 2.0:  # 垂直線
+                    v_edges.append({'x': (lx0 + lx1) / 2, 'y0': min(lt, lb), 'y1': max(lt, lb),
+                                    'span': abs(lb - lt)})
+
+            for r in page.rects:
+                rect_area = (r['x1'] - r['x0']) * (r['bottom'] - r['top'])
+                if rect_area >= 0.85 * page_area:
+                    continue  # ページ全体を覆う矩形は除外
+                # ストロークなし（塗りつぶしのみ）の矩形はエッジ検出に使わない。
+                # ただし極細矩形（線として描かれた罫線）は stroking_color に依らず含める。
+                rw = float(r['x1']) - float(r['x0'])
+                rh = float(r['bottom']) - float(r['top'])
+                is_line_like = rh < 2.0 or rw < 2.0
+                has_stroke = r.get('stroking_color') is not None
+                if not has_stroke and not is_line_like:
+                    continue
+                rx0, rx1 = float(r['x0']), float(r['x1'])
+                rt,  rb  = float(r['top']), float(r['bottom'])
+                h_edges.append({'x0': rx0, 'x1': rx1, 'y': rt})  # 上辺
+                h_edges.append({'x0': rx0, 'x1': rx1, 'y': rb})  # 下辺
+                v_edges.append({'x': rx0, 'y0': rt, 'y1': rb, 'span': rb - rt})  # 左辺
+                v_edges.append({'x': rx1, 'y0': rt, 'y1': rb, 'span': rb - rt})  # 右辺
 
             page_data = {
                 "page_number": page_number,
@@ -158,7 +246,9 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                 "table_row_y_positions": table_row_y_positions,
                 "table_cells": table_cells,
                 "table_data": cleaned_tables,
-                "rects": rects
+                "rects": rects,
+                "h_edges": h_edges,
+                "v_edges": v_edges,
             }
             extracted_pages.append(page_data)
             
