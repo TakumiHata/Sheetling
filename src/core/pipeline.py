@@ -701,12 +701,19 @@ class SheetlingPipeline:
             with open(generated_code_path, "w", encoding="utf-8") as f:
                 f.write("# Please paste final AI Python code (from STEP 2) here.\n")
 
+        # STEP 1.5 入力用のプレースホルダーを作成（LLM出力をここに貼り付ける）
+        step1_5_input_path = prompts_dir / f"{pdf_name}_step1_5_input.json"
+        if not step1_5_input_path.exists():
+            with open(step1_5_input_path, "w", encoding="utf-8") as f:
+                f.write("// STEP 1.5 の LLM 出力 JSON をここに貼り付けてください。\n// その後 python -m src.main fill を実行してください。\n")
+
         logger.info(f"✅ Phase 1 完了: {pdf_name}")
         logger.info(f"  抽出データ: {extracted_json_path}")
         logger.info(f"  STEP 1   プロンプト: {prompt_1_path}")
         logger.info(f"  STEP 1.5 プロンプト: {prompt_1_5_path}")
         logger.info(f"  STEP 2   プロンプト: {prompt_2_path}")
-        logger.info(f"  ※ STEP1 → STEP1.5 → fill → STEP2 → コードを {generated_code_path.name} に保存")
+        logger.info(f"  STEP 1.5 入力JSON: {step1_5_input_path}  ← LLM出力を貼り付けて fill を実行")
+        logger.info(f"  ※ STEP1 → STEP1.5 → {step1_5_input_path.name} に貼り付け → fill → STEP2 → コードを {generated_code_path.name} に保存")
 
         return {
             "json_path": str(extracted_json_path),
@@ -782,7 +789,7 @@ class SheetlingPipeline:
         else:
             out_dir = self.output_base_dir / pdf_name
 
-        output_xlsx_path = out_dir / f"{pdf_name}.xlsx"
+        output_xlsx_path = out_dir / f"{pdf_name}_Python版.xlsx"
         generated_code_path = out_dir / f"{pdf_name}_gen.py"
 
         if generated_code_path.exists():

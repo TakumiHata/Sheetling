@@ -38,10 +38,9 @@ def main():
 
     elif args.phase == "fill":
         # STEP 1.5 出力のテキスト補完 & STEP 2 プロンプト更新
-        # 対象: data/out/ 以下の *_step1_5_input.json を検索
         # ユーザーは STEP 1.5 の LLM 出力を
         #   data/out/{pdf_name}/prompts/{pdf_name}_step1_5_input.json
-        # として保存してからこのコマンドを実行する。
+        # に貼り付けてからこのコマンドを実行する（extract 時に自動生成済み）。
         output_base_dir = Path("data/out")
 
         if args.pdf:
@@ -54,14 +53,13 @@ def main():
         if not input_files:
             logger.warning(
                 "STEP 1.5 の入力ファイルが見つかりません。\n"
-                "  STEP 1.5 の LLM 出力 JSON を以下のパスに保存してから再実行してください:\n"
+                "  STEP 1.5 の LLM 出力 JSON を以下のパスに貼り付けてから再実行してください:\n"
                 "  data/out/{pdf_name}/prompts/{pdf_name}_step1_5_input.json"
             )
             return
 
         filled_count = 0
         for input_file in input_files:
-            # {pdf_name}_step1_5_input.json → pdf_name を取得
             pdf_name = input_file.name.replace("_step1_5_input.json", "")
             out_dir = input_file.parent.parent  # prompts/ の親
             try:
@@ -93,6 +91,18 @@ def main():
             # gen_file.name は "{pdf_name}_gen.py" なので、末尾の "_gen.py" (7文字) を除外して pdf_name を取得
             if gen_file.name.endswith("_gen.py"):
                 pdf_name = gen_file.name[:-7]
+
+                # fill コマンドが実行済みか確認（必須）
+                fill_output = out_dir / "prompts" / f"{pdf_name}_step1_5_output.json"
+                if not fill_output.exists():
+                    logger.error(
+                        f"❌ generate をスキップ: {pdf_name}\n"
+                        f"  fill コマンドが未実行です。先に以下を実行してください:\n"
+                        f"  1. STEP 1.5 の LLM 出力を data/out/{pdf_name}/input/input.json に保存\n"
+                        f"  2. python -m src.main fill --pdf {pdf_name}"
+                    )
+                    continue
+
                 generated_count += 1
                 try:
                     pipeline.render_excel(pdf_name, specific_out_dir=str(out_dir))
