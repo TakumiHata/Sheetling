@@ -83,14 +83,76 @@ data/out/<pdf_name>/
 
 ### Phase 2：LLMによる描画スクリプト生成（手動）
 
-社内AIチャット等のLLMを使い、以下の順に実行します。
+Phase 2 では、Phase 1 が生成したプロンプトを社内AIチャット等のLLMに**順番に**投入します。LLMはPDFのレイアウト構造を理解し、最終的に `openpyxl` で実行可能なPythonコードを出力します。
+
+> [!IMPORTANT]
+> Phase 2 はすべて**手動操作**です。スクリプトは実行しません。
+
+---
 
 #### STEP 1 — レイアウトJSON生成
 
+**目的：** Phase 1 が抽出した座標データをもとに、LLMにExcel方眼紙上のレイアウト仕様JSONを生成させる。
+
+**プロンプトの内容（`_prompt_step1.txt`）：**
+
+Phase 1 が出力した `_extracted.json` の内容が埋め込まれています。データには以下が含まれます：
+
+- `words`：PDFテキストの文字列・位置・フォント情報 ＋ 対応するExcel行列番号（`_row` / `_col`）
+- `table_border_rects`：テーブルセル境界の矩形 ＋ 対応するExcel行列番号
+- `rects`：矩形枠 ＋ 対応するExcel行列番号
+
+**LLMが出力するJSON（イメージ）：**
+
+```json
+[
+  {
+    "page_number": 1,
+    "elements": [
+      {
+        "type": "text",
+        "row": 3,
+        "col": 5,
+        "value": "氏名",
+        "font_size": 9
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 4,
+        "col": 5,
+        "end_col": 12,
+        "borders": { "top": true, "bottom": true, "left": true, "right": true }
+      }
+    ]
+  }
+]
+```
+
+要素は `text`（テキスト配置）と `border_rect`（罫線矩形）の2種類のみです。LLMは `_extracted.json` の座標をそのまま使用し、PDFのレイアウトをExcelグリッド上に再現するJSONを生成します。
+
+**操作手順：**
+
 1. `prompts/<pdf_name>_prompt_step1.txt` の内容をLLMに貼り付ける
-2. LLMが出力したJSON配列（`[` から `]` まで）をコピーする
+2. LLMが出力したJSON配列（`[` から `]` まで）をコピーしておく
+
+---
 
 #### STEP 1.5 — JSON検証・補正
+
+**目的：** STEP 1 の出力JSONに含まれる誤り（座標ズレ・重複・欠落・範囲外座標）をLLMに自己検証・補正させる。
+
+**なぜ必要か：**
+LLMは複雑なレイアウトで座標を誤ったり、要素を重複させたりすることがあります。STEP 1.5 では別のプロンプトで再度LLMに検証させることで、これらの誤りを修正します。
+
+**LLMが行うチェック：**
+
+- `row < end_row`、`col < end_col` の整合性確認
+- グリッド範囲外座標のクランプ（上限・下限への丸め込み）
+- 重複要素の除去
+- 明らかな欠落テキストの補完
+
+**操作手順：**
 
 1. `prompts/<pdf_name>_prompt_step1_5.txt` を開く
 2. `[ここにSTEP 1の出力...]` をSTEP 1で得たJSONに置き換えてLLMに貼り付ける
@@ -100,9 +162,17 @@ data/out/<pdf_name>/
 data/out/<pdf_name>/prompts/<pdf_name>_step1_5_input.json
 ```
 
+> [!NOTE]
+> このファイル名・保存先は固定です。次の `fill` コマンドがこのパスを参照します。
+
 ---
 
 ### fill：テキスト補完 & STEP 2プロンプト更新
+
+**目的：** LLMが見落としたテキストを機械的に補完し、STEP 2 用プロンプトを自動更新する。
+
+**なぜ必要か：**
+LLMは大量のテキスト要素が並ぶレイアウトで一部を見落とすことがあります。`fill` コマンドはLLMに依存せず、Phase 1 の確定データ（`_extracted.json`）と STEP 1.5 の出力（`_step1_5_input.json`）を機械的に照合することで、欠落テキストを**確実に**補完します。
 
 ```bash
 # 特定PDFのみ
@@ -112,10 +182,14 @@ python -m src.main fill --pdf sample
 python -m src.main fill
 ```
 
-**処理内容：**
-- `_step1_5_input.json` を読み込み、`_extracted.json` と照合してLLMが見落としたテキストを自動補完
-- 補完済みJSONを `prompts/<pdf_name>_step1_5_output.json` として保存
-- `prompts/<pdf_name>_prompt_step2.txt` のプレースホルダーを補完済みJSONで自動置換
+**処理内容（自動）：**
+
+1. `_step1_5_input.json` の `text` 要素と `_extracted.json` の `words` を座標で照合
+2. JSONに存在しないテキストを自動補完（`_extracted.json` の座標・フォント情報をそのまま使用）
+3. 補完済みJSONを `prompts/<pdf_name>_step1_5_output.json` として保存
+4. `prompts/<pdf_name>_prompt_step2.txt` のプレースホルダーを補完済みJSONで自動置換
+
+実行後、`_prompt_step2.txt` は STEP 2 で即座にLLMへ投入できる状態になります。
 
 **オプション：**
 
@@ -123,11 +197,22 @@ python -m src.main fill
 |-----------|----------|------|
 | `--pdf` | なし（全対象） | PDF名（拡張子なし）または PDFファイルパス |
 
+> [!WARNING]
+> `_step1_5_input.json` が存在しない場合は警告を出して終了します。必ずSTEP 1.5の出力を保存してから実行してください。
+
 ---
 
 ### Phase 2（続き）：STEP 2
 
 #### STEP 2 — Pythonコード生成
+
+**目的：** 補完済みレイアウト仕様JSONをもとに、LLMに `openpyxl` で動作するExcel生成スクリプトを出力させる。
+
+**プロンプトの内容（`_prompt_step2.txt`）：**
+
+`fill` コマンドによって補完済みJSONが埋め込み済みです。LLMはこのJSONを読み取り、各要素（テキスト配置・罫線描画・セル結合など）を `openpyxl` のAPI呼び出しに変換した、そのまま実行可能なPythonスクリプトを生成します。
+
+**操作手順：**
 
 1. `prompts/<pdf_name>_prompt_step2.txt`（fillにより補完済みJSONが埋め込まれている）をLLMに貼り付ける
 2. 出力されたPythonコード全体を `data/out/<pdf_name>/<pdf_name>_gen.py` に貼り付けて保存する
@@ -235,6 +320,17 @@ Sheetling/
 |-----------|------|
 | `pdfplumber` | PDF内のテキスト、表、罫線の詳細な座標情報を抽出 |
 | `openpyxl` | Excelファイルの生成、セルのスタイリング、印刷範囲設定 |
+
+---
+
+## よく発生するエラー（Phase 3）
+
+Phase 3 でエラーが発生した場合、`prompts/<pdf_name>_prompt_error_fix.txt` が出力されます。その内容をLLMに投入してコードを再生成し、`_gen.py` に上書き保存してから再度 `generate` を実行してください。
+
+| エラー | 原因 | 対処 |
+|--------|------|------|
+| `NameError: name 'thin' is not defined` | LLM生成コードで `Side(style='thin')` 等の `openpyxl.styles.Side` オブジェクトを定義せずに変数参照している | `_prompt_error_fix.txt` をLLMに投入して再生成 |
+| `NameError: name 'true' is not defined. Did you mean: 'True'?` | LLM生成コードにJSONリテラル由来の `true`/`false`（小文字）が混入している。Pythonの予約語は `True`/`False`（先頭大文字） | `_prompt_error_fix.txt` をLLMに投入して再生成 |
 
 ---
 
