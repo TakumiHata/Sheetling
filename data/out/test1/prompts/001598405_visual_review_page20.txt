@@ -1,0 +1,396 @@
+添付のPDFページ画像と、以下のスクリプトが自動生成したレイアウトJSONを照合し、修正が必要な箇所を教えてください。
+
+## グリッドパラメータ
+- 方眼サイズ: 4.0mm × 4.0mm（1マスの大きさ）
+- 最大列数: 62、最大行数: 76
+- 座標は左上が (row=1, col=1) で、右・下方向に増加します
+
+## 自動生成されたレイアウト（ページ 20）
+
+```json
+[
+  {
+    "page_number": 20,
+    "elements": [
+      {
+        "type": "text",
+        "content": "様式番号",
+        "row": 1,
+        "col": 48,
+        "end_col": 52,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "13",
+        "row": 1,
+        "col": 55,
+        "end_col": 57,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "経",
+        "row": 3,
+        "col": 26,
+        "end_col": 27,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "歴",
+        "row": 3,
+        "col": 32,
+        "end_col": 33,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "書",
+        "row": 3,
+        "col": 37,
+        "end_col": 38,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "現",
+        "row": 7,
+        "col": 8,
+        "end_col": 9,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "住",
+        "row": 7,
+        "col": 12,
+        "end_col": 13,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "所",
+        "row": 7,
+        "col": 15,
+        "end_col": 16,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "氏",
+        "row": 10,
+        "col": 8,
+        "end_col": 9,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "名",
+        "row": 10,
+        "col": 15,
+        "end_col": 16,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "生",
+        "row": 13,
+        "col": 8,
+        "end_col": 9,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "年",
+        "row": 13,
+        "col": 11,
+        "end_col": 12,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "月",
+        "row": 13,
+        "col": 12,
+        "end_col": 13,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "日",
+        "row": 13,
+        "col": 15,
+        "end_col": 16,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "学",
+        "row": 15,
+        "col": 8,
+        "end_col": 9,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "歴",
+        "row": 15,
+        "col": 15,
+        "end_col": 16,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "資",
+        "row": 18,
+        "col": 8,
+        "end_col": 9,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "格",
+        "row": 18,
+        "col": 15,
+        "end_col": 16,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "取得年月日・名称・取得№",
+        "row": 18,
+        "col": 19,
+        "end_col": 31,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "職",
+        "row": 24,
+        "col": 8,
+        "end_col": 9,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "歴",
+        "row": 24,
+        "col": 15,
+        "end_col": 16,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "年月日・○○工事・発注者・役職",
+        "row": 24,
+        "col": 19,
+        "end_col": 34,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "１．昭和○○年○○月",
+        "row": 27,
+        "col": 9,
+        "end_col": 19,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○○株式会社入社",
+        "row": 27,
+        "col": 26,
+        "end_col": 34,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "１．昭和○○年○○月",
+        "row": 30,
+        "col": 9,
+        "end_col": 19,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○○工事",
+        "row": 30,
+        "col": 26,
+        "end_col": 30,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○○港湾建設局〇〇事務所",
+        "row": 30,
+        "col": 32,
+        "end_col": 44,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "担当技術者",
+        "row": 30,
+        "col": 50,
+        "end_col": 55,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "１．昭和○○年○○月",
+        "row": 32,
+        "col": 9,
+        "end_col": 19,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "××工事",
+        "row": 32,
+        "col": 26,
+        "end_col": 30,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "××港湾建設局××事務所",
+        "row": 32,
+        "col": 32,
+        "end_col": 44,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "主任技術者",
+        "row": 32,
+        "col": 50,
+        "end_col": 55,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "１．平成○○年○○月",
+        "row": 35,
+        "col": 9,
+        "end_col": 19,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "△△工事",
+        "row": 35,
+        "col": 26,
+        "end_col": 30,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "△△整備局△△事務所",
+        "row": 35,
+        "col": 32,
+        "end_col": 42,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "現場代理人",
+        "row": 35,
+        "col": 47,
+        "end_col": 52,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "上記のとおり相違ありません。",
+        "row": 41,
+        "col": 11,
+        "end_col": 25,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "令和○○年○○月○○日",
+        "row": 46,
+        "col": 16,
+        "end_col": 27,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "氏",
+        "row": 52,
+        "col": 41,
+        "end_col": 42,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "名",
+        "row": 52,
+        "col": 48,
+        "end_col": 49,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "（注）１．資格が証明できるものを添付する。",
+        "row": 58,
+        "col": 8,
+        "end_col": 29,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "２．監理技術者については、監理技術者資格証（写）及び監理技術者講",
+        "row": 60,
+        "col": 12,
+        "end_col": 44,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "習証明証（写）、又は裏面に監理技術者講習修了履歴が記載された監",
+        "row": 62,
+        "col": 14,
+        "end_col": 45,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "理技術者資格者証（写）も添付すること。",
+        "row": 64,
+        "col": 14,
+        "end_col": 33,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "5-19",
+        "row": 70,
+        "col": 31,
+        "end_col": 35,
+        "font_size": 13.0
+      }
+    ]
+  }
+]
+```
+
+## 検証依頼
+
+PDFの画像と上記JSONを比較し、修正が必要な箇所を以下のJSON形式のみで出力してください。
+修正不要な場合は `{"corrections": []}` のみ出力してください。
+
+```json
+{
+  "corrections": [
+    {"action": "add_text",    "page": 20, "row": <行>, "col": <列>, "content": "<テキスト>"},
+    {"action": "fix_text",    "page": 20, "row": <現在行>, "col": <現在列>, "new_row": <正行>, "new_col": <正列>},
+    {"action": "add_border",  "page": 20, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>, "borders": {"top": true, "bottom": true, "left": true, "right": true}},
+    {"action": "remove_border","page": 20, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>}
+  ]
+}
+```
+
+【重要】出力はJSONのみ。説明文・コードブロック記号は不要です。

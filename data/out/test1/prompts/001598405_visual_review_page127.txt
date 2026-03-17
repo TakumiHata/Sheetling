@@ -1,0 +1,340 @@
+添付のPDFページ画像と、以下のスクリプトが自動生成したレイアウトJSONを照合し、修正が必要な箇所を教えてください。
+
+## グリッドパラメータ
+- 方眼サイズ: 4.0mm × 4.0mm（1マスの大きさ）
+- 最大列数: 62、最大行数: 76
+- 座標は左上が (row=1, col=1) で、右・下方向に増加します
+
+## 自動生成されたレイアウト（ページ 127）
+
+```json
+[
+  {
+    "page_number": 127,
+    "elements": [
+      {
+        "type": "text",
+        "content": "様式番号",
+        "row": 1,
+        "col": 49,
+        "end_col": 53,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "36",
+        "row": 1,
+        "col": 55,
+        "end_col": 57,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "令和○年○月○日",
+        "row": 3,
+        "col": 44,
+        "end_col": 52,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "受",
+        "row": 4,
+        "col": 9,
+        "end_col": 10,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "注",
+        "row": 4,
+        "col": 12,
+        "end_col": 13,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "者",
+        "row": 4,
+        "col": 15,
+        "end_col": 16,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "殿",
+        "row": 4,
+        "col": 18,
+        "end_col": 19,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○○地方整備局長",
+        "row": 7,
+        "col": 43,
+        "end_col": 51,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○○地方整備局副局長",
+        "row": 9,
+        "col": 43,
+        "end_col": 53,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○○地方整備局次長",
+        "row": 11,
+        "col": 43,
+        "end_col": 52,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 12,
+        "col": 47,
+        "end_col": 48,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 12,
+        "col": 50,
+        "end_col": 51,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 12,
+        "col": 53,
+        "end_col": 54,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 12,
+        "col": 55,
+        "end_col": 56,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "情報管理体制の変更同意について",
+        "row": 15,
+        "col": 22,
+        "end_col": 37,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "令和○年○月○日付で貴社より提出のありました「○○○○（契約件名）」",
+        "row": 18,
+        "col": 9,
+        "end_col": 43,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "に係る「情報取扱者名簿及び情報管理体制図の変更について（様式番号46）」",
+        "row": 20,
+        "col": 8,
+        "end_col": 44,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "について、情報保全上の懸念がないことを確認しましたので、下記の条件を附",
+        "row": 22,
+        "col": 8,
+        "end_col": 43,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "して同意いたします。",
+        "row": 23,
+        "col": 8,
+        "end_col": 18,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "記",
+        "row": 26,
+        "col": 32,
+        "end_col": 33,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "１．「○○○○（契約件名）」に係る「情報取扱者名簿及び情報管理体制図の",
+        "row": 30,
+        "col": 8,
+        "end_col": 43,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "変更について（様式番号46）」に再度変更が生じた場合は、改めて当局の同",
+        "row": 31,
+        "col": 11,
+        "end_col": 46,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "意を得る必要があるため、変更した「情報取扱者名簿及び情報管理体制図の",
+        "row": 33,
+        "col": 11,
+        "end_col": 45,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "変更について（様式番号46）」を再提出すること。なお、変更内容に疑義が",
+        "row": 34,
+        "col": 11,
+        "end_col": 46,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "ある場合は、貴社に対し事実確認等を行う場合がある。",
+        "row": 36,
+        "col": 11,
+        "end_col": 36,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "２．本業務で知り得た保護すべき情報について、当局が同意した場合を除き、",
+        "row": 39,
+        "col": 8,
+        "end_col": 43,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "情報取扱者以外の者に開示又は漏洩してはならない。（たとえ貴社が本契約",
+        "row": 41,
+        "col": 11,
+        "end_col": 45,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "に関して、親会社、地域統括会社、ブランド・ライセンサー、フランチャイ",
+        "row": 42,
+        "col": 11,
+        "end_col": 45,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "ザー、コンサルタント等から「監督、指導、業務支援、助言、監査等」を受",
+        "row": 44,
+        "col": 11,
+        "end_col": 45,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "ける場合であっても、それらの者に本業務で知り得た保護すべき情報につい",
+        "row": 45,
+        "col": 11,
+        "end_col": 45,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "て、当局が同意した場合を除き、開示又は漏洩してはならない。）",
+        "row": 47,
+        "col": 11,
+        "end_col": 41,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "３．本業務で知り得た保護すべき情報を記録した資料に関する業務履行完了後",
+        "row": 50,
+        "col": 8,
+        "end_col": 43,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "の取扱いについては、発注者の指示に従うこと。",
+        "row": 52,
+        "col": 11,
+        "end_col": 33,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "４．本業務で知り得た保護すべき情報について、報道等での指摘も含め、漏洩",
+        "row": 55,
+        "col": 8,
+        "end_col": 43,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "等の事故や恐れが判明した場合については、業務の履行中・履行後を問わず、",
+        "row": 56,
+        "col": 11,
+        "end_col": 46,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "事実関係等について直ちに当局に報告すること。なお、当局が行う報告徴収",
+        "row": 58,
+        "col": 11,
+        "end_col": 45,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "や調査に必ず応じること。",
+        "row": 60,
+        "col": 11,
+        "end_col": 23,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "5-126",
+        "row": 68,
+        "col": 31,
+        "end_col": 36,
+        "font_size": 13.0
+      }
+    ]
+  }
+]
+```
+
+## 検証依頼
+
+PDFの画像と上記JSONを比較し、修正が必要な箇所を以下のJSON形式のみで出力してください。
+修正不要な場合は `{"corrections": []}` のみ出力してください。
+
+```json
+{
+  "corrections": [
+    {"action": "add_text",    "page": 127, "row": <行>, "col": <列>, "content": "<テキスト>"},
+    {"action": "fix_text",    "page": 127, "row": <現在行>, "col": <現在列>, "new_row": <正行>, "new_col": <正列>},
+    {"action": "add_border",  "page": 127, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>, "borders": {"top": true, "bottom": true, "left": true, "right": true}},
+    {"action": "remove_border","page": 127, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>}
+  ]
+}
+```
+
+【重要】出力はJSONのみ。説明文・コードブロック記号は不要です。

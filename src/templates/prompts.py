@@ -4,7 +4,12 @@ Sheetling 用の LLM プロンプト定義集。
   Step 1:   TABLE_ANCHOR_PROMPT   — PDF解析データ → Excelレイアウト仕様JSON（座標マッピング・テキスト結合）
   Step 1.5: LAYOUT_REVIEW_PROMPT  — レイアウト仕様JSONの検証・補正（欠落補完・重複除去・整合性チェック）
   Step 2:   CODE_GEN_PROMPT       — 補正済みレイアウト仕様JSON → Python(openpyxl)コード
+
+自動化テンプレート:
+  GEN_CODE_TEMPLATE    — _gen.py をスクリプトで直接生成するための string.Template
+  VISUAL_REVIEW_PROMPT — ビジョンLLMによる視覚的検証用プロンプト
 """
+from string import Template
 
 GRID_SIZES = {
     "small": {
@@ -340,6 +345,152 @@ elif item["type"] == "border_rect":
 出力はPythonコードのみをマークダウンのコードブロック（```python ... ```）で出力してください。前後の挨拶・説明文・思考プロセスは一切不要です。"""
 
 
+# ---------------------------------------------------------------------------
+# 自動生成テンプレート（LLM不要）
+# ---------------------------------------------------------------------------
+
+# _gen.py をスクリプトで直接生成するための string.Template。
+# $変数名 が grid_params と pdf_name で置換される。
+# Python コード内の { } はそのまま使えるため .format() より安全。
+GEN_CODE_TEMPLATE = Template("""\
+import json
+from pathlib import Path
+from openpyxl import Workbook
+from openpyxl.styles import Border, Side, Alignment, Font
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.pagebreak import Break
+
+MAX_ROWS = $max_rows
+COL_OFFSET = 1
+ROW_PADDING = 2
+EXCEL_COL_WIDTH = $excel_col_width
+EXCEL_ROW_HEIGHT = $excel_row_height
+DEFAULT_FONT_SIZE = $default_font_size
+
+_dir = Path(__file__).parent
+data = json.loads((_dir / "prompts" / "${pdf_name}_step1_5_output.json").read_text(encoding="utf-8"))
+
+wb = Workbook()
+ws = wb.active
+thin = Side(style='thin')
+total_pages = len(data)
+
+for c in range(1, 200):
+    ws.column_dimensions[get_column_letter(c)].width = EXCEL_COL_WIDTH
+for r in range(1, MAX_ROWS * total_pages + ROW_PADDING + 1):
+    ws.row_dimensions[r].height = EXCEL_ROW_HEIGHT
+
+
+def apply_border(ws, s_row, e_row, s_col, e_col, borders):
+    has_top    = borders.get("top",    True)
+    has_bottom = borders.get("bottom", True)
+    has_left   = borders.get("left",   True)
+    has_right  = borders.get("right",  True)
+    for r in range(s_row, e_row + 1):
+        for c in range(s_col, e_col + 1):
+            target = ws.cell(row=r, column=c)
+            try:
+                target.alignment = Alignment(horizontal='left', vertical='center', wrap_text=False)
+            except AttributeError:
+                pass
+            top    = thin if (r == s_row and has_top)    else None
+            bottom = thin if (r == e_row and has_bottom) else None
+            left   = thin if (c == s_col and has_left)   else None
+            right  = thin if (c == e_col and has_right)  else None
+            try:
+                target.border = Border(top=top, bottom=bottom, left=left, right=right)
+            except AttributeError:
+                pass
+
+
+max_used_row = ROW_PADDING
+max_used_col = COL_OFFSET
+
+for page in data:
+    page_number = page["page_number"]
+    row_offset = (page_number - 1) * MAX_ROWS + ROW_PADDING
+
+    if page_number > 1:
+        ws.row_breaks.append(Break(id=(page_number - 1) * MAX_ROWS + ROW_PADDING))
+
+    for item in page["elements"]:
+        if item["type"] == "text":
+            r = item["row"] + row_offset
+            c = item["col"] + COL_OFFSET
+            try:
+                cell = ws.cell(row=r, column=c)
+                cell.value = item["content"]
+                if item.get("is_vertical"):
+                    cell.alignment = Alignment(text_rotation=255, vertical='top', wrap_text=False)
+                else:
+                    cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=False)
+                font_kwargs = {"size": item.get("font_size") or DEFAULT_FONT_SIZE}
+                if item.get("font_color"):
+                    font_kwargs["color"] = item["font_color"]
+                cell.font = Font(**font_kwargs)
+                max_used_row = max(max_used_row, r)
+                max_used_col = max(max_used_col, c)
+            except AttributeError:
+                pass
+
+        elif item["type"] == "border_rect":
+            s_row = item["row"] + row_offset
+            e_row = item["end_row"] + row_offset
+            s_col = item["col"] + COL_OFFSET
+            e_col = item["end_col"] + COL_OFFSET
+            apply_border(ws, s_row, e_row, s_col, e_col,
+                         item.get("borders", {"top": True, "bottom": True, "left": True, "right": True}))
+            max_used_row = max(max_used_row, e_row)
+            max_used_col = max(max_used_col, e_col)
+
+ws.page_setup.paperSize = $paper_size
+ws.page_setup.orientation = '$orientation'
+ws.page_margins.left = $margin_left
+ws.page_margins.right = $margin_right
+ws.page_margins.top = $margin_top
+ws.page_margins.bottom = $margin_bottom
+ws.print_area = f"A1:{get_column_letter(max_used_col)}{max_used_row}"
+
+wb.save("output.xlsx")
+""")
+
+
+# ビジョンLLM（画像入力対応AIチャット）向けの視覚的検証プロンプト。
+# ページごとに生成し、PDFページ画像と一緒にAIチャットに貼り付けて使用する。
+VISUAL_REVIEW_PROMPT = """\
+添付のPDFページ画像と、以下のスクリプトが自動生成したレイアウトJSONを照合し、修正が必要な箇所を教えてください。
+
+## グリッドパラメータ
+- 方眼サイズ: {col_width_mm}mm × {row_height_mm}mm（1マスの大きさ）
+- 最大列数: {max_cols}、最大行数: {max_rows}
+- 座標は左上が (row=1, col=1) で、右・下方向に増加します
+
+## 自動生成されたレイアウト（ページ {page_number}）
+
+```json
+{page_layout_json}
+```
+
+## 検証依頼
+
+PDFの画像と上記JSONを比較し、修正が必要な箇所を以下のJSON形式のみで出力してください。
+修正不要な場合は `{{"corrections": []}}` のみ出力してください。
+
+```json
+{{
+  "corrections": [
+    {{"action": "add_text",    "page": {page_number}, "row": <行>, "col": <列>, "content": "<テキスト>"}},
+    {{"action": "fix_text",    "page": {page_number}, "row": <現在行>, "col": <現在列>, "new_row": <正行>, "new_col": <正列>}},
+    {{"action": "add_border",  "page": {page_number}, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>, "borders": {{"top": true, "bottom": true, "left": true, "right": true}}}},
+    {{"action": "remove_border","page": {page_number}, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>}}
+  ]
+}}
+```
+
+【重要】出力はJSONのみ。説明文・コードブロック記号は不要です。"""
+
+
+# ---------------------------------------------------------------------------
 CODE_ERROR_FIXING_PROMPT = """あなたはPythonプログラミングのエキスパートです。
 以下のExcel生成用Pythonスクリプトを実行したところ、エラーが発生しました（または期待する結果が得られませんでした）。
 エラーメッセージと現在のコードを分析し、問題を修正した新しいPythonスクリプトを生成してください。

@@ -1,0 +1,1008 @@
+添付のPDFページ画像と、以下のスクリプトが自動生成したレイアウトJSONを照合し、修正が必要な箇所を教えてください。
+
+## グリッドパラメータ
+- 方眼サイズ: 4.0mm × 4.0mm（1マスの大きさ）
+- 最大列数: 62、最大行数: 76
+- 座標は左上が (row=1, col=1) で、右・下方向に増加します
+
+## 自動生成されたレイアウト（ページ 90）
+
+```json
+[
+  {
+    "page_number": 90,
+    "elements": [
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 9,
+        "end_col": 20,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 20,
+        "end_col": 28,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 28,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 41,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 38,
+        "col": 9,
+        "end_col": 20,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 38,
+        "col": 20,
+        "end_col": 28,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 38,
+        "col": 28,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 38,
+        "col": 41,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 38,
+        "end_row": 40,
+        "col": 9,
+        "end_col": 20,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 38,
+        "end_row": 40,
+        "col": 20,
+        "end_col": 28,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 38,
+        "end_row": 40,
+        "col": 28,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 38,
+        "end_row": 40,
+        "col": 41,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 40,
+        "end_row": 42,
+        "col": 9,
+        "end_col": 20,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 40,
+        "end_row": 42,
+        "col": 20,
+        "end_col": 28,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 40,
+        "end_row": 42,
+        "col": 28,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 40,
+        "end_row": 42,
+        "col": 41,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 34,
+        "col": 7,
+        "end_col": 10,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 32,
+        "end_row": 36,
+        "col": 9,
+        "end_col": 9,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 34,
+        "col": 54,
+        "end_col": 58,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 32,
+        "end_row": 36,
+        "col": 56,
+        "end_col": 56,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 34,
+        "col": 9,
+        "end_col": 55,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 43,
+        "col": 7,
+        "end_col": 10,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 40,
+        "end_row": 44,
+        "col": 9,
+        "end_col": 9,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 40,
+        "end_row": 44,
+        "col": 56,
+        "end_col": 56,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 43,
+        "col": 54,
+        "end_col": 58,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 43,
+        "col": 9,
+        "end_col": 55,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 41,
+        "col": 9,
+        "end_col": 9,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 41,
+        "col": 56,
+        "end_col": 56,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "text",
+        "content": "様式番号",
+        "row": 1,
+        "col": 49,
+        "end_col": 53,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "２",
+        "row": 1,
+        "col": 55,
+        "end_col": 56,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "監督職員通知書",
+        "row": 3,
+        "col": 28,
+        "end_col": 35,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "令和",
+        "row": 6,
+        "col": 44,
+        "end_col": 46,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "年",
+        "row": 6,
+        "col": 49,
+        "end_col": 50,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "月",
+        "row": 6,
+        "col": 52,
+        "end_col": 53,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "日",
+        "row": 6,
+        "col": 55,
+        "end_col": 56,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "受",
+        "row": 9,
+        "col": 8,
+        "end_col": 9,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "注",
+        "row": 9,
+        "col": 11,
+        "end_col": 12,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "者",
+        "row": 9,
+        "col": 15,
+        "end_col": 16,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "殿",
+        "row": 9,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "支出負担行為担当官",
+        "row": 12,
+        "col": 42,
+        "end_col": 51,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 14,
+        "col": 43,
+        "end_col": 44,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 14,
+        "col": 45,
+        "end_col": 46,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "地",
+        "row": 14,
+        "col": 46,
+        "end_col": 47,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "方",
+        "row": 14,
+        "col": 48,
+        "end_col": 49,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "整",
+        "row": 14,
+        "col": 50,
+        "end_col": 51,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "備",
+        "row": 14,
+        "col": 52,
+        "end_col": 53,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "局",
+        "row": 14,
+        "col": 53,
+        "end_col": 54,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "長",
+        "row": 14,
+        "col": 55,
+        "end_col": 56,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○○地方整備局副局長",
+        "row": 16,
+        "col": 43,
+        "end_col": 53,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○○地方整備局次長",
+        "row": 18,
+        "col": 43,
+        "end_col": 52,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 20,
+        "col": 46,
+        "end_col": 47,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 20,
+        "col": 48,
+        "end_col": 49,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 20,
+        "col": 51,
+        "end_col": 52,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 20,
+        "col": 53,
+        "end_col": 54,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "令和",
+        "row": 25,
+        "col": 10,
+        "end_col": 12,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "年",
+        "row": 25,
+        "col": 14,
+        "end_col": 15,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "月",
+        "row": 25,
+        "col": 18,
+        "end_col": 19,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "日付け契約第",
+        "row": 25,
+        "col": 21,
+        "end_col": 27,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "号の○",
+        "row": 25,
+        "col": 31,
+        "end_col": 34,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 25,
+        "col": 36,
+        "end_col": 37,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 25,
+        "col": 38,
+        "end_col": 39,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "○工事について、契約書第",
+        "row": 25,
+        "col": 40,
+        "end_col": 52,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "９条第１項に規定する監督職員、同条第２項の規定に基づく権限委任の内容及び",
+        "row": 27,
+        "col": 8,
+        "end_col": 44,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "同条第３項の規定に基づく分担する権限内容は、次のとおり定められたので通知",
+        "row": 29,
+        "col": 8,
+        "end_col": 44,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "します。",
+        "row": 31,
+        "col": 8,
+        "end_col": 12,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "監",
+        "row": 34,
+        "col": 10,
+        "end_col": 11,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "督",
+        "row": 34,
+        "col": 12,
+        "end_col": 13,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "職",
+        "row": 34,
+        "col": 14,
+        "end_col": 15,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "員",
+        "row": 34,
+        "col": 17,
+        "end_col": 18,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "官",
+        "row": 34,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "職",
+        "row": 34,
+        "col": 25,
+        "end_col": 26,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "氏",
+        "row": 34,
+        "col": 30,
+        "end_col": 31,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "名",
+        "row": 34,
+        "col": 38,
+        "end_col": 39,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "契約書第",
+        "row": 34,
+        "col": 42,
+        "end_col": 46,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "9条第",
+        "row": 34,
+        "col": 45,
+        "end_col": 48,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "3",
+        "row": 34,
+        "col": 46,
+        "end_col": 47,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "項に基づく権限分担の内容",
+        "row": 34,
+        "col": 47,
+        "end_col": 59,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "総",
+        "row": 36,
+        "col": 10,
+        "end_col": 11,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "括",
+        "row": 36,
+        "col": 11,
+        "end_col": 12,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "監",
+        "row": 36,
+        "col": 14,
+        "end_col": 15,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "督",
+        "row": 36,
+        "col": 16,
+        "end_col": 17,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "員",
+        "row": 36,
+        "col": 18,
+        "end_col": 19,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "港湾工事共通仕様書のとおり",
+        "row": 36,
+        "col": 44,
+        "end_col": 57,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "主任現場監督員",
+        "row": 38,
+        "col": 10,
+        "end_col": 17,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "〃",
+        "row": 38,
+        "col": 48,
+        "end_col": 49,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "現",
+        "row": 40,
+        "col": 10,
+        "end_col": 11,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "場",
+        "row": 40,
+        "col": 11,
+        "end_col": 12,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "監",
+        "row": 40,
+        "col": 14,
+        "end_col": 15,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "督",
+        "row": 40,
+        "col": 16,
+        "end_col": 17,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "員",
+        "row": 40,
+        "col": 18,
+        "end_col": 19,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "〃",
+        "row": 40,
+        "col": 48,
+        "end_col": 49,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "契約書第９条第２項に基づく総括監督員への権限委任の内容",
+        "row": 45,
+        "col": 8,
+        "end_col": 35,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "契約書第７条",
+        "row": 47,
+        "col": 15,
+        "end_col": 21,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "契約書第１２条第１項",
+        "row": 49,
+        "col": 15,
+        "end_col": 25,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "契約書第１５条第６項（軽微な設計変更に係る権限のみ）",
+        "row": 51,
+        "col": 15,
+        "end_col": 41,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "契約書第１８条第３項（軽微な設計変更に係る権限のみ）",
+        "row": 53,
+        "col": 15,
+        "end_col": 41,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "契約書第１８条第４項（軽微な設計変更に係る権限のみ）",
+        "row": 55,
+        "col": 15,
+        "end_col": 41,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "契約書第１９条",
+        "row": 57,
+        "col": 15,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "（軽微な設計変更に係る権限のみ）",
+        "row": 57,
+        "col": 28,
+        "end_col": 44,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "契約書第３４条第１項",
+        "row": 59,
+        "col": 15,
+        "end_col": 25,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "（注）１．変更になった場合には、「新」・「旧」を付して表示すること。",
+        "row": 63,
+        "col": 8,
+        "end_col": 42,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "２．契約上不要となる条項は抹消する。",
+        "row": 65,
+        "col": 12,
+        "end_col": 30,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "３．契約書第３４条第１項は必要に応じて削除できる。",
+        "row": 67,
+        "col": 12,
+        "end_col": 37,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "5-89",
+        "row": 69,
+        "col": 31,
+        "end_col": 35,
+        "font_size": 13.0
+      }
+    ]
+  }
+]
+```
+
+## 検証依頼
+
+PDFの画像と上記JSONを比較し、修正が必要な箇所を以下のJSON形式のみで出力してください。
+修正不要な場合は `{"corrections": []}` のみ出力してください。
+
+```json
+{
+  "corrections": [
+    {"action": "add_text",    "page": 90, "row": <行>, "col": <列>, "content": "<テキスト>"},
+    {"action": "fix_text",    "page": 90, "row": <現在行>, "col": <現在列>, "new_row": <正行>, "new_col": <正列>},
+    {"action": "add_border",  "page": 90, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>, "borders": {"top": true, "bottom": true, "left": true, "right": true}},
+    {"action": "remove_border","page": 90, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>}
+  ]
+}
+```
+
+【重要】出力はJSONのみ。説明文・コードブロック記号は不要です。

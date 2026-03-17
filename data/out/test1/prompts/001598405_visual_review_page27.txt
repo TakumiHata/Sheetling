@@ -1,0 +1,2048 @@
+添付のPDFページ画像と、以下のスクリプトが自動生成したレイアウトJSONを照合し、修正が必要な箇所を教えてください。
+
+## グリッドパラメータ
+- 方眼サイズ: 4.0mm × 4.0mm（1マスの大きさ）
+- 最大列数: 62、最大行数: 76
+- 座標は左上が (row=1, col=1) で、右・下方向に増加します
+
+## 自動生成されたレイアウト（ページ 27）
+
+```json
+[
+  {
+    "page_number": 27,
+    "elements": [
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 16,
+        "end_col": 19,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 19,
+        "end_col": 21,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 21,
+        "end_col": 23,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 23,
+        "end_col": 26,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 26,
+        "end_col": 29,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 29,
+        "end_col": 32,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 32,
+        "end_col": 35,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 35,
+        "end_col": 38,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 38,
+        "end_col": 41,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 41,
+        "end_col": 43,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 43,
+        "end_col": 46,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 46,
+        "end_col": 49,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 49,
+        "end_col": 52,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 9,
+        "col": 52,
+        "end_col": 55,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 16,
+        "end_col": 19,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 19,
+        "end_col": 21,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 21,
+        "end_col": 23,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 23,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 26,
+        "end_col": 29,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 29,
+        "end_col": 32,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 32,
+        "end_col": 35,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 35,
+        "end_col": 38,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 38,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 41,
+        "end_col": 43,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 43,
+        "end_col": 46,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 46,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 49,
+        "end_col": 52,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 9,
+        "end_row": 16,
+        "col": 52,
+        "end_col": 55,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 16,
+        "end_col": 19,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 19,
+        "end_col": 21,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 21,
+        "end_col": 23,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 23,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 26,
+        "end_col": 29,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 29,
+        "end_col": 32,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 32,
+        "end_col": 35,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 35,
+        "end_col": 38,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 38,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 41,
+        "end_col": 43,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 43,
+        "end_col": 46,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 46,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 49,
+        "end_col": 52,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 16,
+        "end_row": 23,
+        "col": 52,
+        "end_col": 55,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 16,
+        "end_col": 19,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 19,
+        "end_col": 21,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 21,
+        "end_col": 23,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 23,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 26,
+        "end_col": 29,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 29,
+        "end_col": 32,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 32,
+        "end_col": 35,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 35,
+        "end_col": 38,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 38,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 41,
+        "end_col": 43,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 43,
+        "end_col": 46,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 46,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 49,
+        "end_col": 52,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 23,
+        "end_row": 30,
+        "col": 52,
+        "end_col": 55,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 16,
+        "end_col": 19,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 19,
+        "end_col": 21,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 21,
+        "end_col": 23,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 23,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 26,
+        "end_col": 29,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 29,
+        "end_col": 32,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 32,
+        "end_col": 35,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 35,
+        "end_col": 38,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 38,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 41,
+        "end_col": 43,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 43,
+        "end_col": 46,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 46,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 49,
+        "end_col": 52,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 30,
+        "end_row": 43,
+        "col": 52,
+        "end_col": 55,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 16,
+        "end_col": 19,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 19,
+        "end_col": 21,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 21,
+        "end_col": 23,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 23,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 26,
+        "end_col": 29,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 29,
+        "end_col": 32,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 32,
+        "end_col": 35,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 35,
+        "end_col": 38,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 38,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 41,
+        "end_col": 43,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 43,
+        "end_col": 46,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 46,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 49,
+        "end_col": 52,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 55,
+        "col": 52,
+        "end_col": 55,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 16,
+        "end_col": 19,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 19,
+        "end_col": 21,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 21,
+        "end_col": 23,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 23,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 26,
+        "end_col": 29,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 29,
+        "end_col": 32,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 32,
+        "end_col": 35,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 35,
+        "end_col": 38,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 38,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 41,
+        "end_col": 43,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 43,
+        "end_col": 46,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 46,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 49,
+        "end_col": 52,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 55,
+        "end_row": 62,
+        "col": 52,
+        "end_col": 55,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 16,
+        "end_col": 19,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 19,
+        "end_col": 21,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 21,
+        "end_col": 23,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 23,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 26,
+        "end_col": 29,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 29,
+        "end_col": 32,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 32,
+        "end_col": 35,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 35,
+        "end_col": 38,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 38,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 41,
+        "end_col": 43,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 43,
+        "end_col": 46,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 46,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 49,
+        "end_col": 52,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 62,
+        "end_row": 68,
+        "col": 52,
+        "end_col": 55,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 66,
+        "end_row": 71,
+        "col": 15,
+        "end_col": 15,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 69,
+        "end_row": 69,
+        "col": 14,
+        "end_col": 17,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 1,
+        "end_row": 4,
+        "col": 15,
+        "end_col": 15,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 2,
+        "end_row": 2,
+        "col": 14,
+        "end_col": 17,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 68,
+        "col": 15,
+        "end_col": 15,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 66,
+        "end_row": 71,
+        "col": 55,
+        "end_col": 55,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 69,
+        "end_row": 69,
+        "col": 53,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 2,
+        "end_row": 2,
+        "col": 53,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 1,
+        "end_row": 4,
+        "col": 55,
+        "end_col": 55,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 3,
+        "end_row": 68,
+        "col": 55,
+        "end_col": 55,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 69,
+        "end_row": 69,
+        "col": 16,
+        "end_col": 54,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 2,
+        "end_row": 2,
+        "col": 16,
+        "end_col": 54,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "text",
+        "content": "考考備者施実施実査検果結の査検容内望希査検日出申",
+        "row": 4,
+        "col": 21,
+        "end_col": 45,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "1212号番式様",
+        "row": 5,
+        "col": 8,
+        "end_col": 16,
+        "font_size": 6.0
+      },
+      {
+        "type": "text",
+        "content": "号番式様",
+        "row": 7,
+        "col": 8,
+        "end_col": 12,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "備",
+        "row": 7,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "員員職督監人理代場現日月年日月年",
+        "row": 10,
+        "col": 21,
+        "end_col": 37,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "者",
+        "row": 12,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "職",
+        "row": 12,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "督",
+        "row": 13,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "監",
+        "row": 15,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "施",
+        "row": 16,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "人理代場現",
+        "row": 17,
+        "col": 21,
+        "end_col": 26,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "実",
+        "row": 19,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "施",
+        "row": 24,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "日",
+        "row": 24,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "実",
+        "row": 25,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "月",
+        "row": 26,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "査",
+        "row": 27,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "検",
+        "row": 28,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "年",
+        "row": 28,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "書書査検況状工施",
+        "row": 30,
+        "col": 11,
+        "end_col": 19,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "査",
+        "row": 32,
+        "col": 11,
+        "end_col": 12,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "果",
+        "row": 32,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "検",
+        "row": 33,
+        "col": 11,
+        "end_col": 12,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "結",
+        "row": 34,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "62-5 62-5",
+        "row": 34,
+        "col": 59,
+        "end_col": 62,
+        "font_size": 6.5
+      },
+      {
+        "type": "text",
+        "content": "況",
+        "row": 35,
+        "col": 10,
+        "end_col": 11,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "会会立",
+        "row": 35,
+        "col": 12,
+        "end_col": 15,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "の",
+        "row": 36,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "状",
+        "row": 37,
+        "col": 10,
+        "end_col": 11,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "工",
+        "row": 38,
+        "col": 10,
+        "end_col": 11,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "査",
+        "row": 38,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "検",
+        "row": 39,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "施",
+        "row": 40,
+        "col": 10,
+        "end_col": 11,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "立",
+        "row": 40,
+        "col": 12,
+        "end_col": 13,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "容",
+        "row": 45,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "内",
+        "row": 52,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "。るす消抹は字文。るす消抹は字文な要不）注（",
+        "row": 53,
+        "col": 55,
+        "end_col": 62,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "望",
+        "row": 56,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "日",
+        "row": 56,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "名名事工",
+        "row": 57,
+        "col": 17,
+        "end_col": 21,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "希",
+        "row": 57,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "月",
+        "row": 58,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "査",
+        "row": 59,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "事",
+        "row": 61,
+        "col": 17,
+        "end_col": 18,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "検",
+        "row": 61,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "年",
+        "row": 61,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "な",
+        "row": 62,
+        "col": 55,
+        "end_col": 56,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "要不）注（",
+        "row": 63,
+        "col": 55,
+        "end_col": 60,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "日出申",
+        "row": 64,
+        "col": 21,
+        "end_col": 24,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "工",
+        "row": 65,
+        "col": 17,
+        "end_col": 18,
+        "font_size": 12.0
+      }
+    ]
+  }
+]
+```
+
+## 検証依頼
+
+PDFの画像と上記JSONを比較し、修正が必要な箇所を以下のJSON形式のみで出力してください。
+修正不要な場合は `{"corrections": []}` のみ出力してください。
+
+```json
+{
+  "corrections": [
+    {"action": "add_text",    "page": 27, "row": <行>, "col": <列>, "content": "<テキスト>"},
+    {"action": "fix_text",    "page": 27, "row": <現在行>, "col": <現在列>, "new_row": <正行>, "new_col": <正列>},
+    {"action": "add_border",  "page": 27, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>, "borders": {"top": true, "bottom": true, "left": true, "right": true}},
+    {"action": "remove_border","page": 27, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>}
+  ]
+}
+```
+
+【重要】出力はJSONのみ。説明文・コードブロック記号は不要です。

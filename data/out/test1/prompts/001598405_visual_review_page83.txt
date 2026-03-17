@@ -1,0 +1,1153 @@
+添付のPDFページ画像と、以下のスクリプトが自動生成したレイアウトJSONを照合し、修正が必要な箇所を教えてください。
+
+## グリッドパラメータ
+- 方眼サイズ: 4.0mm × 4.0mm（1マスの大きさ）
+- 最大列数: 62、最大行数: 76
+- 座標は左上が (row=1, col=1) で、右・下方向に増加します
+
+## 自動生成されたレイアウト（ページ 83）
+
+```json
+[
+  {
+    "page_number": 83,
+    "elements": [
+      {
+        "type": "border_rect",
+        "row": 12,
+        "end_row": 15,
+        "col": 9,
+        "end_col": 17,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 12,
+        "end_row": 15,
+        "col": 17,
+        "end_col": 19,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 12,
+        "end_row": 15,
+        "col": 19,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 12,
+        "end_row": 15,
+        "col": 26,
+        "end_col": 36,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 12,
+        "end_row": 15,
+        "col": 36,
+        "end_col": 42,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 12,
+        "end_row": 15,
+        "col": 42,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 12,
+        "end_row": 15,
+        "col": 49,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 15,
+        "end_row": 18,
+        "col": 9,
+        "end_col": 17,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 15,
+        "end_row": 18,
+        "col": 17,
+        "end_col": 19,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 15,
+        "end_row": 18,
+        "col": 19,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 15,
+        "end_row": 18,
+        "col": 26,
+        "end_col": 36,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 15,
+        "end_row": 18,
+        "col": 36,
+        "end_col": 42,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 15,
+        "end_row": 18,
+        "col": 42,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 15,
+        "end_row": 18,
+        "col": 49,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 18,
+        "end_row": 20,
+        "col": 9,
+        "end_col": 17,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 18,
+        "end_row": 20,
+        "col": 17,
+        "end_col": 19,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 18,
+        "end_row": 20,
+        "col": 19,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 18,
+        "end_row": 20,
+        "col": 26,
+        "end_col": 36,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 18,
+        "end_row": 20,
+        "col": 36,
+        "end_col": 42,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 18,
+        "end_row": 20,
+        "col": 42,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 18,
+        "end_row": 20,
+        "col": 49,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 22,
+        "col": 9,
+        "end_col": 17,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 22,
+        "col": 17,
+        "end_col": 19,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 22,
+        "col": 19,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 22,
+        "col": 26,
+        "end_col": 36,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 22,
+        "col": 36,
+        "end_col": 42,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 22,
+        "col": 42,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 22,
+        "col": 49,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 22,
+        "end_row": 24,
+        "col": 9,
+        "end_col": 17,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 22,
+        "end_row": 24,
+        "col": 17,
+        "end_col": 19,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 22,
+        "end_row": 24,
+        "col": 19,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 22,
+        "end_row": 24,
+        "col": 26,
+        "end_col": 36,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 22,
+        "end_row": 24,
+        "col": 36,
+        "end_col": 42,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 22,
+        "end_row": 24,
+        "col": 42,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 22,
+        "end_row": 24,
+        "col": 49,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 24,
+        "end_row": 26,
+        "col": 9,
+        "end_col": 17,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 24,
+        "end_row": 26,
+        "col": 17,
+        "end_col": 19,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 24,
+        "end_row": 26,
+        "col": 19,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 24,
+        "end_row": 26,
+        "col": 26,
+        "end_col": 36,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 24,
+        "end_row": 26,
+        "col": 36,
+        "end_col": 42,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 24,
+        "end_row": 26,
+        "col": 42,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 24,
+        "end_row": 26,
+        "col": 49,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 26,
+        "end_row": 27,
+        "col": 9,
+        "end_col": 17,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 26,
+        "end_row": 27,
+        "col": 17,
+        "end_col": 19,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 26,
+        "end_row": 27,
+        "col": 19,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 26,
+        "end_row": 27,
+        "col": 26,
+        "end_col": 36,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 26,
+        "end_row": 27,
+        "col": 36,
+        "end_col": 42,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 26,
+        "end_row": 27,
+        "col": 42,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 26,
+        "end_row": 27,
+        "col": 49,
+        "end_col": 56,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 12,
+        "end_row": 12,
+        "col": 7,
+        "end_col": 10,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 11,
+        "end_row": 14,
+        "col": 8,
+        "end_col": 9,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 12,
+        "end_row": 12,
+        "col": 55,
+        "end_col": 58,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 11,
+        "end_row": 14,
+        "col": 56,
+        "end_col": 56,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 27,
+        "end_row": 28,
+        "col": 7,
+        "end_col": 10,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 26,
+        "end_row": 30,
+        "col": 8,
+        "end_col": 9,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 26,
+        "end_row": 30,
+        "col": 56,
+        "end_col": 56,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 27,
+        "end_row": 28,
+        "col": 55,
+        "end_col": 58,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "text",
+        "content": "様式番号",
+        "row": 1,
+        "col": 49,
+        "end_col": 53,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "61",
+        "row": 1,
+        "col": 55,
+        "end_col": 57,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "提出日",
+        "row": 3,
+        "col": 40,
+        "end_col": 43,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "令和",
+        "row": 3,
+        "col": 46,
+        "end_col": 48,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "年",
+        "row": 3,
+        "col": 50,
+        "end_col": 51,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "月",
+        "row": 3,
+        "col": 53,
+        "end_col": 54,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "日",
+        "row": 3,
+        "col": 55,
+        "end_col": 56,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "情報取扱者名簿及び情報管理体制図",
+        "row": 5,
+        "col": 22,
+        "end_col": 38,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "①情報取扱者名簿",
+        "row": 9,
+        "col": 8,
+        "end_col": 16,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "（情報取扱者は本工事の遂行のために最低限必要な範囲の者とすること（※1））",
+        "row": 9,
+        "col": 20,
+        "end_col": 57,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "氏名",
+        "row": 12,
+        "col": 22,
+        "end_col": 24,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "住所",
+        "row": 12,
+        "col": 30,
+        "end_col": 32,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "生年月日",
+        "row": 12,
+        "col": 37,
+        "end_col": 41,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "会社名・",
+        "row": 12,
+        "col": 44,
+        "end_col": 48,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "役職",
+        "row": 12,
+        "col": 52,
+        "end_col": 54,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "（※５）",
+        "row": 14,
+        "col": 29,
+        "end_col": 33,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "（※５）",
+        "row": 14,
+        "col": 37,
+        "end_col": 41,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "所属部署",
+        "row": 14,
+        "col": 44,
+        "end_col": 48,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "情報管理責任者",
+        "row": 16,
+        "col": 9,
+        "end_col": 16,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "Ａ",
+        "row": 16,
+        "col": 17,
+        "end_col": 18,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "（※２）",
+        "row": 17,
+        "col": 9,
+        "end_col": 13,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "情報取扱管理者",
+        "row": 18,
+        "col": 9,
+        "end_col": 16,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "Ｂ",
+        "row": 18,
+        "col": 17,
+        "end_col": 18,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "Ｃ",
+        "row": 20,
+        "col": 17,
+        "end_col": 18,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "（※３）",
+        "row": 21,
+        "col": 9,
+        "end_col": 13,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "業務従事者",
+        "row": 22,
+        "col": 9,
+        "end_col": 14,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "Ｄ",
+        "row": 22,
+        "col": 17,
+        "end_col": 18,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "（※４）",
+        "row": 24,
+        "col": 9,
+        "end_col": 13,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "Ｅ",
+        "row": 24,
+        "col": 17,
+        "end_col": 18,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "再委託先",
+        "row": 26,
+        "col": 9,
+        "end_col": 13,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "Ｆ",
+        "row": 26,
+        "col": 17,
+        "end_col": 18,
+        "font_size": 10.4
+      },
+      {
+        "type": "text",
+        "content": "（※１）受注者における情報取扱者の範囲については、必要に応じ受発注者間で協議すること。",
+        "row": 29,
+        "col": 8,
+        "end_col": 51,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "（※２）本工事における情報の取扱いのすべてに責任を有する者。",
+        "row": 30,
+        "col": 8,
+        "end_col": 38,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "（※３）本工事の進捗状況などの管理を行う者で、本工事で知り得た保護すべき情報を取り扱う可能性のある者。",
+        "row": 32,
+        "col": 8,
+        "end_col": 59,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "（※４）本工事で知り得た保護すべき情報を取り扱う可能性のある者。",
+        "row": 33,
+        "col": 8,
+        "end_col": 40,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "（※５）住所及び生年月日が記載されている書類を発注者に対して提示することをもって様式の提出に代えることができる。",
+        "row": 35,
+        "col": 8,
+        "end_col": 62,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "ただし、発注者の求めに応じて再度提示できるよう適切に当該書類を保管すること。",
+        "row": 36,
+        "col": 12,
+        "end_col": 50,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "※このほか、日本国籍以外の国籍を有する者については、国籍やパスポート番号等を別途報告するものとする。",
+        "row": 37,
+        "col": 8,
+        "end_col": 58,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "なお、報告の方法については、受発注者間で協議して決定することができる。",
+        "row": 39,
+        "col": 9,
+        "end_col": 44,
+        "font_size": 8.0
+      },
+      {
+        "type": "text",
+        "content": "②情報管理体制図",
+        "row": 40,
+        "col": 8,
+        "end_col": 16,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "（例）",
+        "row": 42,
+        "col": 8,
+        "end_col": 11,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "③その他",
+        "row": 60,
+        "col": 8,
+        "end_col": 12,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "・別途提出している資料により必要な情報を確認できることを発注者が認める場合に",
+        "row": 61,
+        "col": 8,
+        "end_col": 46,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "は、当該資料で代用することができる。",
+        "row": 63,
+        "col": 9,
+        "end_col": 27,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "・可能な範囲で、社内で定める情報管理規則等の内規を別途添付すること。",
+        "row": 64,
+        "col": 8,
+        "end_col": 42,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "・必要に応じ、追加で資料の提出を求める場合がある。",
+        "row": 66,
+        "col": 8,
+        "end_col": 33,
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "content": "5-82",
+        "row": 69,
+        "col": 31,
+        "end_col": 35,
+        "font_size": 13.0
+      }
+    ]
+  }
+]
+```
+
+## 検証依頼
+
+PDFの画像と上記JSONを比較し、修正が必要な箇所を以下のJSON形式のみで出力してください。
+修正不要な場合は `{"corrections": []}` のみ出力してください。
+
+```json
+{
+  "corrections": [
+    {"action": "add_text",    "page": 83, "row": <行>, "col": <列>, "content": "<テキスト>"},
+    {"action": "fix_text",    "page": 83, "row": <現在行>, "col": <現在列>, "new_row": <正行>, "new_col": <正列>},
+    {"action": "add_border",  "page": 83, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>, "borders": {"top": true, "bottom": true, "left": true, "right": true}},
+    {"action": "remove_border","page": 83, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>}
+  ]
+}
+```
+
+【重要】出力はJSONのみ。説明文・コードブロック記号は不要です。

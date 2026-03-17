@@ -1,0 +1,1422 @@
+添付のPDFページ画像と、以下のスクリプトが自動生成したレイアウトJSONを照合し、修正が必要な箇所を教えてください。
+
+## グリッドパラメータ
+- 方眼サイズ: 4.0mm × 4.0mm（1マスの大きさ）
+- 最大列数: 62、最大行数: 76
+- 座標は左上が (row=1, col=1) で、右・下方向に増加します
+
+## 自動生成されたレイアウト（ページ 11）
+
+```json
+[
+  {
+    "page_number": 11,
+    "elements": [
+      {
+        "type": "border_rect",
+        "row": 2,
+        "end_row": 5,
+        "col": 41,
+        "end_col": 45,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 2,
+        "end_row": 5,
+        "col": 45,
+        "end_col": 57,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 19,
+        "end_row": 20,
+        "col": 48,
+        "end_col": 57,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 20,
+        "end_row": 28,
+        "col": 48,
+        "end_col": 57,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 34,
+        "col": 9,
+        "end_col": 16,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 34,
+        "col": 16,
+        "end_col": 20,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 34,
+        "col": 20,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 34,
+        "col": 26,
+        "end_col": 32,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 34,
+        "col": 32,
+        "end_col": 36,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 34,
+        "col": 36,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 34,
+        "col": 41,
+        "end_col": 48,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": false,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 34,
+        "col": 48,
+        "end_col": 57,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 9,
+        "end_col": 16,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 16,
+        "end_col": 20,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 20,
+        "end_col": 26,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 26,
+        "end_col": 32,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 32,
+        "end_col": 36,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 36,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 41,
+        "end_col": 48,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 34,
+        "end_row": 36,
+        "col": 48,
+        "end_col": 57,
+        "borders": {
+          "top": false,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 44,
+        "col": 9,
+        "end_col": 16,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 44,
+        "col": 16,
+        "end_col": 20,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 44,
+        "col": 20,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 44,
+        "col": 26,
+        "end_col": 32,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 44,
+        "col": 32,
+        "end_col": 36,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 44,
+        "col": 36,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 44,
+        "col": 41,
+        "end_col": 48,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 36,
+        "end_row": 44,
+        "col": 48,
+        "end_col": 57,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 2,
+        "end_row": 2,
+        "col": 39,
+        "end_col": 43,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 1,
+        "end_row": 4,
+        "col": 41,
+        "end_col": 41,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 2,
+        "end_row": 2,
+        "col": 55,
+        "end_col": 59,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 1,
+        "end_row": 4,
+        "col": 57,
+        "end_col": 57,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 5,
+        "end_row": 6,
+        "col": 39,
+        "end_col": 43,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 4,
+        "end_row": 8,
+        "col": 41,
+        "end_col": 41,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 4,
+        "end_row": 8,
+        "col": 57,
+        "end_col": 57,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 5,
+        "end_row": 6,
+        "col": 55,
+        "end_col": 59,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 11,
+        "end_row": 11,
+        "col": 8,
+        "end_col": 47,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 19,
+        "end_row": 19,
+        "col": 46,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 17,
+        "end_row": 20,
+        "col": 48,
+        "end_col": 48,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 19,
+        "end_row": 19,
+        "col": 55,
+        "end_col": 59,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 17,
+        "end_row": 20,
+        "col": 57,
+        "end_col": 57,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 28,
+        "end_row": 29,
+        "col": 46,
+        "end_col": 49,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 26,
+        "end_row": 30,
+        "col": 48,
+        "end_col": 48,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 26,
+        "end_row": 30,
+        "col": 57,
+        "end_col": 57,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 28,
+        "end_row": 29,
+        "col": 55,
+        "end_col": 59,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 33,
+        "col": 7,
+        "end_col": 11,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 31,
+        "end_row": 34,
+        "col": 9,
+        "end_col": 9,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 33,
+        "end_row": 33,
+        "col": 55,
+        "end_col": 59,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 31,
+        "end_row": 34,
+        "col": 57,
+        "end_col": 57,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 44,
+        "end_row": 45,
+        "col": 7,
+        "end_col": 11,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 47,
+        "col": 9,
+        "end_col": 9,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 43,
+        "end_row": 47,
+        "col": 57,
+        "end_col": 57,
+        "borders": {
+          "top": false,
+          "bottom": false,
+          "left": true,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 44,
+        "end_row": 45,
+        "col": 55,
+        "end_col": 59,
+        "borders": {
+          "top": true,
+          "bottom": true,
+          "left": true,
+          "right": true
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 11,
+        "end_col": 12,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 13,
+        "end_col": 14,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 14,
+        "end_col": 15,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 17,
+        "end_col": 18,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 20,
+        "end_col": 21,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 21,
+        "end_col": 22,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 22,
+        "end_col": 23,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 24,
+        "end_col": 25,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 25,
+        "end_col": 26,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 26,
+        "end_col": 27,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 28,
+        "end_col": 29,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 29,
+        "end_col": 30,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 32,
+        "end_col": 33,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 33,
+        "end_col": 34,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 35,
+        "end_col": 36,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 36,
+        "end_col": 37,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 37,
+        "end_col": 38,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 39,
+        "end_col": 40,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 40,
+        "end_col": 41,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 41,
+        "end_col": 42,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "border_rect",
+        "row": 47,
+        "end_row": 47,
+        "col": 43,
+        "end_col": 44,
+        "borders": {
+          "top": true,
+          "bottom": false,
+          "left": false,
+          "right": false
+        }
+      },
+      {
+        "type": "text",
+        "content": "様式番号",
+        "row": 1,
+        "col": 51,
+        "end_col": 55,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "５",
+        "row": 1,
+        "col": 56,
+        "end_col": 57,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "保管有価証券提出書",
+        "row": 3,
+        "col": 28,
+        "end_col": 37,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "※",
+        "row": 3,
+        "col": 39,
+        "end_col": 40,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "番",
+        "row": 3,
+        "col": 41,
+        "end_col": 42,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "号",
+        "row": 3,
+        "col": 44,
+        "end_col": 45,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "令和",
+        "row": 3,
+        "col": 46,
+        "end_col": 48,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "年度第",
+        "row": 3,
+        "col": 50,
+        "end_col": 53,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "号",
+        "row": 3,
+        "col": 55,
+        "end_col": 56,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "（提出の事由）契約書第４条第１項第２号の契約保証金の納付に代える担保",
+        "row": 10,
+        "col": 8,
+        "end_col": 42,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "○○地方整備局",
+        "row": 15,
+        "col": 8,
+        "end_col": 15,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "取扱主任官",
+        "row": 16,
+        "col": 9,
+        "end_col": 14,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "○○課長",
+        "row": 16,
+        "col": 16,
+        "end_col": 20,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 16,
+        "col": 22,
+        "end_col": 23,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 16,
+        "col": 24,
+        "end_col": 25,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 16,
+        "col": 26,
+        "end_col": 27,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "○",
+        "row": 16,
+        "col": 28,
+        "end_col": 29,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "殿",
+        "row": 16,
+        "col": 30,
+        "end_col": 31,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "令和",
+        "row": 19,
+        "col": 20,
+        "end_col": 22,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "年",
+        "row": 19,
+        "col": 24,
+        "end_col": 25,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "月",
+        "row": 19,
+        "col": 27,
+        "end_col": 28,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "日",
+        "row": 19,
+        "col": 29,
+        "end_col": 30,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "印",
+        "row": 19,
+        "col": 49,
+        "end_col": 50,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "鑑",
+        "row": 19,
+        "col": 54,
+        "end_col": 55,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "受注者",
+        "row": 22,
+        "col": 25,
+        "end_col": 28,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "住所",
+        "row": 22,
+        "col": 31,
+        "end_col": 33,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "氏名",
+        "row": 25,
+        "col": 31,
+        "end_col": 33,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "上記事由により、下記の有価証券を保管有価証券として提出します。",
+        "row": 30,
+        "col": 8,
+        "end_col": 39,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "証",
+        "row": 33,
+        "col": 9,
+        "end_col": 10,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "券",
+        "row": 33,
+        "col": 11,
+        "end_col": 12,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "名",
+        "row": 33,
+        "col": 12,
+        "end_col": 13,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "称",
+        "row": 33,
+        "col": 14,
+        "end_col": 15,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "枚",
+        "row": 33,
+        "col": 16,
+        "end_col": 17,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "数",
+        "row": 33,
+        "col": 19,
+        "end_col": 20,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "総",
+        "row": 33,
+        "col": 21,
+        "end_col": 22,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "額",
+        "row": 33,
+        "col": 22,
+        "end_col": 23,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "面",
+        "row": 33,
+        "col": 24,
+        "end_col": 25,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "内",
+        "row": 33,
+        "col": 31,
+        "end_col": 32,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "訳",
+        "row": 33,
+        "col": 41,
+        "end_col": 42,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "備",
+        "row": 33,
+        "col": 50,
+        "end_col": 51,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "考",
+        "row": 33,
+        "col": 53,
+        "end_col": 54,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "額",
+        "row": 34,
+        "col": 27,
+        "end_col": 28,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "面",
+        "row": 34,
+        "col": 29,
+        "end_col": 30,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "回記号",
+        "row": 34,
+        "col": 32,
+        "end_col": 35,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "番",
+        "row": 34,
+        "col": 37,
+        "end_col": 38,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "号",
+        "row": 34,
+        "col": 39,
+        "end_col": 40,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "付属利賦札",
+        "row": 34,
+        "col": 41,
+        "end_col": 46,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "契約件名",
+        "row": 46,
+        "col": 11,
+        "end_col": 15,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "（注）１．契約保証金の金額に相当する利付国債を支出負担行為担当官等の指定する日本銀行に",
+        "row": 51,
+        "col": 8,
+        "end_col": 51,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "払い込みのうえ、この際交付される政府保管有価証券払込済通知書（日本銀行から取扱",
+        "row": 52,
+        "col": 13,
+        "end_col": 52,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "主任官宛）を添付して、提出すること。",
+        "row": 54,
+        "col": 13,
+        "end_col": 31,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "２．保管有価証券払渡し時に、印鑑照合を行うので、印影を鮮明にすること。",
+        "row": 55,
+        "col": 11,
+        "end_col": 46,
+        "font_size": 11.0
+      },
+      {
+        "type": "text",
+        "content": "5-10",
+        "row": 71,
+        "col": 31,
+        "end_col": 35,
+        "font_size": 13.0
+      }
+    ]
+  }
+]
+```
+
+## 検証依頼
+
+PDFの画像と上記JSONを比較し、修正が必要な箇所を以下のJSON形式のみで出力してください。
+修正不要な場合は `{"corrections": []}` のみ出力してください。
+
+```json
+{
+  "corrections": [
+    {"action": "add_text",    "page": 11, "row": <行>, "col": <列>, "content": "<テキスト>"},
+    {"action": "fix_text",    "page": 11, "row": <現在行>, "col": <現在列>, "new_row": <正行>, "new_col": <正列>},
+    {"action": "add_border",  "page": 11, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>, "borders": {"top": true, "bottom": true, "left": true, "right": true}},
+    {"action": "remove_border","page": 11, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>}
+  ]
+}
+```
+
+【重要】出力はJSONのみ。説明文・コードブロック記号は不要です。

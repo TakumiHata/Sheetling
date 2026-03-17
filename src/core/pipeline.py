@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 from src.parser.pdf_extractor import extract_pdf_data
-from src.templates.prompts import TABLE_ANCHOR_PROMPT, LAYOUT_REVIEW_PROMPT, CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GRID_SIZES
+from src.templates.prompts import TABLE_ANCHOR_PROMPT, LAYOUT_REVIEW_PROMPT, CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GEN_CODE_TEMPLATE, VISUAL_REVIEW_PROMPT, GRID_SIZES
 from src.utils.logger import get_logger
 
 
@@ -304,12 +304,31 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
     for rect in page['rects']:
         r, er = rect['_row'], rect['_end_row']
         c, ec = rect['_col'], rect['_end_col']
-        rect['_borders'] = {
-            'top':    _has_h(r,  c, ec),
-            'bottom': _has_h(er, c, ec),
-            'left':   _has_v(c,  r, er),
-            'right':  _has_v(ec, r, er),
-        }
+        if r == er and c != ec:
+            # 水平分割線（高さ1グリッド未満の細長い矩形）:
+            # top のみ描画。bottom は同じ行なので重複ライン、left/right は端キャップになるため除外。
+            rect['_borders'] = {
+                'top':    _has_h(r, c, ec),
+                'bottom': False,
+                'left':   False,
+                'right':  False,
+            }
+        elif c == ec and r != er:
+            # 垂直分割線（幅1グリッド未満の細長い矩形）:
+            # left のみ描画。right は同じ列なので重複ライン、top/bottom は端キャップになるため除外。
+            rect['_borders'] = {
+                'top':    False,
+                'bottom': False,
+                'left':   _has_v(c, r, er),
+                'right':  False,
+            }
+        else:
+            rect['_borders'] = {
+                'top':    _has_h(r,  c, ec),
+                'bottom': _has_h(er, c, ec),
+                'left':   _has_v(c,  r, er),
+                'right':  _has_v(ec, r, er),
+            }
 
     # ---- 隣接セル間の _borders 整合性パス ---------------------------------------
     # 量子化誤差で A.right と B.left（共有辺）が不一致になる場合を OR で統一する。
@@ -441,10 +460,20 @@ def _apply_borders_to_xlsx(xlsx_path: str, extracted_data: dict, max_rows: int) 
         for rect in page.get('rects', []):
             if '_row' not in rect:
                 continue
+            r, er = rect['_row'], rect['_end_row']
+            c, ec = rect['_col'], rect['_end_col']
+            raw_borders = rect.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
+            # 水平・垂直分割線（1行/1列に収まる細長い矩形）の端キャップを除去する
+            if r == er and c != ec:
+                borders = {'top': raw_borders.get('top', True), 'bottom': False, 'left': False, 'right': False}
+            elif c == ec and r != er:
+                borders = {'top': False, 'bottom': False, 'left': raw_borders.get('left', True), 'right': False}
+            else:
+                borders = raw_borders
             _draw(
-                rect['_row'] + row_offset, rect['_end_row'] + row_offset,
-                rect['_col'] + COL_OFFSET, rect['_end_col'] + COL_OFFSET,
-                rect.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True}),
+                r + row_offset, er + row_offset,
+                c + COL_OFFSET, ec + COL_OFFSET,
+                borders,
             )
             total += 1
 
@@ -542,6 +571,117 @@ def _fill_missing_text(layout_json_str: str, extracted_data: dict) -> str:
 
     if total_added:
         logger.info(f"[fill_missing_text] {total_added} 個の欠落テキスト要素を補完しました")
+
+    return json.dumps(layout, ensure_ascii=False)
+
+
+def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
+    """
+    extracted_data から直接レイアウトJSONを生成する（step1 + step1.5 のスクリプト代替）。
+
+    - table_border_rects / rects → border_rect 要素
+    - words を (_row, _col) でグループ化 → text 要素
+    - 座標整合性チェック・重複除去・クランプを適用
+    """
+    max_rows = grid_params['max_rows']
+    max_cols = grid_params['max_cols']
+
+    layout = []
+    for page in extracted_data.get('pages', []):
+        elements = []
+        seen_border_rects: set = set()
+
+        # table_border_rects → border_rect 要素
+        for tbr in page.get('table_border_rects', []):
+            r  = min(tbr['_row'],     max_rows)
+            er = min(tbr['_end_row'], max_rows)
+            c  = min(tbr['_col'],     max_cols)
+            ec = min(tbr['_end_col'], max_cols)
+            if r > er: r, er = er, r
+            if c > ec: c, ec = ec, c
+            if r == er and c == ec:
+                continue
+            key = (r, er, c, ec)
+            if key in seen_border_rects:
+                continue
+            seen_border_rects.add(key)
+            elements.append({
+                'type': 'border_rect',
+                'row': r, 'end_row': er,
+                'col': c, 'end_col': ec,
+                'borders': tbr.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True}),
+            })
+
+        # rects → border_rect 要素
+        for rect in page.get('rects', []):
+            if '_row' not in rect:
+                continue
+            r  = min(rect['_row'],     max_rows)
+            er = min(rect['_end_row'], max_rows)
+            c  = min(rect['_col'],     max_cols)
+            ec = min(rect['_end_col'], max_cols)
+            if r > er: r, er = er, r
+            if c > ec: c, ec = ec, c
+            if r == er and c == ec:
+                continue
+            key = (r, er, c, ec)
+            if key in seen_border_rects:
+                continue
+            seen_border_rects.add(key)
+            # 水平・垂直分割線の場合、_borders が旧データでも端キャップ除去を適用する
+            raw_borders = rect.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
+            if r == er and c != ec:
+                borders = {'top': raw_borders.get('top', True), 'bottom': False, 'left': False, 'right': False}
+            elif c == ec and r != er:
+                borders = {'top': False, 'bottom': False, 'left': raw_borders.get('left', True), 'right': False}
+            else:
+                borders = raw_borders
+            elements.append({
+                'type': 'border_rect',
+                'row': r, 'end_row': er,
+                'col': c, 'end_col': ec,
+                'borders': borders,
+            })
+
+        # words → text 要素（_row, _col でグループ化）
+        groups: dict = {}
+        for w in page.get('words', []):
+            if '_row' not in w or '_col' not in w:
+                continue
+            groups.setdefault((w['_row'], w['_col']), []).append(w)
+
+        seen_text: set = set()
+        for (row, col), words in sorted(groups.items()):
+            content = _join_word_texts([w.get('text', '') for w in words])
+            stripped = content.strip()
+            if not stripped or (len(stripped) == 1 and stripped in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'):
+                continue
+            row_c = min(row, max_rows)
+            col_c = min(col, max_cols)
+            pos = (row_c, col_c)
+            if pos in seen_text:
+                continue
+            seen_text.add(pos)
+            first = words[0]
+            elem: dict = {
+                'type': 'text',
+                'content': content,
+                'row': row_c,
+                'col': col_c,
+                'end_col': min(col_c + len(content), max_cols),
+            }
+            if first.get('font_color') and first['font_color'] != '000000':
+                elem['font_color'] = first['font_color']
+            if first.get('font_size'):
+                elem['font_size'] = first['font_size']
+            if first.get('is_vertical'):
+                elem['is_vertical'] = True
+                if '_end_row' in first:
+                    elem['end_row'] = min(first['_end_row'], max_rows)
+                elem['end_col'] = min(col_c + 1, max_cols)
+            elements.append(elem)
+
+        layout.append({'page_number': page['page_number'], 'elements': elements})
 
     return json.dumps(layout, ensure_ascii=False)
 
@@ -779,6 +919,92 @@ class SheetlingPipeline:
 
         return filled_json
 
+    def auto_layout(self, pdf_path: str, in_base_dir: str = "data/in", grid_size: str = "small") -> dict:
+        """
+        step1 + step1.5 + fill + step2 をスクリプトで完全自動化する。
+
+        1. _extracted.json と _grid_params.json を読み込む（extract 済みが前提）
+        2. _auto_generate_layout() でレイアウトJSONを生成（step1 + step1.5 相当）
+        3. fill_layout() で欠落テキストを補完（安全網）
+        4. _auto_generate_code() で _gen.py を生成（step2 相当）
+        5. ページごとの視覚的検証プロンプトを生成
+        """
+        logger.info(f"--- [auto] レイアウト自動生成: {Path(pdf_path).name} ---")
+        path_obj = Path(pdf_path)
+        pdf_name = path_obj.stem
+
+        try:
+            rel_path = path_obj.parent.relative_to(Path(in_base_dir))
+            out_dir = self.output_base_dir / rel_path
+        except ValueError:
+            out_dir = self.output_base_dir / pdf_name
+
+        # extract 済みファイルの確認
+        extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
+        grid_params_path    = out_dir / f"{pdf_name}_grid_params.json"
+        if not extracted_json_path.exists():
+            raise FileNotFoundError(
+                f"_extracted.json が見つかりません: {extracted_json_path}\n"
+                "先に `extract` コマンドを実行してください。"
+            )
+
+        with open(extracted_json_path, "r", encoding="utf-8") as f:
+            extracted_data = json.load(f)
+        with open(grid_params_path, "r", encoding="utf-8") as f:
+            grid_params = json.load(f)
+
+        # step1 + step1.5: スクリプトでレイアウトJSON生成
+        layout_json = _auto_generate_layout(extracted_data, grid_params)
+
+        # _step1_5_input.json に保存（fill_layout が参照）
+        prompts_dir = out_dir / "prompts"
+        prompts_dir.mkdir(parents=True, exist_ok=True)
+        input_path = prompts_dir / f"{pdf_name}_step1_5_input.json"
+        with open(input_path, "w", encoding="utf-8") as f:
+            f.write(layout_json)
+
+        # fill: 欠落テキスト補完 + _step1_5_output.json 保存
+        filled_json = self.fill_layout(pdf_name, layout_json, specific_out_dir=str(out_dir))
+
+        # step2: テンプレートから _gen.py を生成
+        gen_code = self._auto_generate_code(pdf_name, grid_params)
+        gen_path = out_dir / f"{pdf_name}_gen.py"
+        with open(gen_path, "w", encoding="utf-8") as f:
+            f.write(gen_code)
+        logger.info(f"[auto] _gen.py を自動生成しました: {gen_path}")
+
+        # 視覚的検証プロンプトをページごとに生成
+        layout = json.loads(filled_json)
+        review_paths = []
+        for page_layout in layout:
+            page_num = page_layout.get('page_number', 1)
+            page_json_str = json.dumps([page_layout], ensure_ascii=False, indent=2)
+            prompt_text = VISUAL_REVIEW_PROMPT.format(
+                page_number=page_num,
+                page_layout_json=page_json_str,
+                **grid_params,
+            )
+            review_path = prompts_dir / f"{pdf_name}_visual_review_page{page_num}.txt"
+            with open(review_path, "w", encoding="utf-8") as f:
+                f.write(prompt_text)
+            review_paths.append(str(review_path))
+            logger.info(f"[auto] 視覚的検証プロンプト生成: {review_path}")
+
+        logger.info(f"✅ [auto] 完了: {pdf_name}")
+        logger.info(f"  次のステップ（任意）: 各ページのPDF画像 + visual_review_page*.txt をAIチャットに貼り付けて検証")
+        logger.info(f"  修正がある場合: _visual_corrections.json に保存して `correct` コマンドを実行")
+        logger.info(f"  修正不要な場合: そのまま `generate` コマンドを実行")
+
+        return {
+            "layout_json_path": str(input_path),
+            "gen_py_path": str(gen_path),
+            "visual_review_paths": review_paths,
+        }
+
+    def _auto_generate_code(self, pdf_name: str, grid_params: dict) -> str:
+        """GEN_CODE_TEMPLATE からランタイムにJSONを読み込む _gen.py コードを生成する。"""
+        return GEN_CODE_TEMPLATE.substitute(pdf_name=pdf_name, **grid_params)
+
     def render_excel(self, pdf_name: str, specific_out_dir: str = None) -> str:
         """
         Phase 3: AI出力の生成コードを読み込み、Excel方眼紙を描画する。
@@ -865,6 +1091,104 @@ class SheetlingPipeline:
             logger.error(f"❌ 生成コードファイル {generated_code_path.name} が見つかりません。STEP 2 の結果を保存してください。")
 
         raise RuntimeError(f"Excelの生成に失敗しました ({pdf_name})")
+
+    def apply_corrections(self, pdf_name: str, corrections_json: str, specific_out_dir: str = None) -> None:
+        """
+        ビジョンLLMが出力した修正指示を _step1_5_output.json に適用し、_gen.py を再生成する。
+
+        corrections_json の形式:
+        {
+          "corrections": [
+            {"action": "add_text",    "page": 1, "row": 3, "col": 5, "content": "テキスト"},
+            {"action": "fix_text",    "page": 1, "row": 3, "col": 5, "new_row": 4, "new_col": 6},
+            {"action": "add_border",  "page": 1, "row": 3, "end_row": 8, "col": 2, "end_col": 15,
+                                      "borders": {"top": true, ...}},
+            {"action": "remove_border","page": 1, "row": 3, "end_row": 8, "col": 2, "end_col": 15}
+          ]
+        }
+        """
+        if specific_out_dir:
+            out_dir = Path(specific_out_dir)
+        else:
+            out_dir = self.output_base_dir / pdf_name
+
+        output_json_path  = out_dir / "prompts" / f"{pdf_name}_step1_5_output.json"
+        grid_params_path  = out_dir / f"{pdf_name}_grid_params.json"
+
+        if not output_json_path.exists():
+            raise FileNotFoundError(f"_step1_5_output.json が見つかりません: {output_json_path}")
+        if not grid_params_path.exists():
+            raise FileNotFoundError(f"_grid_params.json が見つかりません: {grid_params_path}")
+
+        layout = json.loads(output_json_path.read_text(encoding="utf-8"))
+        grid_params = json.loads(grid_params_path.read_text(encoding="utf-8"))
+
+        try:
+            corrections_data = json.loads(corrections_json)
+            corrections = corrections_data.get("corrections", [])
+        except json.JSONDecodeError as e:
+            raise ValueError(f"corrections JSON のパースに失敗しました: {e}")
+
+        # ページ番号 → elements のマップを構築
+        page_map: dict = {p["page_number"]: p["elements"] for p in layout}
+
+        applied = 0
+        for c in corrections:
+            action  = c.get("action")
+            page_no = c.get("page", 1)
+            elements = page_map.get(page_no)
+            if elements is None:
+                logger.warning(f"[correct] ページ {page_no} が見つかりません。スキップします。")
+                continue
+
+            if action == "add_text":
+                elements.append({
+                    "type": "text",
+                    "content": c["content"],
+                    "row": c["row"],
+                    "col": c["col"],
+                    "end_col": c["col"] + len(c["content"]),
+                })
+                applied += 1
+
+            elif action == "fix_text":
+                for elem in elements:
+                    if elem.get("type") == "text" and elem["row"] == c["row"] and elem["col"] == c["col"]:
+                        elem["row"] = c["new_row"]
+                        elem["col"] = c["new_col"]
+                        applied += 1
+                        break
+
+            elif action == "add_border":
+                elements.append({
+                    "type": "border_rect",
+                    "row": c["row"], "end_row": c["end_row"],
+                    "col": c["col"], "end_col": c["end_col"],
+                    "borders": c.get("borders", {"top": True, "bottom": True, "left": True, "right": True}),
+                })
+                applied += 1
+
+            elif action == "remove_border":
+                before = len(elements)
+                page_map[page_no] = [
+                    e for e in elements
+                    if not (e.get("type") == "border_rect"
+                            and e["row"] == c["row"] and e["end_row"] == c["end_row"]
+                            and e["col"] == c["col"] and e["end_col"] == c["end_col"])
+                ]
+                elements = page_map[page_no]
+                applied += before - len(elements)
+
+        # 修正済みレイアウトを保存
+        updated_json = json.dumps(layout, ensure_ascii=False)
+        output_json_path.write_text(updated_json, encoding="utf-8")
+        logger.info(f"[correct] {applied} 件の修正を適用しました: {output_json_path}")
+
+        # _gen.py を再生成
+        gen_code = self._auto_generate_code(pdf_name, grid_params)
+        gen_path = out_dir / f"{pdf_name}_gen.py"
+        gen_path.write_text(gen_code, encoding="utf-8")
+        logger.info(f"[correct] _gen.py を再生成しました: {gen_path}")
 
     def _generate_error_prompt(self, out_dir: Path, pdf_name: str, error_msg: str, current_code: str):
         prompt_text = CODE_ERROR_FIXING_PROMPT.format(error_msg=error_msg, code=current_code)
