@@ -1,13 +1,9 @@
 """
 Sheetling 用の LLM プロンプト定義集。
-3ステップ・パイプライン方式:
-  Step 1:   TABLE_ANCHOR_PROMPT   — PDF解析データ → Excelレイアウト仕様JSON（座標マッピング・テキスト結合）
-  Step 1.5: LAYOUT_REVIEW_PROMPT  — レイアウト仕様JSONの検証・補正（欠落補完・重複除去・整合性チェック）
-  Step 2:   CODE_GEN_PROMPT       — 補正済みレイアウト仕様JSON → Python(openpyxl)コード
 
-自動化テンプレート:
-  GEN_CODE_TEMPLATE    — _gen.py をスクリプトで直接生成するための string.Template
-  VISUAL_REVIEW_PROMPT — ビジョンLLMによる視覚的検証用プロンプト
+  GEN_CODE_TEMPLATE        — _gen.py をスクリプトで直接生成するための string.Template
+  VISUAL_REVIEW_PROMPT     — ビジョンLLMによる視覚的検証用プロンプト
+  CODE_ERROR_FIXING_PROMPT — 生成コードのエラー修正プロンプト
 """
 from string import Template
 
@@ -52,297 +48,6 @@ GRID_SIZES = {
         "default_font_size": 11
     }
 }
-
-TABLE_ANCHOR_PROMPT = """あなたはPDF解析データからExcelレイアウト仕様を生成する設計者です。
-
-## 座標について（最重要）
-
-入力データの各要素には **事前計算済みのExcel座標** が付与されています。
-独自に座標を計算せず、必ず以下のフィールドをそのまま参照してください。
-
-| フィールド | 意味 |
-|---|---|
-| `words[i]._row` | テキストのExcel行番号 |
-| `words[i]._col` | テキストのExcel列番号（開始） |
-| `words[i].is_vertical` | 縦文字かどうか（`true` の場合のみ存在） |
-| `words[i]._end_row` | 縦文字の下端行番号（`is_vertical=true` の場合のみ存在） |
-| `rects[i]._row` / `_end_row` | 矩形の開始・終了行番号（テーブル外） |
-| `rects[i]._col` / `_end_col` | 矩形の開始・終了列番号（テーブル外） |
-| `rects[i]._borders` | 矩形枠の各辺に罫線があるか `{{top, bottom, left, right}}` |
-| `table_border_rects[i]._row` / `_end_row` | テーブルセルの開始・終了行番号 |
-| `table_border_rects[i]._col` / `_end_col` | テーブルセルの開始・終了列番号 |
-| `table_border_rects[i]._borders` | セルの各辺に罫線があるか `{{top, bottom, left, right}}` |
-
-## 複数ページ処理（最重要）
-
-入力データには複数ページが含まれる場合があります。
-
-- 出力JSONは `page_number` ごとに **必ず独立したオブジェクト** として出力すること
-- ページ1の要素はページ1のオブジェクト内、ページ2の要素はページ2のオブジェクト内に格納する
-- **あるページのコンテンツを別のページのオブジェクトに混入させることは絶対禁止**
-- 各ページの座標（`_row`, `_col`）はそのページ内でリセットされた値（1始まり）である。ページをまたいで座標を統合・変換しないこと
-
-## 処理手順
-
-### Step 1: border_rect 要素の生成
-
-**テーブルセル（`table_border_rects`）：**
-- `table_border_rects` の各エントリを `border_rect` 要素として出力する
-- 各エントリの `_row`, `_end_row`, `_col`, `_end_col` をそのまま使用する
-- 各エントリの `_borders` を `borders` フィールドとしてそのまま出力する
-- **隣接するセル同士で共有辺の `_borders` が両方 `false` の場合、それらは視覚的に1つのセルである可能性が高い。確信が持てる場合は統合して1つの `border_rect` にまとめよ**（統合後の row/col は最小値、end_row/end_col は最大値、borders は外周辺のみ true）
-
-**テーブル外の矩形（`rects`）：**
-- 各 rect の `_row`, `_col`, `_end_row`, `_end_col` をそのまま使用する
-- 各 rect の `_borders` を `borders` フィールドとしてそのまま出力する
-
-### Step 2: テキスト要素の生成
-
-`words` を **`(_row, _col)` の組み合わせ** でグループ化し、同一 `(_row, _col)` のwordを1つの `text` 要素にまとめる。
-これにより、テーブル内の各列セルが別々の `text` 要素として保持される（行単位の結合は禁止）。
-
-- `row` = グループの `_row` 値
-- `col` = グループの `_col` 値
-- `content` = グループ内のwordを左から順に結合したテキスト（日本語文字＝漢字・ひらがな・カタカナを含む場合はスペースなし、英数字のみの場合は半角スペースで結合）
-- `end_col` = `col` + `content` の文字数（概算）
-- `font_color` = グループ内最初のwordの `font_color`（存在し、かつ黒 `"000000"` でない場合のみ含める）
-- `font_size` = グループ内最初のwordの `font_size`（存在する場合のみ含める）
-
-**縦文字（`is_vertical=true`）の扱い：**
-- `is_vertical=true` のwordは他のwordとグループ化せず、単独で `text` 要素にする
-- `is_vertical: true` を要素に含める
-- `_end_row` が存在する場合は `end_row` として含める（縦方向の占有範囲）
-- `end_col` は `col + 1`（縦文字は1列幅）
-
-## 出力フォーマット
-
-複数ページの場合は以下のように **ページ数分のオブジェクトを配列に含める**。各ページの要素は必ず対応する `page_number` のオブジェクト内にのみ格納すること。
-
-[
-  {{
-    "page_number": 1,
-    "elements": [
-      {{
-        "type": "text",
-        "content": "請求書",
-        "row": 2,
-        "col": 20,
-        "end_col": 28,
-        "font_color": "FF0000",
-        "font_size": 14
-      }},
-      {{
-        "type": "border_rect",
-        "row": 8,
-        "end_row": 9,
-        "col": 18,
-        "end_col": 27,
-        "borders": {{"top": true, "bottom": true, "left": false, "right": true}}
-      }}
-    ]
-  }},
-  {{
-    "page_number": 2,
-    "elements": [
-      {{
-        "type": "text",
-        "content": "明細",
-        "row": 3,
-        "col": 5,
-        "end_col": 7
-      }},
-      {{
-        "type": "border_rect",
-        "row": 5,
-        "end_row": 10,
-        "col": 3,
-        "end_col": 25,
-        "borders": {{"top": true, "bottom": true, "left": true, "right": true}}
-      }}
-    ]
-  }}
-]
-
-入力データ:
-{input_data}
-
-【最重要】出力は `[` で始まり `]` で終わる純粋なJSON配列文字列のみとしてください。Markdownのコードブロック(```json等)、前後の説明文、思考プロセス、検証コメントは一切含めないでください。JSON以外の文字を1文字でも出力するとSTEP 1.5で処理できなくなります。"""
-
-
-LAYOUT_REVIEW_PROMPT = """あなたはExcelレイアウト設計の検証者です。
-STEP 1が生成したレイアウト仕様JSONを検証・補正し、同じフォーマットの修正済みJSONを出力してください。
-
-## 検証・修正項目
-
-### 1. border_rect の座標整合性
-- `row > end_row` または `col > end_col` となっている場合は値を入れ替えて修正する
-- `row == end_row` かつ `col == end_col`（1×1セル）のborder_rectは削除する
-
-### 2. 重複するborder_rectの除去
-- `row`, `end_row`, `col`, `end_col` がすべて同一のborder_rectが複数ある場合、1つだけ残す
-
-### 2.5. border_rectのbordersフィールド
-- `borders` フィールドが存在する場合、値を変更せずそのまま保持すること
-- STEP 1 で隣接セルが統合された場合、統合後の `borders` は外周辺（視覚的に線がある辺）のみ true にすること
-
-### 2.7. ページ間要素混入の検出・修正（最重要）
-- 元のPDF解析データの `page_number` と照合し、あるページのコンテンツが別のページの `elements` に混入していないか確認する
-- 例：元データのページ2に存在する `words` がSTEP 1出力のページ1の `elements` に含まれている場合、それをページ1から削除しページ2の `elements` に移動する
-- 判定基準：元データの `pages[N].words[i].text` が STEP 1 出力の `page_number: M`（M ≠ N+1）の elements に含まれている場合は混入
-
-### 3. テキスト要素の欠落補完
-以下の元PDF解析データの `words` と照合し、レイアウトJSONに欠落しているテキストを補完する：
-- 元データの各ページの `words` を確認し、**対応するページ**の `text` 要素に含まれていない `text` フィールドの内容を探す（ページ番号を必ず照合すること）
-- 欠落が確認された場合、該当wordの `_row` を `row`、`_col` を `col` として **同じページ番号** の `text` 要素を追加する
-- `end_col` = `col` + `text` の文字数（概算）
-- 空白・記号のみのword（`text` が空文字、スペースのみ、または1文字以下の記号）は無視してよい
-
-### 4. text 要素の重複除去
-- 同一ページ内で `row` と `col` が同じ `text` 要素が複数ある場合、`content` を結合して1つにまとめる（日本語文字を含む場合はスペースなし、英数字のみの場合は半角スペース）
-
-### 5. 座標のクランプ
-- `row`, `end_row` が {max_rows} を超えている場合は {max_rows} に切り詰める
-- `col`, `end_col` が {max_cols} を超えている場合は {max_cols} に切り詰める
-
-## 元のPDF解析データ（参照用）
-
-{input_data}
-
-## STEP 1の出力（検証・修正対象）
-
-{step1_output}
-
-【最重要】出力は `[` で始まり `]` で終わる純粋なJSON配列文字列のみとしてください。Markdownのコードブロック(```json等)、前後の説明文、思考プロセス、検証コメントは一切含めないでください。JSON以外の文字を1文字でも出力するとSTEP 2で処理できなくなります。"""
-
-
-CODE_GEN_PROMPT = """あなたはPythonプログラミングのエキスパートです。
-以下のExcelレイアウト仕様（JSON）を元に、openpyxlを使ったExcel生成スクリプトを作成してください。
-
-## グリッド設定（必須）
-全列・全行に以下の値を**ハードコード**で適用してください（mmからの再計算・変数化は禁止）：
-- 列幅: `ws.column_dimensions[get_column_letter(c)].width = {excel_col_width}` （これはExcel固有の単位値。{col_width_mm}mmに相当。変換禁止）
-- 行高: `ws.row_dimensions[r].height = {excel_row_height}` （これはExcel固有の単位値。{row_height_mm}mmに相当。変換禁止）
-- 適用範囲: 列1〜{max_cols}、行1〜(総ページ数 × {max_rows})
-- デフォルトフォントサイズ: {default_font_size}pt（`font_size` 未指定の text 要素はこのサイズを使用）
-
-## 必須インポート
-
-スクリプト冒頭に以下を含めること：
-```python
-from openpyxl.styles import Border, Side, Alignment, Font
-```
-
-## 要素の種類
-
-入力JSONに含まれる要素は `text` と `border_rect` の2種類のみです。
-
-## text 処理パターン（厳守・改変禁止）
-
-以下のコードを**一字一句そのまま**使用してください。`ws.max_row` / `ws.max_column` による境界チェック、セルの存在確認、独自のガード処理は**絶対に追加しないこと**。
-
-```python
-if item["type"] == "text":
-    r = item["row"] + row_offset
-    try:
-        cell = ws.cell(row=r, column=item["col"] + col_offset)
-        cell.value = item["content"]
-        if item.get("is_vertical"):
-            cell.alignment = Alignment(text_rotation=255, vertical='top', wrap_text=False)
-        else:
-            cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=False)
-        font_kwargs = {{"size": item.get("font_size") or {default_font_size}}}
-        if item.get("font_color"):
-            font_kwargs["color"] = item["font_color"]
-        cell.font = Font(**font_kwargs)
-    except AttributeError:
-        pass
-```
-
-## border_rect 処理パターン（必須）
-
-`borders` フィールドの各辺（top/bottom/left/right）が `true` の辺のみ罫線を描画します。
-隣接する `border_rect` の外枠が接することで内部の区切り線が自然に形成されます。
-
-```python
-from openpyxl.styles import Border, Side, Alignment, Font
-thin = Side(style='thin')
-
-def apply_border(ws, s_row, e_row, s_col, e_col, borders):
-    has_top    = borders.get("top",    True)
-    has_bottom = borders.get("bottom", True)
-    has_left   = borders.get("left",   True)
-    has_right  = borders.get("right",  True)
-    for r in range(s_row, e_row + 1):
-        for c in range(s_col, e_col + 1):
-            target = ws.cell(row=r, column=c)
-            try:
-                target.alignment = Alignment(horizontal='left', vertical='center', wrap_text=False)
-            except AttributeError:
-                pass
-            top    = thin if (r == s_row and has_top)    else None
-            bottom = thin if (r == e_row and has_bottom) else None
-            left   = thin if (c == s_col and has_left)   else None
-            right  = thin if (c == e_col and has_right)  else None
-            try:
-                target.border = Border(top=top, bottom=bottom, left=left, right=right)
-            except AttributeError:
-                pass
-
-elif item["type"] == "border_rect":
-    apply_border(
-        ws,
-        item["row"] + row_offset, item["end_row"] + row_offset,
-        item["col"] + col_offset, item["end_col"] + col_offset,
-        item.get("borders", {{"top": True, "bottom": True, "left": True, "right": True}})
-    )
-```
-
-## セルスタイル（必須）
-- すべてのセル: `Alignment(horizontal='left', vertical='center', wrap_text=False)`
-- セル結合（ws.merge_cells）は使用禁止
-
-## 印刷設定（必須）
-- 用紙サイズ: `ws.page_setup.paperSize = {paper_size}`（定数は使わず直接代入）
-- 向き: `ws.page_setup.orientation = '{orientation}'`（定数は使わず直接代入）
-- スケーリング: fitToWidth / fitToPage は設定しない（等倍100%が大前提）
-- 余白（数値は変更禁止）:
-  ```python
-  ws.page_margins.left = {margin_left}
-  ws.page_margins.right = {margin_right}
-  ws.page_margins.top = {margin_top}
-  ws.page_margins.bottom = {margin_bottom}
-  ```
-- 印刷範囲: 入力JSONに `print_range` があればそれを使用。なければ、入力データの各要素から実際に使用されている最大行・最大列を求め、`A1:{{最大列文字}}{{最大行番号}}` を設定すること。`max_rows` や `total_pages × max_rows` を印刷範囲の計算に**使用しないこと**（コンテンツが収まらず2ページ目に溢れる原因になる）。
-
-## 複数ページ対応
-- 全ページを1シート（`wb.active`）に縦に並べる
-- オフセット定数（コード先頭で定義）: `col_offset = 1`（左右1マス余白）、`row_padding = 2`（上下2マス余白）
-- 2ページ目以降のrow_offset = `(page_number - 1) * {max_rows} + row_padding`
-- ページ境界に改ページ設定:
-  ```python
-  from openpyxl.worksheet.pagebreak import Break
-  ws.row_breaks.append(Break(id=page_number * ({max_rows} + row_padding)))
-  ```
-- 行の高さ設定範囲（`row_dimensions`）は `総ページ数 × {max_rows}` まで適用すること。ただし**印刷範囲はこの値を使わず**、上記の「実際に使用されている最大行」に基づくこと。データの最終使用行に定数を加算するバッファ処理は**禁止**。
-
-## 技術的制約
-- `True`/`False`（Python形式）を使用。JSONの`true`/`false`は**絶対に禁止**（`NameError: name 'true' is not defined` の原因）
-- `data = [...]` リストの末尾は必ず `]` で終わること。余分な `}}` を付加しないこと（`SyntaxError: unmatched '}}'` の原因）
-- `[cite: ...]` のようなアノテーションタグは絶対に含めない（SyntaxErrorの原因）
-- 出力ファイル名: `output.xlsx`
-- `ws.page_margins` への dict 代入は**絶対に禁止**（`AttributeError: 'dict' object has no attribute 'to_tree'` の原因）。必ず属性代入形式を使用すること:
-  ```python
-  # ✗ 禁止
-  ws.page_margins = {{'left': 0.47, ...}}
-  # ✓ 正しい形式（上記「印刷設定」の通り）
-  ws.page_margins.left = 0.47
-  ```
-
-入力データ（Step 1のレイアウト仕様）:
-【重要】以下の入力データに `[` で始まる JSON 配列が含まれています。JSON配列の前後に説明文や検証コメントが含まれている場合は完全に無視し、`[` から `]` までのJSON部分のみを使用してください。
-{input_data}
-
-出力はPythonコードのみをマークダウンのコードブロック（```python ... ```）で出力してください。前後の挨拶・説明文・思考プロセスは一切不要です。"""
 
 
 # ---------------------------------------------------------------------------
@@ -456,38 +161,34 @@ wb.save("output.xlsx")
 
 
 # ビジョンLLM（画像入力対応AIチャット）向けの視覚的検証プロンプト。
-# ページごとに生成し、PDFページ画像と一緒にAIチャットに貼り付けて使用する。
+# JSONは渡さず、PDFページ画像 + Excelファイルの比較で罫線差分を検出する。
+# ページごとに生成し、対応する PNG ファイルと Excel ファイルと一緒にLLMに投入して使用する。
 VISUAL_REVIEW_PROMPT = """\
-添付のPDFページ画像と、以下のスクリプトが自動生成したレイアウトJSONを照合し、修正が必要な箇所を教えてください。
+以下の2つのファイルを比較し、**罫線（枠線）の過不足のみ**を指摘してください。
+- ファイル1: PDFの原本画像（ページ {page_number}）
+- ファイル2: 自動生成したExcelファイル（ページ {page_number} に対応する部分を参照）
 
 ## グリッドパラメータ
 - 方眼サイズ: {col_width_mm}mm × {row_height_mm}mm（1マスの大きさ）
-- 最大列数: {max_cols}、最大行数: {max_rows}
-- 座標は左上が (row=1, col=1) で、右・下方向に増加します
+- 座標はExcelの対象ページ先頭セルを (row=1, col=1) とし、右・下方向に増加します
+- col はExcelの列番号（A=1, B=2, C=3 ...）と対応します
 
-## 自動生成されたレイアウト（ページ {page_number}）
+## 出力形式
 
-```json
-{page_layout_json}
-```
-
-## 検証依頼
-
-PDFの画像と上記JSONを比較し、修正が必要な箇所を以下のJSON形式のみで出力してください。
+PDFと比較して罫線に差異がある箇所のみ、以下のJSON形式で出力してください。
 修正不要な場合は `{{"corrections": []}}` のみ出力してください。
 
 ```json
 {{
   "corrections": [
-    {{"action": "add_text",    "page": {page_number}, "row": <行>, "col": <列>, "content": "<テキスト>"}},
-    {{"action": "fix_text",    "page": {page_number}, "row": <現在行>, "col": <現在列>, "new_row": <正行>, "new_col": <正列>}},
-    {{"action": "add_border",  "page": {page_number}, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>, "borders": {{"top": true, "bottom": true, "left": true, "right": true}}}},
-    {{"action": "remove_border","page": {page_number}, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>}}
+    {{"action": "add_border",    "page": {page_number}, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>, "borders": {{"top": true, "bottom": true, "left": true, "right": true}}}},
+    {{"action": "remove_border", "page": {page_number}, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>}}
   ]
 }}
 ```
 
-【重要】出力はJSONのみ。説明文・コードブロック記号は不要です。"""
+【重要】出力はJSONのみ。説明文・コードブロック記号は不要です。
+【重要】テキストの差異は無視してください。罫線のみが対象です。"""
 
 
 # ---------------------------------------------------------------------------

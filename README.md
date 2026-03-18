@@ -1,28 +1,24 @@
 # Sheetling
 
-PDFを解析し、スクリプトが自動生成したPythonコードを実行することで、**任意のPDFレイアウトを維持したままA4/A3方眼Excelに変換**するツールです。
+PDFを解析し、自動生成したPythonコードを実行することで、**任意のPDFレイアウトを維持したままA4/A3方眼Excelに変換**するツールです。
 テーブルの列ズレのない高精度な方眼紙レイアウトへの変換を、LLMを最小限に抑えた完全自動パイプラインで実現します。
 
 ---
 
-## 仕組み（2フェーズ構成）
+## 仕組み
 
 ```
-PDF → [Phase 1] 解析・座標計算
-         ↓
-      [auto] レイアウトJSON自動生成 + _gen.py 自動生成
-         ↓
-      [任意] ビジョンLLMによる視覚的検証・修正
-         ↓
-      [Phase 3] Excel描画 + 確定的ボーダー後処理
+PDF → [auto] 解析 → グリッド座標計算 → レイアウトJSON生成 → _gen.py 生成 → Excel出力
+                                                                    ↓
+                                              （任意）ビジョンLLMによる視覚的検証
+                                                                    ↓
+                                             [correct] 修正適用 → Excel再生成
 ```
 
-| フェーズ | コマンド | 実行者 | 内容 |
-|----------|---------|--------|------|
-| Phase 1 | `extract` | スクリプト | `pdfplumber` でPDFを解析。Excel グリッド座標を事前計算し、抽出データを `data/out/<pdf_name>/` に出力 |
-| 自動生成 | `auto` | スクリプト | 抽出データから直接レイアウトJSONと `_gen.py` を生成。視覚的検証プロンプトも出力 |
-| 視覚的検証 | `correct` | 人間 + ビジョンLLM | PDFページ画像 + 検証プロンプトをAIチャットに投入。修正指示JSONを `_gen.py` に反映 |
-| Phase 3 | `generate` | スクリプト | `_gen.py` を実行してExcelを出力。罫線を確定的に後処理で上書き適用 |
+| コマンド | 実行者 | 内容 |
+|---------|--------|------|
+| `auto` | スクリプト | PDF解析 → グリッド座標計算 → レイアウトJSON自動生成 → `_gen.py` 生成 → Excel出力。視覚的検証プロンプトも出力 |
+| `correct` | 人間 + ビジョンLLM | PDFページ画像 + 検証プロンプトをAIチャットに投入。修正指示JSONを適用し Excel を再生成 |
 
 ---
 
@@ -42,41 +38,9 @@ pip install -r requirements.txt
 
 ## 実行手順
 
-### Phase 1：PDF解析 & 座標計算
+### auto：PDF → Excel 自動生成
 
 `data/in/` に対象のPDFを置いて実行します：
-
-```bash
-# 全PDF一括処理
-python -m src.main extract [--grid-size <size>]
-
-# 特定PDFのみ
-python -m src.main extract --pdf data/in/sample.pdf [--grid-size <size>]
-```
-
-**オプション：**
-
-| オプション | デフォルト | 説明 |
-|-----------|----------|------|
-| `--grid-size` | `small` | 方眼サイズ（`small` / `medium` / `large`） |
-| `--pdf` | なし（全PDF） | 処理対象PDFのパス |
-
-実行後、`data/out/<pdf_name>/` に以下が生成されます：
-
-```text
-data/out/<pdf_name>/
-├── <pdf_name>_extracted.json      # PDFから抽出した生データ（グリッド座標付き）
-├── <pdf_name>_grid_params.json    # グリッドパラメータ（Phase 3 罫線後処理用）
-├── <pdf_name>_gen.py              # (空) auto コマンドで自動生成される
-└── prompts/
-    ├── <pdf_name>_prompt_step1.txt    # 旧来フロー用: STEP 1 プロンプト（参照用）
-    ├── <pdf_name>_prompt_step1_5.txt  # 旧来フロー用: STEP 1.5 プロンプト（参照用）
-    └── <pdf_name>_prompt_step2.txt    # 旧来フロー用: STEP 2 プロンプト（参照用）
-```
-
----
-
-### auto：レイアウト自動生成（step1 + step1.5 + fill + step2 を一括自動化）
 
 ```bash
 # 全PDF一括処理
@@ -86,24 +50,26 @@ python -m src.main auto [--grid-size <size>]
 python -m src.main auto --pdf data/in/sample.pdf [--grid-size <size>]
 ```
 
-`extract` 済みの抽出データをもとに、以下をすべて自動で行います：
-
 | 処理 | 内容 |
 |------|------|
-| レイアウトJSON生成 | `_extracted.json` の `table_border_rects` / `rects` / `words` から直接生成（旧 STEP 1 + 1.5 相当） |
-| 座標検証・補正 | 座標整合性チェック・重複除去・クランプをスクリプトで確実に適用 |
-| テキスト補完 | `_extracted.json` の `words` と照合して欠落テキストを補完（旧 `fill` 相当） |
-| `_gen.py` 生成 | テンプレートから Excel生成スクリプトを生成。JSONはランタイムで読み込む設計 |
+| PDF解析 | `pdfplumber` でテキスト・罫線・矩形を抽出し、Excel グリッド座標を計算 |
+| レイアウトJSON生成 | `table_border_rects` / `rects` / `words` から直接生成（LLM不要） |
+| 座標検証・補正 | 整合性チェック・重複除去・クランプをスクリプトで確実に適用 |
+| テキスト補完 | 抽出データと照合して欠落テキストを補完 |
+| `_gen.py` 生成 | テンプレートから Excel生成スクリプトを生成 |
 | 視覚的検証プロンプト生成 | ページごとに `_visual_review_page{N}.txt` を出力 |
+| Excel出力 | `_gen.py` を実行して `_Python版.xlsx` を生成 |
 
-実行後、`data/out/<pdf_name>/` に以下が追加されます：
+実行後、`data/out/<pdf_name>/` に以下が生成されます：
 
 ```text
 data/out/<pdf_name>/
-├── <pdf_name>_gen.py                        # 自動生成された Excel生成スクリプト
+├── <pdf_name>_extracted.json          # PDFから抽出した生データ（グリッド座標付き）
+├── <pdf_name>_grid_params.json        # グリッドパラメータ（罫線後処理用）
+├── <pdf_name>_gen.py                  # 自動生成された Excel生成スクリプト
+├── <pdf_name>_Python版.xlsx           # 生成された Excel ファイル
 └── prompts/
-    ├── <pdf_name>_step1_5_input.json        # 自動生成されたレイアウトJSON
-    ├── <pdf_name>_step1_5_output.json       # テキスト補完済みレイアウトJSON
+    ├── <pdf_name>_step1_5_output.json       # レイアウトJSON（_gen.py が参照）
     └── <pdf_name>_visual_review_page1.txt   # 視覚的検証プロンプト（ページごと）
 ```
 
@@ -146,7 +112,7 @@ python -m src.main correct --pdf sample
 python -m src.main correct
 ```
 
-`_visual_corrections.json` の修正指示を `_step1_5_output.json` に適用し、`_gen.py` を再生成します。
+`_visual_corrections.json` の修正指示を `_step1_5_output.json` に適用し、`_gen.py` を再生成して Excel を出力します。
 
 **`_visual_corrections.json` の形式：**
 
@@ -164,40 +130,21 @@ python -m src.main correct
 
 ---
 
-### Phase 3：Excel生成
-
-```bash
-# data/out/ 以下の全 *_gen.py を一括処理
-python -m src.main generate
-```
-
-`data/out/<pdf_name>/<pdf_name>_Python版.xlsx` が生成されます。
-
-**処理内容：**
-- `_gen.py` を実行して Excel を生成（`_step1_5_output.json` をランタイムで読み込む）
-- `_extracted.json` と `_grid_params.json` を参照し、罫線を確定的に後処理で上書き適用
-- エラー発生時は `prompts/<pdf_name>_prompt_error_fix.txt` にエラー修正用プロンプトを出力
-
----
-
 ## CLIリファレンス
 
 ```
-python -m src.main <phase> [options]
+python -m src.main <command> [options]
 ```
 
-| phase | 説明 |
-|-------|------|
-| `extract` | Phase 1: PDF解析 & グリッド座標計算 |
-| `auto` | step1 + step1.5 + fill + step2 を完全自動化。レイアウトJSON・`_gen.py`・視覚的検証プロンプトを生成 |
-| `correct` | ビジョンLLMの修正指示（`_visual_corrections.json`）を適用して `_gen.py` を再生成 |
-| `fill` | 旧来フロー用: STEP 1.5 出力のテキスト補完 & STEP 2 プロンプト更新 |
-| `generate` | Phase 3: `_gen.py` を実行してExcel出力 |
+| command | 説明 |
+|---------|------|
+| `auto` | PDF → Excel 自動生成（解析 → レイアウトJSON生成 → `_gen.py` 生成 → Excel出力） |
+| `correct` | ビジョンLLMの修正指示（`_visual_corrections.json`）を適用して Excel を再生成 |
 
-| オプション | 対象phase | 説明 |
-|-----------|----------|------|
-| `--pdf <path>` | `extract`, `auto`, `fill`, `correct` | 処理対象PDFのパスまたはPDF名（省略時は全対象を処理） |
-| `--grid-size <size>` | `extract`, `auto` | 方眼サイズ: `small`（デフォルト）/ `medium` / `large` |
+| オプション | 対象command | 説明 |
+|-----------|------------|------|
+| `--pdf <path>` | `auto`, `correct` | 処理対象PDFのパスまたはPDF名（省略時は全対象を処理） |
+| `--grid-size <size>` | `auto` | 方眼サイズ: `small`（デフォルト）/ `medium` / `large` |
 
 ---
 
@@ -221,13 +168,13 @@ python -m src.main <phase> [options]
 ```text
 Sheetling/
 ├── src/
-│   ├── main.py              # CLI エントリポイント（extract / auto / correct / fill / generate）
+│   ├── main.py              # CLI エントリポイント（auto / correct）
 │   ├── core/
-│   │   └── pipeline.py      # フェーズ全体のフロー制御・座標計算・自動生成・ボーダー後処理
+│   │   └── pipeline.py      # パイプライン全体の制御・座標計算・自動生成・ボーダー後処理
 │   ├── parser/
-│   │   └── pdf_extractor.py # Phase 1: PDFデータ抽出 (pdfplumber)
+│   │   └── pdf_extractor.py # PDFデータ抽出 (pdfplumber)
 │   ├── templates/
-│   │   └── prompts.py       # LLMプロンプト定義・コード生成テンプレート・グリッドサイズ設定
+│   │   └── prompts.py       # コード生成テンプレート・視覚的検証プロンプト・グリッドサイズ設定
 │   └── utils/
 │       └── logger.py        # ログ出力管理
 ├── data/
@@ -249,25 +196,21 @@ Sheetling/
 
 ---
 
-## よく発生するエラー（Phase 3）
+## エラー発生時
 
-`auto` コマンドで生成された `_gen.py` はテンプレートベースのため、旧来のLLM生成コードで発生していたエラー（`NameError: name 'thin'` 等）は発生しません。
-
-万一エラーが発生した場合、`prompts/<pdf_name>_prompt_error_fix.txt` が出力されます。その内容をAIチャットに投入してコードを修正し、`_gen.py` を上書き保存してから再度 `generate` を実行してください。
+`auto` / `correct` コマンドで `_gen.py` の実行に失敗した場合、`prompts/<pdf_name>_prompt_error_fix.txt` にエラー修正用プロンプトが出力されます。その内容をAIチャットに投入してコードを修正し、`_gen.py` を上書き保存してから再度 `correct` を実行してください。
 
 ---
 
 ## 開発メモ
 
 - `src/` と `data/` はコンテナにボリュームマウントされており、ホスト側の変更が即時反映されます。
-- `auto` コマンドは `extract` が完了している（`_extracted.json` が存在する）ことを前提とします。
-- Phase 3 の罫線後処理は `_grid_params.json` が存在する場合のみ実行されます（`extract` を実行していれば自動生成されます）。
-- 旧来フローの `fill` コマンドは引き続き利用可能です（LLMとの手動ステップを経由したい場合）。
+- 罫線の後処理は `_extracted.json` と `_grid_params.json` が存在する場合のみ実行されます（`auto` 実行時に自動生成）。
 
 ### アーキテクチャ設計の考え方
 
 #### スクリプトが担う処理（`auto` コマンド）
-- **座標マッピング**：`_row` / `_col` は Phase 1 で確定計算済みのためLLM不要
+- **座標マッピング**：`_row` / `_col` は解析時に確定計算済みのためLLM不要
 - **border_rect 生成**：`table_border_rects` / `rects` のフィールドをそのまま変換
 - **text 生成**：`words` を `(_row, _col)` でグループ化するだけ
 - **座標検証・補正**：整合性チェック・重複除去・クランプはすべて決定論的処理
@@ -283,4 +226,4 @@ Sheetling/
 
 `auto` コマンドはページ全体を一括処理するため、ビジョン検証プロンプトはページごとに分割して出力されます。PDFのページ数が多い場合は、代表ページのみを検証することで作業量を削減できます。
 
-**将来対応案：** `extract` コマンドに `--pages 1-3` のようなオプションを追加して、処理対象ページを絞り込む。
+**将来対応案：** `auto` コマンドに `--pages 1-3` のようなオプションを追加して、処理対象ページを絞り込む。

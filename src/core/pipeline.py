@@ -1,8 +1,7 @@
 """
 Sheetling パイプライン。
-3ステップ・パイプライン方式:
-1. 解析 (pdfplumber) → extracted_data.json + prompt_step1.txt + prompt_step1_5.txt + prompt_step2.txt
-2. 描画 (openpyxl) — LLMが生成した _gen.py を実行
+1. PDF 解析 (pdfplumber) → グリッド座標付与 → レイアウトJSON自動生成
+2. Excel 描画 (openpyxl) — _gen.py を実行
 """
 
 import json
@@ -10,7 +9,7 @@ import re
 from pathlib import Path
 
 from src.parser.pdf_extractor import extract_pdf_data
-from src.templates.prompts import TABLE_ANCHOR_PROMPT, LAYOUT_REVIEW_PROMPT, CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GEN_CODE_TEMPLATE, VISUAL_REVIEW_PROMPT, GRID_SIZES
+from src.templates.prompts import CODE_ERROR_FIXING_PROMPT, GEN_CODE_TEMPLATE, VISUAL_REVIEW_PROMPT, GRID_SIZES
 from src.utils.logger import get_logger
 
 
@@ -396,7 +395,7 @@ def _apply_borders_to_xlsx(xlsx_path: str, extracted_data: dict, max_rows: int) 
     extracted_data の table_border_rects / rects の _borders を
     openpyxl で直接 XLSX ファイルに適用する（LLM 非依存の確定的罫線描画）。
 
-    CODE_GEN_PROMPT と同じオフセット定数を使用:
+    GEN_CODE_TEMPLATE と同じオフセット定数を使用:
       COL_OFFSET  = 1  （左1マス余白）
       ROW_PADDING = 2  （ページ上部2マス余白）
       row_offset for page N = (N-1) * max_rows + ROW_PADDING
@@ -494,7 +493,7 @@ def _has_japanese(text: str) -> bool:
 def _join_word_texts(texts: list) -> str:
     """
     word テキストのリストを結合する。
-    TABLE_ANCHOR_PROMPT と同じルール:
+    テキスト結合ルール:
       - 日本語文字を含む場合はスペースなし
       - 英数字のみの場合は半角スペースで結合
     """
@@ -720,23 +719,26 @@ def _setup_grid_params(first_page: dict, grid_size: str) -> dict:
 
 
 class SheetlingPipeline:
-    """
-    1. PDF を解析してプロンプトを出力する (Phase 1)。
-    2. ユーザーがLLMから得たコードを実行し、Excel方眼紙を生成する (Phase 3)。
-    """
+    """PDF から Excel 方眼紙を自動生成するパイプライン。"""
 
     def __init__(self, output_base_dir: str):
         self.output_base_dir = Path(output_base_dir)
 
-    def generate_prompts(self, pdf_path: str, in_base_dir: str = "data/in", grid_size: str = "small") -> dict:
+    def auto_layout(self, pdf_path: str, in_base_dir: str = "data/in", grid_size: str = "small") -> dict:
         """
-        Phase 1: PDFを解析し、LLMに渡すためのプロンプトを data/out/ に出力する。
+        PDF から Excel を完全自動生成する。
+
+        1. PDF を解析してグリッド座標を付与
+        2. _auto_generate_layout() でレイアウトJSONを生成
+        3. _fill_missing_text() で欠落テキストを補完
+        4. _auto_generate_code() で _gen.py を生成
+        5. ページごとの視覚的検証プロンプトを生成
+        6. render_excel() で Excel を生成
         """
-        logger.info(f"--- [Phase 1] PDF解析 & プロンプト生成: {Path(pdf_path).name} ---")
+        logger.info(f"--- [auto] PDF → Excel 自動生成: {Path(pdf_path).name} ---")
         path_obj = Path(pdf_path)
         pdf_name = path_obj.stem
 
-        # 出力先のディレクトリを作成
         try:
             rel_path = path_obj.parent.relative_to(Path(in_base_dir))
             out_dir = self.output_base_dir / rel_path
@@ -744,244 +746,60 @@ class SheetlingPipeline:
             out_dir = self.output_base_dir / pdf_name
 
         out_dir.mkdir(parents=True, exist_ok=True)
+        prompts_dir = out_dir / "prompts"
+        prompts_dir.mkdir(parents=True, exist_ok=True)
 
-        # PDFから情報を抽出
+        # PDF抽出 & グリッド座標付与
         extracted_data = extract_pdf_data(pdf_path)
-
         first_page = extracted_data['pages'][0]
         grid_params = _setup_grid_params(first_page, grid_size)
-
-        # Phase 3（render_excel）の罫線後処理で参照するためメタデータとして保存
-        with open(out_dir / f"{pdf_name}_grid_params.json", "w", encoding="utf-8") as f:
-            json.dump(grid_params, f, ensure_ascii=False)
-
-        # Y・X座標のクラスタリングを行い、各要素に事前計算済みExcel座標を付与
         for page in extracted_data['pages']:
             _compute_grid_coords(page, grid_params['max_rows'], grid_params['max_cols'])
 
-        # グリッド座標付与済みの状態で保存（_row/_col をデバッグ用ファイルに含める）
-        extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
-        with open(extracted_json_path, "w", encoding="utf-8") as f:
+        # 罫線後処理・デバッグ用に保存
+        with open(out_dir / f"{pdf_name}_extracted.json", "w", encoding="utf-8") as f:
             json.dump(extracted_data, f, indent=2, ensure_ascii=False)
+        with open(out_dir / f"{pdf_name}_grid_params.json", "w", encoding="utf-8") as f:
+            json.dump(grid_params, f, ensure_ascii=False)
 
-        # Step 1 用スリム版: LLMが参照するフィールドのみ（生座標・中間データを除外してトークン削減）
-        _WORD_KEEP = {"text", "_row", "_col", "font_color", "font_size", "is_vertical", "_end_row"}
-        _TBR_KEEP  = {"_row", "_end_row", "_col", "_end_col", "_borders"}
-        _RECT_KEEP = {"_row", "_col", "_end_row", "_end_col", "_borders"}
-        step1_data = {"pages": [
-            {
-                "page_number": p["page_number"],
-                "words": [
-                    {k: v for k, v in w.items() if k in _WORD_KEEP}
-                    for w in p.get("words", [])
-                ],
-                "table_border_rects": [
-                    {k: v for k, v in r.items() if k in _TBR_KEEP}
-                    for r in p.get("table_border_rects", [])
-                ],
-                "rects": [
-                    {k: v for k, v in r.items() if k in _RECT_KEEP}
-                    for r in p.get("rects", [])
-                ],
-            }
-            for p in extracted_data["pages"]
-        ]}
-        step1_data_str = json.dumps(step1_data, indent=2, ensure_ascii=False)
-
-        # Step 1.5 用スリム版: words の text/_row/_col のみ（トークン削減）
-        slim_data = {"pages": [
-            {
-                "page_number": p["page_number"],
-                "words": [
-                    {"text": w.get("text", ""), "_row": w["_row"], "_col": w["_col"]}
-                    for w in p.get("words", [])
-                ]
-            }
-            for p in extracted_data["pages"]
-        ]}
-        slim_input_data_str = json.dumps(slim_data, indent=2, ensure_ascii=False)
-
-        # Step 1: 列アンカー確定プロンプト（PDF解析データを直接埋め込む）
-        prompt_1 = TABLE_ANCHOR_PROMPT.format(
-            input_data=step1_data_str,
-            **grid_params
-        )
-
-        # Step 1.5: レイアウトJSON検証・補正プロンプト（Step 1の出力を貼り付けるプレースホルダー）
-        prompt_1_5 = LAYOUT_REVIEW_PROMPT.format(
-            input_data=slim_input_data_str,
-            step1_output="[ここにSTEP 1の出力（JSON部分のみ）を貼り付けてください]",
-            **grid_params
-        )
-
-        # Step 2: コード生成プロンプト（Step 1.5 の出力を貼り付けるプレースホルダー）
-        prompt_2 = CODE_GEN_PROMPT.format(
-            input_data="[ここにSTEP 1.5の出力（JSON部分のみ）を貼り付けてください]",
-            **grid_params
-        )
-
-        # プロンプト保存
-        prompts_dir = out_dir / "prompts"
-        prompts_dir.mkdir(parents=True, exist_ok=True)
-
-        prompt_1_path = prompts_dir / f"{pdf_name}_prompt_step1.txt"
-        prompt_1_5_path = prompts_dir / f"{pdf_name}_prompt_step1_5.txt"
-        prompt_2_path = prompts_dir / f"{pdf_name}_prompt_step2.txt"
-
-        with open(prompt_1_path, "w", encoding="utf-8") as f:
-            f.write(prompt_1)
-        with open(prompt_1_5_path, "w", encoding="utf-8") as f:
-            f.write(prompt_1_5)
-        with open(prompt_2_path, "w", encoding="utf-8") as f:
-            f.write(prompt_2)
-
-        # 生成コード保存用の空ファイルを作成
-        generated_code_path = out_dir / f"{pdf_name}_gen.py"
-        if not generated_code_path.exists():
-            with open(generated_code_path, "w", encoding="utf-8") as f:
-                f.write("# Please paste final AI Python code (from STEP 2) here.\n")
-
-        # STEP 1.5 入力用のプレースホルダーを作成（LLM出力をここに貼り付ける）
-        step1_5_input_path = prompts_dir / f"{pdf_name}_step1_5_input.json"
-        if not step1_5_input_path.exists():
-            with open(step1_5_input_path, "w", encoding="utf-8") as f:
-                f.write("// STEP 1.5 の LLM 出力 JSON をここに貼り付けてください。\n// その後 python -m src.main fill を実行してください。\n")
-
-        logger.info(f"✅ Phase 1 完了: {pdf_name}")
-        logger.info(f"  抽出データ: {extracted_json_path}")
-        logger.info(f"  STEP 1   プロンプト: {prompt_1_path}")
-        logger.info(f"  STEP 1.5 プロンプト: {prompt_1_5_path}")
-        logger.info(f"  STEP 2   プロンプト: {prompt_2_path}")
-        logger.info(f"  STEP 1.5 入力JSON: {step1_5_input_path}  ← LLM出力を貼り付けて fill を実行")
-        logger.info(f"  ※ STEP1 → STEP1.5 → {step1_5_input_path.name} に貼り付け → fill → STEP2 → コードを {generated_code_path.name} に保存")
-
-        return {
-            "json_path": str(extracted_json_path),
-            "prompt_step1_path": str(prompt_1_path),
-            "prompt_step1_5_path": str(prompt_1_5_path),
-            "prompt_step2_path": str(prompt_2_path),
-            "generated_code_base_path": str(generated_code_path),
-        }
-
-    def fill_layout(self, pdf_name: str, step1_5_json: str, specific_out_dir: str = None) -> str:
-        """
-        手動パイプライン用: STEP 1.5 の LLM 出力に対してプログラム的テキスト補完を適用する。
-
-        STEP 1.5 の LLM が見落とした word を extracted_data と照合して補完し、
-        補完済み JSON を prompts/{pdf_name}_step1_5_output.json として保存する。
-        また、STEP 2 プロンプトを補完済み JSON で更新して保存する。
-
-        Args:
-            pdf_name:        PDF ファイル名（拡張子なし）
-            step1_5_json:    STEP 1.5 の LLM 出力 JSON 文字列
-            specific_out_dir: 出力ディレクトリ（省略時は data/out/{pdf_name}）
-
-        Returns:
-            補完済みレイアウト JSON 文字列
-        """
-        if specific_out_dir:
-            out_dir = Path(specific_out_dir)
-        else:
-            out_dir = self.output_base_dir / pdf_name
-
-        # extracted.json を読み込む（グリッド座標付与済み）
-        extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
-        if not extracted_json_path.exists():
-            raise FileNotFoundError(
-                f"extracted.json が見つかりません: {extracted_json_path}. "
-                "generate_prompts() を先に実行してください。"
-            )
-
-        with open(extracted_json_path, "r", encoding="utf-8") as f:
-            extracted_data = json.load(f)
-
-        # テキスト補完を適用
-        filled_json = _fill_missing_text(step1_5_json, extracted_data)
-
-        # 補完済み JSON を保存
-        prompts_dir = out_dir / "prompts"
-        prompts_dir.mkdir(parents=True, exist_ok=True)
-        filled_json_path = prompts_dir / f"{pdf_name}_step1_5_output.json"
-        with open(filled_json_path, "w", encoding="utf-8") as f:
-            f.write(filled_json)
-        logger.info(f"[fill_layout] 補完済みレイアウト JSON を保存しました: {filled_json_path}")
-
-        # STEP 2 プロンプトのプレースホルダーを補完済み JSON で置換して保存
-        prompt_2_path = prompts_dir / f"{pdf_name}_prompt_step2.txt"
-        if prompt_2_path.exists():
-            with open(prompt_2_path, "r", encoding="utf-8") as f:
-                prompt_2 = f.read()
-            placeholder = "[ここにSTEP 1.5の出力（JSON部分のみ）を貼り付けてください]"
-            if placeholder in prompt_2:
-                with open(prompt_2_path, "w", encoding="utf-8") as f:
-                    f.write(prompt_2.replace(placeholder, filled_json))
-                logger.info(f"[fill_layout] STEP 2 プロンプトを補完済み JSON で更新しました: {prompt_2_path}")
-
-        return filled_json
-
-    def auto_layout(self, pdf_path: str, in_base_dir: str = "data/in", grid_size: str = "small") -> dict:
-        """
-        step1 + step1.5 + fill + step2 をスクリプトで完全自動化する。
-
-        1. _extracted.json と _grid_params.json を読み込む（extract 済みが前提）
-        2. _auto_generate_layout() でレイアウトJSONを生成（step1 + step1.5 相当）
-        3. fill_layout() で欠落テキストを補完（安全網）
-        4. _auto_generate_code() で _gen.py を生成（step2 相当）
-        5. ページごとの視覚的検証プロンプトを生成
-        """
-        logger.info(f"--- [auto] レイアウト自動生成: {Path(pdf_path).name} ---")
-        path_obj = Path(pdf_path)
-        pdf_name = path_obj.stem
-
-        try:
-            rel_path = path_obj.parent.relative_to(Path(in_base_dir))
-            out_dir = self.output_base_dir / rel_path
-        except ValueError:
-            out_dir = self.output_base_dir / pdf_name
-
-        # extract 済みファイルの確認
-        extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
-        grid_params_path    = out_dir / f"{pdf_name}_grid_params.json"
-        if not extracted_json_path.exists():
-            raise FileNotFoundError(
-                f"_extracted.json が見つかりません: {extracted_json_path}\n"
-                "先に `extract` コマンドを実行してください。"
-            )
-
-        with open(extracted_json_path, "r", encoding="utf-8") as f:
-            extracted_data = json.load(f)
-        with open(grid_params_path, "r", encoding="utf-8") as f:
-            grid_params = json.load(f)
-
-        # step1 + step1.5: スクリプトでレイアウトJSON生成
+        # レイアウトJSON生成 & 欠落テキスト補完
         layout_json = _auto_generate_layout(extracted_data, grid_params)
+        filled_json = _fill_missing_text(layout_json, extracted_data)
 
-        # _step1_5_input.json に保存（fill_layout が参照）
-        prompts_dir = out_dir / "prompts"
-        prompts_dir.mkdir(parents=True, exist_ok=True)
-        input_path = prompts_dir / f"{pdf_name}_step1_5_input.json"
-        with open(input_path, "w", encoding="utf-8") as f:
-            f.write(layout_json)
+        # _gen.py が参照するJSONとして保存
+        output_json_path = prompts_dir / f"{pdf_name}_step1_5_output.json"
+        with open(output_json_path, "w", encoding="utf-8") as f:
+            f.write(filled_json)
 
-        # fill: 欠落テキスト補完 + _step1_5_output.json 保存
-        filled_json = self.fill_layout(pdf_name, layout_json, specific_out_dir=str(out_dir))
-
-        # step2: テンプレートから _gen.py を生成
+        # _gen.py 生成
         gen_code = self._auto_generate_code(pdf_name, grid_params)
         gen_path = out_dir / f"{pdf_name}_gen.py"
         with open(gen_path, "w", encoding="utf-8") as f:
             f.write(gen_code)
-        logger.info(f"[auto] _gen.py を自動生成しました: {gen_path}")
+        logger.info(f"[auto] _gen.py を生成しました: {gen_path}")
 
-        # 視覚的検証プロンプトをページごとに生成
+        # PDFページ画像の生成（pdfplumber の to_image() を使用）
+        page_image_paths = []
+        try:
+            import pdfplumber
+            with pdfplumber.open(pdf_path) as pdf:
+                for page in pdf.pages:
+                    page_num = page.page_number
+                    img = page.to_image(resolution=144)
+                    img_path = out_dir / f"{pdf_name}_page{page_num}.png"
+                    img.save(str(img_path))
+                    page_image_paths.append(str(img_path))
+            logger.info(f"[auto] PDFページ画像を生成しました: {len(page_image_paths)} ページ")
+        except Exception as e:
+            logger.warning(f"[auto] PDFページ画像の生成に失敗しました: {e}")
+
+        # 視覚的検証プロンプト生成（JSONなし・PDF画像 + Excelファイル比較方式）
         layout = json.loads(filled_json)
         review_paths = []
         for page_layout in layout:
             page_num = page_layout.get('page_number', 1)
-            page_json_str = json.dumps([page_layout], ensure_ascii=False, indent=2)
             prompt_text = VISUAL_REVIEW_PROMPT.format(
                 page_number=page_num,
-                page_layout_json=page_json_str,
                 **grid_params,
             )
             review_path = prompts_dir / f"{pdf_name}_visual_review_page{page_num}.txt"
@@ -990,14 +808,13 @@ class SheetlingPipeline:
             review_paths.append(str(review_path))
             logger.info(f"[auto] 視覚的検証プロンプト生成: {review_path}")
 
-        logger.info(f"✅ [auto] 完了: {pdf_name}")
-        logger.info(f"  次のステップ（任意）: 各ページのPDF画像 + visual_review_page*.txt をAIチャットに貼り付けて検証")
-        logger.info(f"  修正がある場合: _visual_corrections.json に保存して `correct` コマンドを実行")
-        logger.info(f"  修正不要な場合: そのまま `generate` コマンドを実行")
+        # Excel生成
+        xlsx_path = self.render_excel(pdf_name, specific_out_dir=str(out_dir))
 
         return {
-            "layout_json_path": str(input_path),
+            "xlsx_path": xlsx_path,
             "gen_py_path": str(gen_path),
+            "page_image_paths": page_image_paths,
             "visual_review_paths": review_paths,
         }
 
