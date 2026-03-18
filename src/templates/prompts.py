@@ -80,9 +80,24 @@ ws = wb.active
 thin = Side(style='thin')
 total_pages = len(data)
 
-for c in range(1, 200):
+# 使用範囲を先行スキャン（方眼サイズ適用をその範囲+3に限定するため）
+_pre_max_row = ROW_PADDING
+_pre_max_col = COL_OFFSET
+for _page in data:
+    _row_offset = (_page["page_number"] - 1) * MAX_ROWS + ROW_PADDING
+    for _item in _page["elements"]:
+        if _item["type"] == "text":
+            _pre_max_row = max(_pre_max_row, _item["row"] + _row_offset)
+            _pre_max_col = max(_pre_max_col, _item["col"] + COL_OFFSET)
+        elif _item["type"] == "border_rect":
+            _pre_max_row = max(_pre_max_row, _item["end_row"] + _row_offset)
+            _pre_max_col = max(_pre_max_col, _item["end_col"] + COL_OFFSET)
+_grid_rows = _pre_max_row + 3
+_grid_cols = _pre_max_col + 3
+
+for c in range(1, _grid_cols + 1):
     ws.column_dimensions[get_column_letter(c)].width = EXCEL_COL_WIDTH
-for r in range(1, MAX_ROWS * total_pages + ROW_PADDING + 1):
+for r in range(1, _grid_rows + 1):
     ws.row_dimensions[r].height = EXCEL_ROW_HEIGHT
 
 
