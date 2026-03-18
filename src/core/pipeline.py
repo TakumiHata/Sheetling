@@ -1,8 +1,7 @@
 """
 Sheetling パイプライン。
-3ステップ・パイプライン方式:
-1. 解析 (pdfplumber) → extracted_data.json + prompt_step1.txt + prompt_step1_5.txt + prompt_step2.txt
-2. 描画 (openpyxl) — LLMが生成した _gen.py を実行
+1. PDF 解析 (pdfplumber) → グリッド座標付与 → レイアウトJSON自動生成
+2. Excel 描画 (openpyxl) — _gen.py を実行
 """
 
 import json
@@ -10,7 +9,7 @@ import re
 from pathlib import Path
 
 from src.parser.pdf_extractor import extract_pdf_data
-from src.templates.prompts import TABLE_ANCHOR_PROMPT, LAYOUT_REVIEW_PROMPT, CODE_GEN_PROMPT, CODE_ERROR_FIXING_PROMPT, GRID_SIZES
+from src.templates.prompts import CODE_ERROR_FIXING_PROMPT, GEN_CODE_TEMPLATE, VISUAL_REVIEW_PROMPT, GRID_SIZES
 from src.utils.logger import get_logger
 
 
@@ -304,12 +303,31 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
     for rect in page['rects']:
         r, er = rect['_row'], rect['_end_row']
         c, ec = rect['_col'], rect['_end_col']
-        rect['_borders'] = {
-            'top':    _has_h(r,  c, ec),
-            'bottom': _has_h(er, c, ec),
-            'left':   _has_v(c,  r, er),
-            'right':  _has_v(ec, r, er),
-        }
+        if r == er and c != ec:
+            # 水平分割線（高さ1グリッド未満の細長い矩形）:
+            # top のみ描画。bottom は同じ行なので重複ライン、left/right は端キャップになるため除外。
+            rect['_borders'] = {
+                'top':    _has_h(r, c, ec),
+                'bottom': False,
+                'left':   False,
+                'right':  False,
+            }
+        elif c == ec and r != er:
+            # 垂直分割線（幅1グリッド未満の細長い矩形）:
+            # left のみ描画。right は同じ列なので重複ライン、top/bottom は端キャップになるため除外。
+            rect['_borders'] = {
+                'top':    False,
+                'bottom': False,
+                'left':   _has_v(c, r, er),
+                'right':  False,
+            }
+        else:
+            rect['_borders'] = {
+                'top':    _has_h(r,  c, ec),
+                'bottom': _has_h(er, c, ec),
+                'left':   _has_v(c,  r, er),
+                'right':  _has_v(ec, r, er),
+            }
 
     # ---- 隣接セル間の _borders 整合性パス ---------------------------------------
     # 量子化誤差で A.right と B.left（共有辺）が不一致になる場合を OR で統一する。
@@ -377,7 +395,7 @@ def _apply_borders_to_xlsx(xlsx_path: str, extracted_data: dict, max_rows: int) 
     extracted_data の table_border_rects / rects の _borders を
     openpyxl で直接 XLSX ファイルに適用する（LLM 非依存の確定的罫線描画）。
 
-    CODE_GEN_PROMPT と同じオフセット定数を使用:
+    GEN_CODE_TEMPLATE と同じオフセット定数を使用:
       COL_OFFSET  = 1  （左1マス余白）
       ROW_PADDING = 2  （ページ上部2マス余白）
       row_offset for page N = (N-1) * max_rows + ROW_PADDING
@@ -441,10 +459,20 @@ def _apply_borders_to_xlsx(xlsx_path: str, extracted_data: dict, max_rows: int) 
         for rect in page.get('rects', []):
             if '_row' not in rect:
                 continue
+            r, er = rect['_row'], rect['_end_row']
+            c, ec = rect['_col'], rect['_end_col']
+            raw_borders = rect.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
+            # 水平・垂直分割線（1行/1列に収まる細長い矩形）の端キャップを除去する
+            if r == er and c != ec:
+                borders = {'top': raw_borders.get('top', True), 'bottom': False, 'left': False, 'right': False}
+            elif c == ec and r != er:
+                borders = {'top': False, 'bottom': False, 'left': raw_borders.get('left', True), 'right': False}
+            else:
+                borders = raw_borders
             _draw(
-                rect['_row'] + row_offset, rect['_end_row'] + row_offset,
-                rect['_col'] + COL_OFFSET, rect['_end_col'] + COL_OFFSET,
-                rect.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True}),
+                r + row_offset, er + row_offset,
+                c + COL_OFFSET, ec + COL_OFFSET,
+                borders,
             )
             total += 1
 
@@ -465,7 +493,7 @@ def _has_japanese(text: str) -> bool:
 def _join_word_texts(texts: list) -> str:
     """
     word テキストのリストを結合する。
-    TABLE_ANCHOR_PROMPT と同じルール:
+    テキスト結合ルール:
       - 日本語文字を含む場合はスペースなし
       - 英数字のみの場合は半角スペースで結合
     """
@@ -546,6 +574,117 @@ def _fill_missing_text(layout_json_str: str, extracted_data: dict) -> str:
     return json.dumps(layout, ensure_ascii=False)
 
 
+def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
+    """
+    extracted_data から直接レイアウトJSONを生成する（step1 + step1.5 のスクリプト代替）。
+
+    - table_border_rects / rects → border_rect 要素
+    - words を (_row, _col) でグループ化 → text 要素
+    - 座標整合性チェック・重複除去・クランプを適用
+    """
+    max_rows = grid_params['max_rows']
+    max_cols = grid_params['max_cols']
+
+    layout = []
+    for page in extracted_data.get('pages', []):
+        elements = []
+        seen_border_rects: set = set()
+
+        # table_border_rects → border_rect 要素
+        for tbr in page.get('table_border_rects', []):
+            r  = min(tbr['_row'],     max_rows)
+            er = min(tbr['_end_row'], max_rows)
+            c  = min(tbr['_col'],     max_cols)
+            ec = min(tbr['_end_col'], max_cols)
+            if r > er: r, er = er, r
+            if c > ec: c, ec = ec, c
+            if r == er and c == ec:
+                continue
+            key = (r, er, c, ec)
+            if key in seen_border_rects:
+                continue
+            seen_border_rects.add(key)
+            elements.append({
+                'type': 'border_rect',
+                'row': r, 'end_row': er,
+                'col': c, 'end_col': ec,
+                'borders': tbr.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True}),
+            })
+
+        # rects → border_rect 要素
+        for rect in page.get('rects', []):
+            if '_row' not in rect:
+                continue
+            r  = min(rect['_row'],     max_rows)
+            er = min(rect['_end_row'], max_rows)
+            c  = min(rect['_col'],     max_cols)
+            ec = min(rect['_end_col'], max_cols)
+            if r > er: r, er = er, r
+            if c > ec: c, ec = ec, c
+            if r == er and c == ec:
+                continue
+            key = (r, er, c, ec)
+            if key in seen_border_rects:
+                continue
+            seen_border_rects.add(key)
+            # 水平・垂直分割線の場合、_borders が旧データでも端キャップ除去を適用する
+            raw_borders = rect.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
+            if r == er and c != ec:
+                borders = {'top': raw_borders.get('top', True), 'bottom': False, 'left': False, 'right': False}
+            elif c == ec and r != er:
+                borders = {'top': False, 'bottom': False, 'left': raw_borders.get('left', True), 'right': False}
+            else:
+                borders = raw_borders
+            elements.append({
+                'type': 'border_rect',
+                'row': r, 'end_row': er,
+                'col': c, 'end_col': ec,
+                'borders': borders,
+            })
+
+        # words → text 要素（_row, _col でグループ化）
+        groups: dict = {}
+        for w in page.get('words', []):
+            if '_row' not in w or '_col' not in w:
+                continue
+            groups.setdefault((w['_row'], w['_col']), []).append(w)
+
+        seen_text: set = set()
+        for (row, col), words in sorted(groups.items()):
+            content = _join_word_texts([w.get('text', '') for w in words])
+            stripped = content.strip()
+            if not stripped or (len(stripped) == 1 and stripped in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'):
+                continue
+            row_c = min(row, max_rows)
+            col_c = min(col, max_cols)
+            pos = (row_c, col_c)
+            if pos in seen_text:
+                continue
+            seen_text.add(pos)
+            first = words[0]
+            elem: dict = {
+                'type': 'text',
+                'content': content,
+                'row': row_c,
+                'col': col_c,
+                'end_col': min(col_c + len(content), max_cols),
+            }
+            if first.get('font_color') and first['font_color'] != '000000':
+                elem['font_color'] = first['font_color']
+            if first.get('font_size'):
+                elem['font_size'] = first['font_size']
+            if first.get('is_vertical'):
+                elem['is_vertical'] = True
+                if '_end_row' in first:
+                    elem['end_row'] = min(first['_end_row'], max_rows)
+                elem['end_col'] = min(col_c + 1, max_cols)
+            elements.append(elem)
+
+        layout.append({'page_number': page['page_number'], 'elements': elements})
+
+    return json.dumps(layout, ensure_ascii=False)
+
+
 # A4 縦の基準サイズ (pt) — GRID_SIZES のセル密度はこのサイズを基準に調整されている
 _A4_W_PT: float = 595.28
 _A4_H_PT: float = 841.89
@@ -580,23 +719,26 @@ def _setup_grid_params(first_page: dict, grid_size: str) -> dict:
 
 
 class SheetlingPipeline:
-    """
-    1. PDF を解析してプロンプトを出力する (Phase 1)。
-    2. ユーザーがLLMから得たコードを実行し、Excel方眼紙を生成する (Phase 3)。
-    """
+    """PDF から Excel 方眼紙を自動生成するパイプライン。"""
 
     def __init__(self, output_base_dir: str):
         self.output_base_dir = Path(output_base_dir)
 
-    def generate_prompts(self, pdf_path: str, in_base_dir: str = "data/in", grid_size: str = "small") -> dict:
+    def auto_layout(self, pdf_path: str, in_base_dir: str = "data/in", grid_size: str = "small") -> dict:
         """
-        Phase 1: PDFを解析し、LLMに渡すためのプロンプトを data/out/ に出力する。
+        PDF から Excel を完全自動生成する。
+
+        1. PDF を解析してグリッド座標を付与
+        2. _auto_generate_layout() でレイアウトJSONを生成
+        3. _fill_missing_text() で欠落テキストを補完
+        4. _auto_generate_code() で _gen.py を生成
+        5. ページごとの視覚的検証プロンプトを生成
+        6. render_excel() で Excel を生成
         """
-        logger.info(f"--- [Phase 1] PDF解析 & プロンプト生成: {Path(pdf_path).name} ---")
+        logger.info(f"--- [auto] PDF → Excel 自動生成: {Path(pdf_path).name} ---")
         path_obj = Path(pdf_path)
         pdf_name = path_obj.stem
 
-        # 出力先のディレクトリを作成
         try:
             rel_path = path_obj.parent.relative_to(Path(in_base_dir))
             out_dir = self.output_base_dir / rel_path
@@ -604,184 +746,139 @@ class SheetlingPipeline:
             out_dir = self.output_base_dir / pdf_name
 
         out_dir.mkdir(parents=True, exist_ok=True)
+        prompts_dir = out_dir / "prompts"
+        prompts_dir.mkdir(parents=True, exist_ok=True)
 
-        # PDFから情報を抽出
+        # PDF抽出 & グリッド座標付与
         extracted_data = extract_pdf_data(pdf_path)
-
         first_page = extracted_data['pages'][0]
         grid_params = _setup_grid_params(first_page, grid_size)
-
-        # Phase 3（render_excel）の罫線後処理で参照するためメタデータとして保存
-        with open(out_dir / f"{pdf_name}_grid_params.json", "w", encoding="utf-8") as f:
-            json.dump(grid_params, f, ensure_ascii=False)
-
-        # Y・X座標のクラスタリングを行い、各要素に事前計算済みExcel座標を付与
         for page in extracted_data['pages']:
             _compute_grid_coords(page, grid_params['max_rows'], grid_params['max_cols'])
 
-        # グリッド座標付与済みの状態で保存（_row/_col をデバッグ用ファイルに含める）
-        extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
-        with open(extracted_json_path, "w", encoding="utf-8") as f:
+        # 罫線後処理・デバッグ用に保存
+        with open(out_dir / f"{pdf_name}_extracted.json", "w", encoding="utf-8") as f:
             json.dump(extracted_data, f, indent=2, ensure_ascii=False)
+        with open(out_dir / f"{pdf_name}_grid_params.json", "w", encoding="utf-8") as f:
+            json.dump(grid_params, f, ensure_ascii=False)
 
-        # Step 1 用スリム版: LLMが参照するフィールドのみ（生座標・中間データを除外してトークン削減）
-        _WORD_KEEP = {"text", "_row", "_col", "font_color", "font_size", "is_vertical", "_end_row"}
-        _TBR_KEEP  = {"_row", "_end_row", "_col", "_end_col", "_borders"}
-        _RECT_KEEP = {"_row", "_col", "_end_row", "_end_col", "_borders"}
-        step1_data = {"pages": [
-            {
-                "page_number": p["page_number"],
-                "words": [
-                    {k: v for k, v in w.items() if k in _WORD_KEEP}
-                    for w in p.get("words", [])
-                ],
-                "table_border_rects": [
-                    {k: v for k, v in r.items() if k in _TBR_KEEP}
-                    for r in p.get("table_border_rects", [])
-                ],
-                "rects": [
-                    {k: v for k, v in r.items() if k in _RECT_KEEP}
-                    for r in p.get("rects", [])
-                ],
-            }
-            for p in extracted_data["pages"]
-        ]}
-        step1_data_str = json.dumps(step1_data, indent=2, ensure_ascii=False)
+        # レイアウトJSON生成 & 欠落テキスト補完
+        layout_json = _auto_generate_layout(extracted_data, grid_params)
+        filled_json = _fill_missing_text(layout_json, extracted_data)
 
-        # Step 1.5 用スリム版: words の text/_row/_col のみ（トークン削減）
-        slim_data = {"pages": [
-            {
-                "page_number": p["page_number"],
-                "words": [
-                    {"text": w.get("text", ""), "_row": w["_row"], "_col": w["_col"]}
-                    for w in p.get("words", [])
-                ]
-            }
-            for p in extracted_data["pages"]
-        ]}
-        slim_input_data_str = json.dumps(slim_data, indent=2, ensure_ascii=False)
+        # _gen.py が参照するレイアウトJSONとして保存
+        output_json_path = out_dir / f"{pdf_name}_layout.json"
+        with open(output_json_path, "w", encoding="utf-8") as f:
+            f.write(filled_json)
 
-        # Step 1: 列アンカー確定プロンプト（PDF解析データを直接埋め込む）
-        prompt_1 = TABLE_ANCHOR_PROMPT.format(
-            input_data=step1_data_str,
-            **grid_params
-        )
+        # _gen.py 生成
+        gen_code = self._auto_generate_code(pdf_name, grid_params)
+        gen_path = out_dir / f"{pdf_name}_gen.py"
+        with open(gen_path, "w", encoding="utf-8") as f:
+            f.write(gen_code)
+        logger.info(f"[auto] _gen.py を生成しました: {gen_path}")
 
-        # Step 1.5: レイアウトJSON検証・補正プロンプト（Step 1の出力を貼り付けるプレースホルダー）
-        prompt_1_5 = LAYOUT_REVIEW_PROMPT.format(
-            input_data=slim_input_data_str,
-            step1_output="[ここにSTEP 1の出力（JSON部分のみ）を貼り付けてください]",
-            **grid_params
-        )
+        # PDFページ画像 + 視覚的検証プロンプトの生成（ページごとに page_{N}/ フォルダへ格納）
+        layout = json.loads(filled_json)
+        page_image_paths = []
+        review_paths = []
 
-        # Step 2: コード生成プロンプト（Step 1.5 の出力を貼り付けるプレースホルダー）
-        prompt_2 = CODE_GEN_PROMPT.format(
-            input_data="[ここにSTEP 1.5の出力（JSON部分のみ）を貼り付けてください]",
-            **grid_params
-        )
+        try:
+            import pdfplumber as _plumber
+            pdf_for_images = _plumber.open(pdf_path)
+        except Exception as e:
+            logger.warning(f"[auto] PDFページ画像の生成に失敗しました: {e}")
+            pdf_for_images = None
 
-        # プロンプト保存
-        prompts_dir = out_dir / "prompts"
-        prompts_dir.mkdir(parents=True, exist_ok=True)
+        for page_layout in layout:
+            page_num = page_layout.get('page_number', 1)
+            page_dir = prompts_dir / f"page_{page_num}"
+            page_dir.mkdir(parents=True, exist_ok=True)
 
-        prompt_1_path = prompts_dir / f"{pdf_name}_prompt_step1.txt"
-        prompt_1_5_path = prompts_dir / f"{pdf_name}_prompt_step1_5.txt"
-        prompt_2_path = prompts_dir / f"{pdf_name}_prompt_step2.txt"
+            # PDF画像
+            if pdf_for_images is not None:
+                try:
+                    page = pdf_for_images.pages[page_num - 1]
+                    img = page.to_image(resolution=144)
+                    img_path = page_dir / f"{pdf_name}_page{page_num}.png"
+                    img.save(str(img_path))
+                    page_image_paths.append(str(img_path))
+                except Exception as e:
+                    logger.warning(f"[auto] ページ {page_num} の画像生成に失敗しました: {e}")
 
-        with open(prompt_1_path, "w", encoding="utf-8") as f:
-            f.write(prompt_1)
-        with open(prompt_1_5_path, "w", encoding="utf-8") as f:
-            f.write(prompt_1_5)
-        with open(prompt_2_path, "w", encoding="utf-8") as f:
-            f.write(prompt_2)
+            # 視覚的検証プロンプト
+            prompt_text = VISUAL_REVIEW_PROMPT.format(page_number=page_num, **grid_params)
+            review_path = page_dir / f"{pdf_name}_visual_review_page{page_num}.txt"
+            review_path.write_text(prompt_text, encoding="utf-8")
+            review_paths.append(str(review_path))
 
-        # 生成コード保存用の空ファイルを作成
-        generated_code_path = out_dir / f"{pdf_name}_gen.py"
-        if not generated_code_path.exists():
-            with open(generated_code_path, "w", encoding="utf-8") as f:
-                f.write("# Please paste final AI Python code (from STEP 2) here.\n")
+            # Excel罫線プレビュー画像の生成（Pillow で border_rect を描画）
+            try:
+                from PIL import Image, ImageDraw
+                cell_w = 20
+                cell_h = 14
+                max_c = int(grid_params.get('max_cols', 62))
+                max_r = int(grid_params.get('max_rows', 76))
+                img_w = cell_w * max_c + 1
+                img_h = cell_h * max_r + 1
+                excel_img = Image.new('RGB', (img_w, img_h), 'white')
+                draw = ImageDraw.Draw(excel_img)
+                # 薄いグリッド線
+                for c in range(max_c + 1):
+                    x = c * cell_w
+                    draw.line([(x, 0), (x, img_h)], fill='#E0E0E0', width=1)
+                for r in range(max_r + 1):
+                    y = r * cell_h
+                    draw.line([(0, y), (img_w, y)], fill='#E0E0E0', width=1)
+                # border_rect を黒線で描画
+                for elem in page_layout.get('elements', []):
+                    if elem.get('type') != 'border_rect':
+                        continue
+                    r1 = (elem['row'] - 1) * cell_h
+                    r2 = elem['end_row'] * cell_h
+                    c1 = (elem['col'] - 1) * cell_w
+                    c2 = elem['end_col'] * cell_w
+                    borders = elem.get('borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
+                    if borders.get('top',    True): draw.line([(c1, r1), (c2, r1)], fill='black', width=2)
+                    if borders.get('bottom', True): draw.line([(c1, r2), (c2, r2)], fill='black', width=2)
+                    if borders.get('left',   True): draw.line([(c1, r1), (c1, r2)], fill='black', width=2)
+                    if borders.get('right',  True): draw.line([(c2, r1), (c2, r2)], fill='black', width=2)
+                excel_img_path = page_dir / f"{pdf_name}_excel_page{page_num}.png"
+                excel_img.save(str(excel_img_path))
+            except Exception as e:
+                logger.warning(f"[auto] Excel罫線プレビュー画像の生成に失敗しました: {e}")
 
-        # STEP 1.5 入力用のプレースホルダーを作成（LLM出力をここに貼り付ける）
-        step1_5_input_path = prompts_dir / f"{pdf_name}_step1_5_input.json"
-        if not step1_5_input_path.exists():
-            with open(step1_5_input_path, "w", encoding="utf-8") as f:
-                f.write("// STEP 1.5 の LLM 出力 JSON をここに貼り付けてください。\n// その後 python -m src.main fill を実行してください。\n")
+            # 修正ファイルのテンプレートを自動生成（未存在時のみ）
+            corrections_path = page_dir / f"{pdf_name}_visual_corrections_page{page_num}.json"
+            if not corrections_path.exists():
+                corrections_path.write_text(
+                    json.dumps({"corrections": []}, ensure_ascii=False, indent=2),
+                    encoding="utf-8"
+                )
 
-        logger.info(f"✅ Phase 1 完了: {pdf_name}")
-        logger.info(f"  抽出データ: {extracted_json_path}")
-        logger.info(f"  STEP 1   プロンプト: {prompt_1_path}")
-        logger.info(f"  STEP 1.5 プロンプト: {prompt_1_5_path}")
-        logger.info(f"  STEP 2   プロンプト: {prompt_2_path}")
-        logger.info(f"  STEP 1.5 入力JSON: {step1_5_input_path}  ← LLM出力を貼り付けて fill を実行")
-        logger.info(f"  ※ STEP1 → STEP1.5 → {step1_5_input_path.name} に貼り付け → fill → STEP2 → コードを {generated_code_path.name} に保存")
+        if pdf_for_images is not None:
+            pdf_for_images.close()
+            logger.info(f"[auto] PDFページ画像を生成しました: {len(page_image_paths)} ページ")
+        logger.info(f"[auto] 視覚的検証プロンプトを生成しました: {len(review_paths)} ページ")
+
+        # Excel生成
+        xlsx_path = self.render_excel(pdf_name, specific_out_dir=str(out_dir))
 
         return {
-            "json_path": str(extracted_json_path),
-            "prompt_step1_path": str(prompt_1_path),
-            "prompt_step1_5_path": str(prompt_1_5_path),
-            "prompt_step2_path": str(prompt_2_path),
-            "generated_code_base_path": str(generated_code_path),
+            "xlsx_path": xlsx_path,
+            "gen_py_path": str(gen_path),
+            "page_image_paths": page_image_paths,
+            "visual_review_paths": review_paths,
         }
 
-    def fill_layout(self, pdf_name: str, step1_5_json: str, specific_out_dir: str = None) -> str:
-        """
-        手動パイプライン用: STEP 1.5 の LLM 出力に対してプログラム的テキスト補完を適用する。
+    def _auto_generate_code(self, pdf_name: str, grid_params: dict) -> str:
+        """GEN_CODE_TEMPLATE からランタイムにJSONを読み込む _gen.py コードを生成する。"""
+        return GEN_CODE_TEMPLATE.substitute(pdf_name=pdf_name, **grid_params)
 
-        STEP 1.5 の LLM が見落とした word を extracted_data と照合して補完し、
-        補完済み JSON を prompts/{pdf_name}_step1_5_output.json として保存する。
-        また、STEP 2 プロンプトを補完済み JSON で更新して保存する。
-
-        Args:
-            pdf_name:        PDF ファイル名（拡張子なし）
-            step1_5_json:    STEP 1.5 の LLM 出力 JSON 文字列
-            specific_out_dir: 出力ディレクトリ（省略時は data/out/{pdf_name}）
-
-        Returns:
-            補完済みレイアウト JSON 文字列
-        """
-        if specific_out_dir:
-            out_dir = Path(specific_out_dir)
-        else:
-            out_dir = self.output_base_dir / pdf_name
-
-        # extracted.json を読み込む（グリッド座標付与済み）
-        extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
-        if not extracted_json_path.exists():
-            raise FileNotFoundError(
-                f"extracted.json が見つかりません: {extracted_json_path}. "
-                "generate_prompts() を先に実行してください。"
-            )
-
-        with open(extracted_json_path, "r", encoding="utf-8") as f:
-            extracted_data = json.load(f)
-
-        # テキスト補完を適用
-        filled_json = _fill_missing_text(step1_5_json, extracted_data)
-
-        # 補完済み JSON を保存
-        prompts_dir = out_dir / "prompts"
-        prompts_dir.mkdir(parents=True, exist_ok=True)
-        filled_json_path = prompts_dir / f"{pdf_name}_step1_5_output.json"
-        with open(filled_json_path, "w", encoding="utf-8") as f:
-            f.write(filled_json)
-        logger.info(f"[fill_layout] 補完済みレイアウト JSON を保存しました: {filled_json_path}")
-
-        # STEP 2 プロンプトのプレースホルダーを補完済み JSON で置換して保存
-        prompt_2_path = prompts_dir / f"{pdf_name}_prompt_step2.txt"
-        if prompt_2_path.exists():
-            with open(prompt_2_path, "r", encoding="utf-8") as f:
-                prompt_2 = f.read()
-            placeholder = "[ここにSTEP 1.5の出力（JSON部分のみ）を貼り付けてください]"
-            if placeholder in prompt_2:
-                with open(prompt_2_path, "w", encoding="utf-8") as f:
-                    f.write(prompt_2.replace(placeholder, filled_json))
-                logger.info(f"[fill_layout] STEP 2 プロンプトを補完済み JSON で更新しました: {prompt_2_path}")
-
-        return filled_json
-
-    def render_excel(self, pdf_name: str, specific_out_dir: str = None) -> str:
+    def render_excel(self, pdf_name: str, specific_out_dir: str = None, apply_border_post_process: bool = True) -> str:
         """
         Phase 3: AI出力の生成コードを読み込み、Excel方眼紙を描画する。
+        apply_border_post_process=False のとき _apply_borders_to_xlsx をスキップする（correct 実行時）。
         """
         logger.info(f"--- [Phase 3] Excel生成: {pdf_name} ---")
         if specific_out_dir:
@@ -831,20 +928,21 @@ class SheetlingPipeline:
                         temp_xlsx = out_dir / "output.xlsx"
                         if temp_xlsx.exists():
                             temp_xlsx.replace(output_xlsx_path)
-                            # 罫線を Python で直接適用（LLM 生成コードの罫線を上書き補正）
-                            extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
-                            grid_params_path = out_dir / f"{pdf_name}_grid_params.json"
-                            if extracted_json_path.exists() and grid_params_path.exists():
-                                try:
-                                    with open(extracted_json_path, "r", encoding="utf-8") as f:
-                                        extracted_data = json.load(f)
-                                    with open(grid_params_path, "r", encoding="utf-8") as f:
-                                        grid_params = json.load(f)
-                                    _apply_borders_to_xlsx(
-                                        str(output_xlsx_path), extracted_data, grid_params['max_rows']
-                                    )
-                                except Exception as e:
-                                    logger.warning(f"罫線後処理に失敗しました（Excel は生成済み）: {e}")
+                            # 罫線を Python で直接適用（correct 実行時はスキップして corrections を優先）
+                            if apply_border_post_process:
+                                extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
+                                grid_params_path = out_dir / f"{pdf_name}_grid_params.json"
+                                if extracted_json_path.exists() and grid_params_path.exists():
+                                    try:
+                                        with open(extracted_json_path, "r", encoding="utf-8") as f:
+                                            extracted_data = json.load(f)
+                                        with open(grid_params_path, "r", encoding="utf-8") as f:
+                                            grid_params = json.load(f)
+                                        _apply_borders_to_xlsx(
+                                            str(output_xlsx_path), extracted_data, grid_params['max_rows']
+                                        )
+                                    except Exception as e:
+                                        logger.warning(f"罫線後処理に失敗しました（Excel は生成済み）: {e}")
                             logger.info(f"✅ Phase 3 完了: {output_xlsx_path}")
                             return str(output_xlsx_path)
                         else:
@@ -865,6 +963,104 @@ class SheetlingPipeline:
             logger.error(f"❌ 生成コードファイル {generated_code_path.name} が見つかりません。STEP 2 の結果を保存してください。")
 
         raise RuntimeError(f"Excelの生成に失敗しました ({pdf_name})")
+
+    def apply_corrections(self, pdf_name: str, corrections_json: str, specific_out_dir: str = None) -> None:
+        """
+        ビジョンLLMが出力した修正指示を _layout.json に適用し、_gen.py を再生成する。
+
+        corrections_json の形式:
+        {
+          "corrections": [
+            {"action": "add_text",    "page": 1, "row": 3, "col": 5, "content": "テキスト"},
+            {"action": "fix_text",    "page": 1, "row": 3, "col": 5, "new_row": 4, "new_col": 6},
+            {"action": "add_border",  "page": 1, "row": 3, "end_row": 8, "col": 2, "end_col": 15,
+                                      "borders": {"top": true, ...}},
+            {"action": "remove_border","page": 1, "row": 3, "end_row": 8, "col": 2, "end_col": 15}
+          ]
+        }
+        """
+        if specific_out_dir:
+            out_dir = Path(specific_out_dir)
+        else:
+            out_dir = self.output_base_dir / pdf_name
+
+        output_json_path  = out_dir / f"{pdf_name}_layout.json"
+        grid_params_path  = out_dir / f"{pdf_name}_grid_params.json"
+
+        if not output_json_path.exists():
+            raise FileNotFoundError(f"_layout.json が見つかりません: {output_json_path}")
+        if not grid_params_path.exists():
+            raise FileNotFoundError(f"_grid_params.json が見つかりません: {grid_params_path}")
+
+        layout = json.loads(output_json_path.read_text(encoding="utf-8"))
+        grid_params = json.loads(grid_params_path.read_text(encoding="utf-8"))
+
+        try:
+            corrections_data = json.loads(corrections_json)
+            corrections = corrections_data.get("corrections", [])
+        except json.JSONDecodeError as e:
+            raise ValueError(f"corrections JSON のパースに失敗しました: {e}")
+
+        # ページ番号 → elements のマップを構築
+        page_map: dict = {p["page_number"]: p["elements"] for p in layout}
+
+        applied = 0
+        for c in corrections:
+            action  = c.get("action")
+            page_no = c.get("page", 1)
+            elements = page_map.get(page_no)
+            if elements is None:
+                logger.warning(f"[correct] ページ {page_no} が見つかりません。スキップします。")
+                continue
+
+            if action == "add_text":
+                elements.append({
+                    "type": "text",
+                    "content": c["content"],
+                    "row": c["row"],
+                    "col": c["col"],
+                    "end_col": c["col"] + len(c["content"]),
+                })
+                applied += 1
+
+            elif action == "fix_text":
+                for elem in elements:
+                    if elem.get("type") == "text" and elem["row"] == c["row"] and elem["col"] == c["col"]:
+                        elem["row"] = c["new_row"]
+                        elem["col"] = c["new_col"]
+                        applied += 1
+                        break
+
+            elif action == "add_border":
+                elements.append({
+                    "type": "border_rect",
+                    "row": c["row"], "end_row": c["end_row"],
+                    "col": c["col"], "end_col": c["end_col"],
+                    "borders": c.get("borders", {"top": True, "bottom": True, "left": True, "right": True}),
+                })
+                applied += 1
+
+            elif action == "remove_border":
+                # 指定範囲と重複する border_rect をすべて削除（完全一致ではなく重複判定）
+                before = len(elements)
+                def _overlaps(e: dict, c: dict) -> bool:
+                    return (e.get("type") == "border_rect"
+                            and e["row"]     <= c["end_row"] and e["end_row"] >= c["row"]
+                            and e["col"]     <= c["end_col"] and e["end_col"] >= c["col"])
+                # layout オブジェクトが参照する同一リストをインプレースで変更する
+                elements[:] = [e for e in elements if not _overlaps(e, c)]
+                applied += before - len(elements)
+
+        # 修正済みレイアウトを保存
+        updated_json = json.dumps(layout, ensure_ascii=False)
+        output_json_path.write_text(updated_json, encoding="utf-8")
+        logger.info(f"[correct] {applied} 件の修正を適用しました: {output_json_path}")
+
+        # _gen.py を再生成
+        gen_code = self._auto_generate_code(pdf_name, grid_params)
+        gen_path = out_dir / f"{pdf_name}_gen.py"
+        gen_path.write_text(gen_code, encoding="utf-8")
+        logger.info(f"[correct] _gen.py を再生成しました: {gen_path}")
 
     def _generate_error_prompt(self, out_dir: Path, pdf_name: str, error_msg: str, current_code: str):
         prompt_text = CODE_ERROR_FIXING_PROMPT.format(error_msg=error_msg, code=current_code)

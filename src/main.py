@@ -1,26 +1,39 @@
 import argparse
+import json
 from pathlib import Path
 from src.core.pipeline import SheetlingPipeline
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+
 def main():
     parser = argparse.ArgumentParser(description="Sheetling: PDF to Excel conversion")
-    parser.add_argument("phase", choices=["extract", "fill", "generate"],
-                        help=(
-                            "Phase to run: "
-                            "extract (Phase 1: PDF解析 & プロンプト生成), "
-                            "fill (Phase 1.5後処理: STEP 1.5出力のテキスト補完 & STEP 2プロンプト更新), "
-                            "generate (Phase 3: 生成コードを実行してExcel出力)"
-                        ))
-    parser.add_argument("--pdf", type=str, help="PDF名（拡張子なし）または PDFファイルパス。fill/generate では出力ディレクトリの特定に使用。")
-    parser.add_argument("--grid-size", type=str, choices=["small", "medium", "large"], default="small", help="Grid size for Excel layout (small, medium, large)")
+    parser.add_argument(
+        "command",
+        choices=["auto", "correct"],
+        help=(
+            "auto: PDF から Excel を自動生成 (PDF解析 → レイアウト生成 → Excel出力), "
+            "correct: ビジョンLLMの修正指示を適用して Excel を再生成"
+        ),
+    )
+    parser.add_argument(
+        "--pdf",
+        type=str,
+        help="PDF名（拡張子なし）または PDFファイルパス。correct では出力ディレクトリの特定に使用。",
+    )
+    parser.add_argument(
+        "--grid-size",
+        type=str,
+        choices=["small", "medium", "large"],
+        default="small",
+        help="Grid size for Excel layout (small, medium, large)",
+    )
     args = parser.parse_args()
 
     pipeline = SheetlingPipeline("data/out")
 
-    if args.phase == "extract":
+    if args.command == "auto":
         if args.pdf:
             pdf_files = [Path(args.pdf)]
         else:
@@ -32,85 +45,81 @@ def main():
 
         for pdf_path in pdf_files:
             try:
-                pipeline.generate_prompts(str(pdf_path), grid_size=args.grid_size)
+                result = pipeline.auto_layout(str(pdf_path), grid_size=args.grid_size)
+                page_imgs = result.get("page_image_paths", [])
+                review_paths = result.get("visual_review_paths", [])
+                img_lines = "\n".join(f"    {p}" for p in page_imgs)
+                prompt_lines = "\n".join(f"    {p}" for p in review_paths)
+                logger.info(
+                    f"✅ auto 完了: {pdf_path.stem}\n"
+                    f"  Excel:         {result['xlsx_path']}\n"
+                    f"  PDFページ画像:\n{img_lines}\n"
+                    f"  検証プロンプト:\n{prompt_lines}\n"
+                    f"  ※ 罫線修正あり なら:\n"
+                    f"    1. 各ページの PNG + Excelファイル + プロンプトテキストを社内LLMに投入\n"
+                    f"    2. 出力JSONを <pdf_name>_visual_corrections_page{{N}}.json に保存\n"
+                    f"    3. python -m src.main correct --pdf {pdf_path.stem}"
+                )
+            except FileNotFoundError as e:
+                logger.error(f"❌ {e}")
             except Exception as e:
-                logger.error(f"❌ Phase 1 failed for {pdf_path.name}: {e}", exc_info=True)
+                logger.error(f"❌ auto failed for {pdf_path.name}: {e}", exc_info=True)
 
-    elif args.phase == "fill":
-        # STEP 1.5 出力のテキスト補完 & STEP 2 プロンプト更新
-        # ユーザーは STEP 1.5 の LLM 出力を
-        #   data/out/{pdf_name}/prompts/{pdf_name}_step1_5_input.json
-        # に貼り付けてからこのコマンドを実行する（extract 時に自動生成済み）。
+    elif args.command == "correct":
         output_base_dir = Path("data/out")
 
+        # 処理対象の out_dir 一覧を収集
         if args.pdf:
-            pdf_name = Path(args.pdf).stem
-            out_dir = output_base_dir / pdf_name
-            input_files = list((out_dir / "prompts").glob(f"{pdf_name}_step1_5_input.json"))
+            out_dirs = [output_base_dir / Path(args.pdf).stem]
         else:
-            input_files = list(output_base_dir.rglob("*_step1_5_input.json"))
+            # corrections ファイルが存在する out_dir をすべて収集
+            out_dirs = sorted(set(
+                p.parent.parent.parent if p.parent.name.startswith("page_") else p.parent.parent
+                for p in output_base_dir.rglob("*_visual_corrections*.json")
+            ))
 
-        if not input_files:
+        if not out_dirs:
             logger.warning(
-                "STEP 1.5 の入力ファイルが見つかりません。\n"
-                "  STEP 1.5 の LLM 出力 JSON を以下のパスに貼り付けてから再実行してください:\n"
-                "  data/out/{pdf_name}/prompts/{pdf_name}_step1_5_input.json"
+                "修正ファイルが見つかりません。\n"
+                "ビジョンLLMの出力JSONを以下のパスに保存してから再実行してください:\n"
+                "  data/out/<name>/prompts/page_1/<pdf_name>_visual_corrections_page1.json"
             )
             return
 
-        filled_count = 0
-        for input_file in input_files:
-            pdf_name = input_file.name.replace("_step1_5_input.json", "")
-            out_dir = input_file.parent.parent  # prompts/ の親
+        for out_dir in out_dirs:
+            prompts_dir = out_dir / "prompts"
+            # _layout.json からPDF名を特定（ディレクトリ名と異なる場合に対応）
+            layout_files = list(out_dir.glob("*_layout.json"))
+            if not layout_files:
+                logger.warning(f"⚠️  _layout.json が見つかりません: {out_dir}")
+                continue
+            pdf_name = layout_files[0].stem.replace("_layout", "")
             try:
-                step1_5_json = input_file.read_text(encoding="utf-8").strip()
-                pipeline.fill_layout(pdf_name, step1_5_json, specific_out_dir=str(out_dir))
-                filled_count += 1
-                logger.info(
-                    f"✅ fill 完了: {pdf_name}\n"
-                    f"  補完済みJSON: {input_file.parent / f'{pdf_name}_step1_5_output.json'}\n"
-                    f"  STEP 2 プロンプトを更新しました: {input_file.parent / f'{pdf_name}_prompt_step2.txt'}\n"
-                    f"  ※ 次のステップ: STEP 2 プロンプトを AI チャットに貼り付けて Python コードを生成してください"
-                )
-            except Exception as e:
-                logger.error(f"❌ fill failed for {pdf_name}: {e}", exc_info=True)
+                # ワイルドカードでページ単位ファイルを収集してマージ
+                page_files = sorted(prompts_dir.glob("page_*/*_visual_corrections_page*.json"))
+                if not page_files:
+                    page_files = sorted(prompts_dir.glob("*_visual_corrections_page*.json"))
+                single_files = list(prompts_dir.glob("*_visual_corrections.json"))
 
-        if filled_count == 0:
-            logger.warning("fill を実行できたファイルがありませんでした。")
-
-    elif args.phase == "generate":
-        output_base_dir = Path("data/out")
-
-        # *_gen.py ファイルを検索
-        gen_files = list(output_base_dir.rglob("*_gen.py"))
-
-        generated_count = 0
-        for gen_file in gen_files:
-            out_dir = gen_file.parent
-
-            # gen_file.name は "{pdf_name}_gen.py" なので、末尾の "_gen.py" (7文字) を除外して pdf_name を取得
-            if gen_file.name.endswith("_gen.py"):
-                pdf_name = gen_file.name[:-7]
-
-                # fill コマンドが実行済みか確認（必須）
-                fill_output = out_dir / "prompts" / f"{pdf_name}_step1_5_output.json"
-                if not fill_output.exists():
-                    logger.error(
-                        f"❌ generate をスキップ: {pdf_name}\n"
-                        f"  fill コマンドが未実行です。先に以下を実行してください:\n"
-                        f"  1. STEP 1.5 の LLM 出力を data/out/{pdf_name}/input/input.json に保存\n"
-                        f"  2. python -m src.main fill --pdf {pdf_name}"
-                    )
+                if page_files:
+                    merged_corrections: list = []
+                    for pf in page_files:
+                        data = json.loads(pf.read_text(encoding="utf-8"))
+                        merged_corrections.extend(data.get("corrections", []))
+                    corrections_json = json.dumps({"corrections": merged_corrections}, ensure_ascii=False)
+                    logger.info(f"[correct] {len(page_files)} ページ分の修正ファイルをマージしました")
+                elif single_files:
+                    corrections_json = single_files[0].read_text(encoding="utf-8")
+                else:
+                    logger.warning(f"⚠️  修正ファイルが見つかりません: {prompts_dir}")
                     continue
 
-                generated_count += 1
-                try:
-                    pipeline.render_excel(pdf_name, specific_out_dir=str(out_dir))
-                except Exception as e:
-                    logger.error(f"❌ Phase 3 failed for {pdf_name}: {e}", exc_info=True)
+                pipeline.apply_corrections(pdf_name, corrections_json, specific_out_dir=str(out_dir))
+                pipeline.render_excel(pdf_name, specific_out_dir=str(out_dir), apply_border_post_process=False)
+                logger.info(f"✅ correct 完了: {out_dir.name} ({pdf_name})")
+            except Exception as e:
+                logger.error(f"❌ correct failed for {out_dir.name}: {e}", exc_info=True)
 
-        if generated_count == 0:
-            logger.warning(f"No *_gen.py files found in subdirectories of {output_base_dir}. Please paste AI generated code first.")
 
 if __name__ == "__main__":
     main()

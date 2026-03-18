@@ -1,33 +1,24 @@
 # Sheetling
 
-PDFを解析し、LLMが生成したPythonコードを実行することで、**任意のPDFレイアウトを維持したままA4/A3方眼Excelに変換**するツールです。
-4ステップ・パイプライン方式により、テーブルの列ズレのない高精度な方眼紙レイアウトへの変換を実現します。
+PDFを解析し、自動生成したPythonコードを実行することで、**任意のPDFレイアウトを維持したままA4/A3方眼Excelに変換**するツールです。
+テーブルの列ズレのない高精度な方眼紙レイアウトへの変換を、LLMを最小限に抑えた完全自動パイプラインで実現します。
 
 ---
 
-## 仕組み（3フェーズ・4ステップ構成）
+## 仕組み
 
 ```
-PDF → [Phase 1] 解析・プロンプト生成
-         ↓
-      [Phase 2] LLMによる推論とコード生成（手動・社内AIチャット等）
-        STEP 1: レイアウトJSON生成
-        STEP 1.5: JSON検証・補正
-        ↓
-      [fill] テキスト補完 & STEP 2プロンプト更新（スクリプト自動）
-        ↓
-        STEP 2: Pythonコード生成
-         ↓
-      [Phase 3] Excel描画 + 確定的ボーダー後処理
+PDF → [auto] 解析 → グリッド座標計算 → レイアウトJSON生成 → _gen.py 生成 → Excel出力
+                                                                    ↓
+                                              （任意）ビジョンLLMによる視覚的検証
+                                                                    ↓
+                                             [correct] 修正適用 → Excel再生成
 ```
 
-| フェーズ | コマンド | 実行者 | 内容 |
-|----------|---------|--------|------|
-| Phase 1 | `extract` | スクリプト | `pdfplumber` でPDFを解析。Excel グリッド座標を事前計算し、LLM用プロンプト・抽出データを `data/out/<pdf_name>/` に出力 |
-| Phase 2 STEP 1〜1.5 | — | 人間 + LLM | STEP 1・1.5 のプロンプトを順にLLMに投入し、レイアウトJSONを生成・補正 |
-| fill | `fill` | スクリプト | STEP 1.5 出力JSONに欠落テキストを自動補完し、STEP 2 プロンプトを更新 |
-| Phase 2 STEP 2 | — | 人間 + LLM | STEP 2 プロンプト（補完済みJSON入り）をLLMに投入し、Excel生成Pythonコードを取得 |
-| Phase 3 | `generate` | スクリプト | 生成コード（`_gen.py`）を実行してExcelを出力。罫線を確定的に後処理で上書き適用 |
+| コマンド | 実行者 | 内容 |
+|---------|--------|------|
+| `auto` | スクリプト | PDF解析 → グリッド座標計算 → レイアウトJSON自動生成 → `_gen.py` 生成 → Excel出力。視覚的検証プロンプトも出力 |
+| `correct` | 人間 + ビジョンLLM | PDFページ画像 + 検証プロンプトをAIチャットに投入。修正指示JSONを適用し Excel を再生成 |
 
 ---
 
@@ -47,231 +38,118 @@ pip install -r requirements.txt
 
 ## 実行手順
 
-### Phase 1：PDF解析 & プロンプト生成
+### auto：PDF → Excel 自動生成
 
 `data/in/` に対象のPDFを置いて実行します：
 
 ```bash
 # 全PDF一括処理
-python -m src.main extract [--grid-size <size>]
+python -m src.main auto [--grid-size <size>]
 
 # 特定PDFのみ
-python -m src.main extract --pdf data/in/sample.pdf [--grid-size <size>]
+python -m src.main auto --pdf data/in/sample.pdf [--grid-size <size>]
 ```
 
-**オプション：**
-
-| オプション | デフォルト | 説明 |
-|-----------|----------|------|
-| `--grid-size` | `small` | 方眼サイズ（`small` / `medium` / `large`） |
-| `--pdf` | なし（全PDF） | 処理対象PDFのパス |
+| 処理 | 内容 |
+|------|------|
+| PDF解析 | `pdfplumber` でテキスト・罫線・矩形を抽出し、Excel グリッド座標を計算 |
+| レイアウトJSON生成 | `table_border_rects` / `rects` / `words` から直接生成（LLM不要） |
+| 座標検証・補正 | 整合性チェック・重複除去・クランプをスクリプトで確実に適用 |
+| テキスト補完 | 抽出データと照合して欠落テキストを補完 |
+| `_gen.py` 生成 | テンプレートから Excel生成スクリプトを生成 |
+| 視覚的検証プロンプト生成 | ページごとに `_visual_review_page{N}.txt` を出力 |
+| Excel出力 | `_gen.py` を実行して `_Python版.xlsx` を生成 |
 
 実行後、`data/out/<pdf_name>/` に以下が生成されます：
 
 ```text
 data/out/<pdf_name>/
-├── <pdf_name>_extracted.json      # PDFから抽出した生データ（グリッド座標付き）
-├── <pdf_name>_grid_params.json    # グリッドパラメータ（Phase 3 罫線後処理用）
-├── <pdf_name>_gen.py              # (空) Phase 2で生成したコードをここに貼り付ける
+├── <pdf_name>_extracted.json     # PDFから抽出した生データ（グリッド座標付き）
+├── <pdf_name>_grid_params.json   # グリッドパラメータ（罫線後処理用）
+├── <pdf_name>_layout.json        # レイアウトJSON（_gen.py が参照）
+├── <pdf_name>_gen.py             # 自動生成された Excel生成スクリプト
+├── <pdf_name>_Python版.xlsx      # 生成された Excel ファイル
 └── prompts/
-    ├── <pdf_name>_prompt_step1.txt    # STEP 1: レイアウトJSON生成プロンプト
-    ├── <pdf_name>_prompt_step1_5.txt  # STEP 1.5: JSON検証・補正プロンプト
-    └── <pdf_name>_prompt_step2.txt    # STEP 2: Pythonコード生成プロンプト
+    ├── page_1/
+    │   ├── <pdf_name>_page1.png                         # PDFページ画像
+    │   ├── <pdf_name>_visual_review_page1.txt           # 視覚的検証プロンプト
+    │   └── <pdf_name>_visual_corrections_page1.json     # LLM修正指示（ユーザーが編集）
+    └── page_2/
+        └── ...
 ```
 
 ---
 
-### Phase 2：LLMによる描画スクリプト生成（手動）
+### 視覚的検証（任意）：ビジョンLLMで再現度を高める
 
-Phase 2 では、Phase 1 が生成したプロンプトを社内AIチャット等のLLMに**順番に**投入します。LLMはPDFのレイアウト構造を理解し、最終的に `openpyxl` で実行可能なPythonコードを出力します。
+`auto` 実行後、再現度をさらに高めたい場合にオプションで実施します。
+PDFページ画像・罫線プレビュー画像はどちらも `auto` 実行時に自動生成されます。
 
-> [!IMPORTANT]
-> Phase 2 はすべて**手動操作**です。スクリプトは実行しません。
+**手順（ページごとに繰り返す）：**
 
----
+1. 社内AIチャット（画像入力対応）に以下を投入する：
+   - `prompts/page_{N}/<pdf_name>_page{N}.png`（PDFページ画像）
+   - `prompts/page_{N}/<pdf_name>_excel_page{N}.png`（罫線プレビュー画像）
+   - `prompts/page_{N}/<pdf_name>_visual_review_page{N}.txt` の内容（プロンプト）
+2. LLMが出力した修正指示JSONを以下のファイルに上書き保存する：
+   ```
+   data/out/<pdf_name>/prompts/page_{N}/<pdf_name>_visual_corrections_page{N}.json
+   ```
+   ※ このファイルは `auto` 実行時に空テンプレートとして自動生成済み
+3. 全ページ分完了したら `correct` コマンドで修正を適用する（次節）
 
-#### STEP 1 — レイアウトJSON生成
-
-**目的：** Phase 1 が抽出した座標データをもとに、LLMにExcel方眼紙上のレイアウト仕様JSONを生成させる。
-
-**プロンプトの内容（`_prompt_step1.txt`）：**
-
-Phase 1 が出力した `_extracted.json` の内容が埋め込まれています。データには以下が含まれます：
-
-- `words`：PDFテキストの文字列・位置・フォント情報 ＋ 対応するExcel行列番号（`_row` / `_col`）
-- `table_border_rects`：テーブルセル境界の矩形 ＋ 対応するExcel行列番号
-- `rects`：矩形枠 ＋ 対応するExcel行列番号
-
-**LLMが出力するJSON（イメージ）：**
-
-```json
-[
-  {
-    "page_number": 1,
-    "elements": [
-      {
-        "type": "text",
-        "row": 3,
-        "col": 5,
-        "value": "氏名",
-        "font_size": 9
-      },
-      {
-        "type": "border_rect",
-        "row": 3,
-        "end_row": 4,
-        "col": 5,
-        "end_col": 12,
-        "borders": { "top": true, "bottom": true, "left": true, "right": true }
-      }
-    ]
-  }
-]
-```
-
-要素は `text`（テキスト配置）と `border_rect`（罫線矩形）の2種類のみです。LLMは `_extracted.json` の座標をそのまま使用し、PDFのレイアウトをExcelグリッド上に再現するJSONを生成します。
-
-**操作手順：**
-
-1. `prompts/<pdf_name>_prompt_step1.txt` の内容をLLMに貼り付ける
-2. LLMが出力したJSON配列（`[` から `]` まで）をコピーしておく
-
----
-
-#### STEP 1.5 — JSON検証・補正
-
-**目的：** STEP 1 の出力JSONに含まれる誤り（座標ズレ・重複・欠落・範囲外座標）をLLMに自己検証・補正させる。
-
-**なぜ必要か：**
-LLMは複雑なレイアウトで座標を誤ったり、要素を重複させたりすることがあります。STEP 1.5 では別のプロンプトで再度LLMに検証させることで、これらの誤りを修正します。
-
-**LLMが行うチェック：**
-
-- `row < end_row`、`col < end_col` の整合性確認
-- グリッド範囲外座標のクランプ（上限・下限への丸め込み）
-- 重複要素の除去
-- 明らかな欠落テキストの補完
-
-**操作手順：**
-
-1. `prompts/<pdf_name>_prompt_step1_5.txt` を開く
-2. `[ここにSTEP 1の出力...]` をSTEP 1で得たJSONに置き換えてLLMに貼り付ける
-3. LLMが出力した補正済みJSONをコピーし、**以下のパスに保存する**：
-
-```
-data/out/<pdf_name>/prompts/<pdf_name>_step1_5_input.json
-```
+**LLMが検出できる問題：**
+- 欠落している罫線・枠
+- 不要な罫線
 
 > [!NOTE]
-> このファイル名・保存先は固定です。次の `fill` コマンドがこのパスを参照します。
+> スクリプトが計算した精密な座標にLLMの視覚的な判断を組み合わせることで、罫線の再現精度を向上できます。
 
 ---
 
-### fill：テキスト補完 & STEP 2プロンプト更新
-
-**目的：** LLMが見落としたテキストを機械的に補完し、STEP 2 用プロンプトを自動更新する。
-
-**なぜ必要か：**
-LLMは大量のテキスト要素が並ぶレイアウトで一部を見落とすことがあります。`fill` コマンドはLLMに依存せず、Phase 1 の確定データ（`_extracted.json`）と STEP 1.5 の出力（`_step1_5_input.json`）を機械的に照合することで、欠落テキストを**確実に**補完します。
+### correct：視覚的検証の修正を適用
 
 ```bash
 # 特定PDFのみ
-python -m src.main fill --pdf sample
+python -m src.main correct --pdf sample
 
-# data/out/ 以下の全 *_step1_5_input.json を一括処理
-python -m src.main fill
+# data/out/ 以下の全 *_visual_corrections.json を一括処理
+python -m src.main correct
 ```
 
-**処理内容（自動）：**
+`_visual_corrections_page{N}.json` の修正指示を `_layout.json` に適用し、`_gen.py` を再生成して Excel を出力します。
 
-1. `_step1_5_input.json` の `text` 要素と `_extracted.json` の `words` を座標で照合
-2. JSONに存在しないテキストを自動補完（`_extracted.json` の座標・フォント情報をそのまま使用）
-3. 補完済みJSONを `prompts/<pdf_name>_step1_5_output.json` として保存
-4. `prompts/<pdf_name>_prompt_step2.txt` のプレースホルダーを補完済みJSONで自動置換
+**`_visual_corrections.json` の形式：**
 
-実行後、`_prompt_step2.txt` は STEP 2 で即座にLLMへ投入できる状態になります。
-
-**オプション：**
-
-| オプション | デフォルト | 説明 |
-|-----------|----------|------|
-| `--pdf` | なし（全対象） | PDF名（拡張子なし）または PDFファイルパス |
-
-> [!WARNING]
-> `_step1_5_input.json` が存在しない場合は警告を出して終了します。必ずSTEP 1.5の出力を保存してから実行してください。
-
----
-
-### Phase 2（続き）：STEP 2
-
-#### STEP 2 — Pythonコード生成
-
-**目的：** 補完済みレイアウト仕様JSONをもとに、LLMに `openpyxl` で動作するExcel生成スクリプトを出力させる。
-
-**プロンプトの内容（`_prompt_step2.txt`）：**
-
-`fill` コマンドによって補完済みJSONが埋め込み済みです。LLMはこのJSONを読み取り、各要素（テキスト配置・罫線描画・セル結合など）を `openpyxl` のAPI呼び出しに変換した、そのまま実行可能なPythonスクリプトを生成します。
-
-**操作手順：**
-
-1. `prompts/<pdf_name>_prompt_step2.txt`（fillにより補完済みJSONが埋め込まれている）をLLMに貼り付ける
-2. 出力されたPythonコード全体を `data/out/<pdf_name>/<pdf_name>_gen.py` に貼り付けて保存する
-
----
-
-### Phase 3：Excel生成
-
-```bash
-# data/out/ 以下の全 *_gen.py を一括処理
-python -m src.main generate
-
-# （--pdf オプションは generate では不要・全自動）
+```json
+{
+  "corrections": [
+    {"action": "add_text",     "page": 1, "row": 5, "col": 3, "content": "追加テキスト"},
+    {"action": "fix_text",     "page": 1, "row": 3, "col": 5, "new_row": 4, "new_col": 6},
+    {"action": "add_border",   "page": 1, "row": 3, "end_row": 8, "col": 2, "end_col": 15,
+                               "borders": {"top": true, "bottom": true, "left": true, "right": true}},
+    {"action": "remove_border","page": 1, "row": 3, "end_row": 5, "col": 2, "end_col": 8}
+  ]
+}
 ```
-
-`data/out/<pdf_name>/<pdf_name>.xlsx` が生成されます。
-
-**処理内容：**
-- `_gen.py` を実行してExcelを生成
-- `_extracted.json` と `_grid_params.json` を参照し、罫線を確定的に後処理で上書き適用（LLM生成コードのボーダー誤りを自動修正）
-- エラー発生時は `prompts/<pdf_name>_prompt_error_fix.txt` にエラー修正用プロンプトを出力
 
 ---
 
 ## CLIリファレンス
 
 ```
-python -m src.main <phase> [options]
+python -m src.main <command> [options]
 ```
 
-| phase | 説明 |
-|-------|------|
-| `extract` | Phase 1: PDF解析 & プロンプト生成 |
-| `fill` | Phase 1.5後処理: テキスト補完 & STEP 2プロンプト更新 |
-| `generate` | Phase 3: 生成コードを実行してExcel出力 |
+| command | 説明 |
+|---------|------|
+| `auto` | PDF → Excel 自動生成（解析 → レイアウトJSON生成 → `_gen.py` 生成 → Excel出力） |
+| `correct` | ビジョンLLMの修正指示（`_visual_corrections.json`）を適用して Excel を再生成 |
 
-| オプション | 対象phase | 説明 |
-|-----------|----------|------|
-| `--pdf <path>` | `extract`, `fill` | 処理対象PDFのパスまたはPDF名（省略時は全対象を処理） |
-| `--grid-size <size>` | `extract` | 方眼サイズ: `small`（デフォルト）/ `medium` / `large` |
-
----
-
-## パイプラインのステップ詳解
-
-### STEP 1（レイアウトJSON生成）
-`pdfplumber` が抽出した `words`（テキスト・フォント色・サイズ）と `table_border_rects`（テーブルセル境界）、`rects`（矩形枠）に、事前計算済みのExcel行列番号（`_row`/`_col`等）が付与されています。LLMはこの座標をそのまま使用して `text` 要素と `border_rect` 要素のみからなるレイアウト仕様JSONを出力します。
-
-### STEP 1.5（JSON検証・補正）
-STEP 1の出力を検証・補正します。座標の整合性チェック、重複除去、欠落テキストの補完、座標のクランプを行います。
-
-### fill（テキスト補完・自動）
-STEP 1.5のLLM出力に対し、`_extracted.json` の `words` と照合して欠落テキストを確実に補完します。LLMへの依存なしに動作するため、LLMが見落としたテキストを毎回漏れなく補完できます。
-
-### STEP 2（Pythonコード生成）
-補正済みレイアウト仕様JSONをもとに、`openpyxl` ベースの実行可能な描画スクリプトを生成します。
-
-### Phase 3（確定的ボーダー後処理）
-`_gen.py` 実行後、`_extracted.json` から得た罫線データを `openpyxl` で直接適用し、LLM生成コードのボーダー誤りを上書き修正します。
+| オプション | 対象command | 説明 |
+|-----------|------------|------|
+| `--pdf <path>` | `auto`, `correct` | 処理対象PDFのパスまたはPDF名（省略時は全対象を処理） |
+| `--grid-size <size>` | `auto` | 方眼サイズ: `small`（デフォルト）/ `medium` / `large` |
 
 ---
 
@@ -295,13 +173,13 @@ STEP 1.5のLLM出力に対し、`_extracted.json` の `words` と照合して欠
 ```text
 Sheetling/
 ├── src/
-│   ├── main.py              # CLI エントリポイント（extract / fill / generate）
+│   ├── main.py              # CLI エントリポイント（auto / correct）
 │   ├── core/
-│   │   └── pipeline.py      # フェーズ全体のフロー制御・グリッド座標計算・ボーダー後処理
+│   │   └── pipeline.py      # パイプライン全体の制御・座標計算・自動生成・ボーダー後処理
 │   ├── parser/
-│   │   └── pdf_extractor.py # Phase 1: PDFデータ抽出 (pdfplumber)
+│   │   └── pdf_extractor.py # PDFデータ抽出 (pdfplumber)
 │   ├── templates/
-│   │   └── prompts.py       # LLMプロンプト定義・グリッドサイズ設定
+│   │   └── prompts.py       # コード生成テンプレート・視覚的検証プロンプト・グリッドサイズ設定
 │   └── utils/
 │       └── logger.py        # ログ出力管理
 ├── data/
@@ -323,19 +201,34 @@ Sheetling/
 
 ---
 
-## よく発生するエラー（Phase 3）
+## エラー発生時
 
-Phase 3 でエラーが発生した場合、`prompts/<pdf_name>_prompt_error_fix.txt` が出力されます。その内容をLLMに投入してコードを再生成し、`_gen.py` に上書き保存してから再度 `generate` を実行してください。
-
-| エラー | 原因 | 対処 |
-|--------|------|------|
-| `NameError: name 'thin' is not defined` | LLM生成コードで `Side(style='thin')` 等の `openpyxl.styles.Side` オブジェクトを定義せずに変数参照している | `_prompt_error_fix.txt` をLLMに投入して再生成 |
-| `NameError: name 'true' is not defined. Did you mean: 'True'?` | LLM生成コードにJSONリテラル由来の `true`/`false`（小文字）が混入している。Pythonの予約語は `True`/`False`（先頭大文字） | `_prompt_error_fix.txt` をLLMに投入して再生成 |
+`auto` / `correct` コマンドで `_gen.py` の実行に失敗した場合、`prompts/<pdf_name>_prompt_error_fix.txt` にエラー修正用プロンプトが出力されます。その内容をAIチャットに投入してコードを修正し、`_gen.py` を上書き保存してから再度 `correct` を実行してください。
 
 ---
 
 ## 開発メモ
 
 - `src/` と `data/` はコンテナにボリュームマウントされており、ホスト側の変更が即時反映されます。
-- `fill` コマンドは `_step1_5_input.json` が存在しない場合は警告を出して終了します。必ずSTEP 1.5の出力を保存してから実行してください。
-- Phase 3 の罫線後処理は `_grid_params.json` が存在する場合のみ実行されます（Phase 1 を実行していれば自動生成されます）。
+- 罫線の後処理は `_extracted.json` と `_grid_params.json` が存在する場合のみ実行されます（`auto` 実行時に自動生成）。
+
+### アーキテクチャ設計の考え方
+
+#### スクリプトが担う処理（`auto` コマンド）
+- **座標マッピング**：`_row` / `_col` は解析時に確定計算済みのためLLM不要
+- **border_rect 生成**：`table_border_rects` / `rects` のフィールドをそのまま変換
+- **text 生成**：`words` を `(_row, _col)` でグループ化するだけ
+- **座標検証・補正**：整合性チェック・重複除去・クランプはすべて決定論的処理
+- **コード生成**：`_gen.py` は固定テンプレート + パラメータ差し込みで生成
+
+#### ビジョンLLMが担う処理（`correct` コマンド、任意）
+- **視覚的な差分検出**：スクリプトが計算した精密な座標 × LLMの目視確認で再現度を向上
+- **意味的な判断が必要なケース**：複雑なレイアウトでスクリプトが見落とした欠落要素の検出
+
+### TODO / 改善案
+
+#### 複数ページ・データ量大への対応
+
+`auto` コマンドはページ全体を一括処理するため、ビジョン検証プロンプトはページごとに分割して出力されます。PDFのページ数が多い場合は、代表ページのみを検証することで作業量を削減できます。
+
+**将来対応案：** `auto` コマンドに `--pages 1-3` のようなオプションを追加して、処理対象ページを絞り込む。
