@@ -72,17 +72,23 @@ def main():
             pdf_names = [Path(args.pdf).stem]
         else:
             # data/out/ 以下でページ単位または統合の corrections ファイルを持つ PDF を収集
+            # 新形式: prompts/page_{N}/<name>_visual_corrections_pageN.json
+            # 旧形式: prompts/<name>_visual_corrections*.json
+            def _pdf_name_from_corrections(p: Path) -> str:
+                # p.parent が page_* フォルダなら新形式
+                if p.parent.name.startswith("page_"):
+                    return p.parent.parent.parent.name
+                return p.parent.parent.name
             pdf_names = sorted(set(
-                p.parent.parent.name
+                _pdf_name_from_corrections(p)
                 for p in output_base_dir.rglob("*_visual_corrections*.json")
             ))
 
         if not pdf_names:
             logger.warning(
                 "修正ファイルが見つかりません。\n"
-                "ビジョンLLMの出力JSONを以下のいずれかのパスに保存してから再実行してください:\n"
-                "  data/out/<pdf_name>/prompts/<pdf_name>_visual_corrections_page1.json  （ページ単位）\n"
-                "  data/out/<pdf_name>/prompts/<pdf_name>_visual_corrections.json         （統合）"
+                "ビジョンLLMの出力JSONを以下のパスに保存してから再実行してください:\n"
+                "  data/out/<pdf_name>/prompts/page_1/<pdf_name>_visual_corrections_page1.json"
             )
             return
 
@@ -90,8 +96,11 @@ def main():
             out_dir = output_base_dir / pdf_name
             prompts_dir = out_dir / "prompts"
             try:
-                # ページ単位ファイルを収集してマージ（存在しない場合は統合ファイルを使用）
-                page_files = sorted(prompts_dir.glob(f"{pdf_name}_visual_corrections_page*.json"))
+                # page_{N}/ フォルダ配下のページ単位ファイルを収集してマージ
+                page_files = sorted(prompts_dir.glob(f"page_*/{pdf_name}_visual_corrections_page*.json"))
+                # 旧形式（prompts/ 直下）にもフォールバック
+                if not page_files:
+                    page_files = sorted(prompts_dir.glob(f"{pdf_name}_visual_corrections_page*.json"))
                 single_file = prompts_dir / f"{pdf_name}_visual_corrections.json"
 
                 if page_files:

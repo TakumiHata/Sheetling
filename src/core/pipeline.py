@@ -778,35 +778,44 @@ class SheetlingPipeline:
             f.write(gen_code)
         logger.info(f"[auto] _gen.py を生成しました: {gen_path}")
 
-        # PDFページ画像の生成（pdfplumber の to_image() を使用）
+        # PDFページ画像 + 視覚的検証プロンプトの生成（ページごとに page_{N}/ フォルダへ格納）
+        layout = json.loads(filled_json)
         page_image_paths = []
+        review_paths = []
+
         try:
-            import pdfplumber
-            with pdfplumber.open(pdf_path) as pdf:
-                for page in pdf.pages:
-                    page_num = page.page_number
-                    img = page.to_image(resolution=144)
-                    img_path = out_dir / f"{pdf_name}_page{page_num}.png"
-                    img.save(str(img_path))
-                    page_image_paths.append(str(img_path))
-            logger.info(f"[auto] PDFページ画像を生成しました: {len(page_image_paths)} ページ")
+            import pdfplumber as _plumber
+            pdf_for_images = _plumber.open(pdf_path)
         except Exception as e:
             logger.warning(f"[auto] PDFページ画像の生成に失敗しました: {e}")
+            pdf_for_images = None
 
-        # 視覚的検証プロンプト生成（JSONなし・PDF画像 + Excelファイル比較方式）
-        layout = json.loads(filled_json)
-        review_paths = []
         for page_layout in layout:
             page_num = page_layout.get('page_number', 1)
-            prompt_text = VISUAL_REVIEW_PROMPT.format(
-                page_number=page_num,
-                **grid_params,
-            )
-            review_path = prompts_dir / f"{pdf_name}_visual_review_page{page_num}.txt"
-            with open(review_path, "w", encoding="utf-8") as f:
-                f.write(prompt_text)
+            page_dir = prompts_dir / f"page_{page_num}"
+            page_dir.mkdir(parents=True, exist_ok=True)
+
+            # PDF画像
+            if pdf_for_images is not None:
+                try:
+                    page = pdf_for_images.pages[page_num - 1]
+                    img = page.to_image(resolution=144)
+                    img_path = page_dir / f"{pdf_name}_page{page_num}.png"
+                    img.save(str(img_path))
+                    page_image_paths.append(str(img_path))
+                except Exception as e:
+                    logger.warning(f"[auto] ページ {page_num} の画像生成に失敗しました: {e}")
+
+            # 視覚的検証プロンプト
+            prompt_text = VISUAL_REVIEW_PROMPT.format(page_number=page_num, **grid_params)
+            review_path = page_dir / f"{pdf_name}_visual_review_page{page_num}.txt"
+            review_path.write_text(prompt_text, encoding="utf-8")
             review_paths.append(str(review_path))
-            logger.info(f"[auto] 視覚的検証プロンプト生成: {review_path}")
+
+        if pdf_for_images is not None:
+            pdf_for_images.close()
+            logger.info(f"[auto] PDFページ画像を生成しました: {len(page_image_paths)} ページ")
+        logger.info(f"[auto] 視覚的検証プロンプトを生成しました: {len(review_paths)} ページ")
 
         # Excel生成
         xlsx_path = self.render_excel(pdf_name, specific_out_dir=str(out_dir))
