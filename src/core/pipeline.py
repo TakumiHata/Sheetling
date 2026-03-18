@@ -875,9 +875,10 @@ class SheetlingPipeline:
         """GEN_CODE_TEMPLATE からランタイムにJSONを読み込む _gen.py コードを生成する。"""
         return GEN_CODE_TEMPLATE.substitute(pdf_name=pdf_name, **grid_params)
 
-    def render_excel(self, pdf_name: str, specific_out_dir: str = None) -> str:
+    def render_excel(self, pdf_name: str, specific_out_dir: str = None, apply_border_post_process: bool = True) -> str:
         """
         Phase 3: AI出力の生成コードを読み込み、Excel方眼紙を描画する。
+        apply_border_post_process=False のとき _apply_borders_to_xlsx をスキップする（correct 実行時）。
         """
         logger.info(f"--- [Phase 3] Excel生成: {pdf_name} ---")
         if specific_out_dir:
@@ -927,20 +928,21 @@ class SheetlingPipeline:
                         temp_xlsx = out_dir / "output.xlsx"
                         if temp_xlsx.exists():
                             temp_xlsx.replace(output_xlsx_path)
-                            # 罫線を Python で直接適用（LLM 生成コードの罫線を上書き補正）
-                            extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
-                            grid_params_path = out_dir / f"{pdf_name}_grid_params.json"
-                            if extracted_json_path.exists() and grid_params_path.exists():
-                                try:
-                                    with open(extracted_json_path, "r", encoding="utf-8") as f:
-                                        extracted_data = json.load(f)
-                                    with open(grid_params_path, "r", encoding="utf-8") as f:
-                                        grid_params = json.load(f)
-                                    _apply_borders_to_xlsx(
-                                        str(output_xlsx_path), extracted_data, grid_params['max_rows']
-                                    )
-                                except Exception as e:
-                                    logger.warning(f"罫線後処理に失敗しました（Excel は生成済み）: {e}")
+                            # 罫線を Python で直接適用（correct 実行時はスキップして corrections を優先）
+                            if apply_border_post_process:
+                                extracted_json_path = out_dir / f"{pdf_name}_extracted.json"
+                                grid_params_path = out_dir / f"{pdf_name}_grid_params.json"
+                                if extracted_json_path.exists() and grid_params_path.exists():
+                                    try:
+                                        with open(extracted_json_path, "r", encoding="utf-8") as f:
+                                            extracted_data = json.load(f)
+                                        with open(grid_params_path, "r", encoding="utf-8") as f:
+                                            grid_params = json.load(f)
+                                        _apply_borders_to_xlsx(
+                                            str(output_xlsx_path), extracted_data, grid_params['max_rows']
+                                        )
+                                    except Exception as e:
+                                        logger.warning(f"罫線後処理に失敗しました（Excel は生成済み）: {e}")
                             logger.info(f"✅ Phase 3 完了: {output_xlsx_path}")
                             return str(output_xlsx_path)
                         else:
@@ -1039,14 +1041,14 @@ class SheetlingPipeline:
                 applied += 1
 
             elif action == "remove_border":
+                # 指定範囲と重複する border_rect をすべて削除（完全一致ではなく重複判定）
                 before = len(elements)
-                page_map[page_no] = [
-                    e for e in elements
-                    if not (e.get("type") == "border_rect"
-                            and e["row"] == c["row"] and e["end_row"] == c["end_row"]
-                            and e["col"] == c["col"] and e["end_col"] == c["end_col"])
-                ]
-                elements = page_map[page_no]
+                def _overlaps(e: dict, c: dict) -> bool:
+                    return (e.get("type") == "border_rect"
+                            and e["row"]     <= c["end_row"] and e["end_row"] >= c["row"]
+                            and e["col"]     <= c["end_col"] and e["end_col"] >= c["col"])
+                # layout オブジェクトが参照する同一リストをインプレースで変更する
+                elements[:] = [e for e in elements if not _overlaps(e, c)]
                 applied += before - len(elements)
 
         # 修正済みレイアウトを保存

@@ -68,40 +68,38 @@ def main():
     elif args.command == "correct":
         output_base_dir = Path("data/out")
 
+        # 処理対象の out_dir 一覧を収集
         if args.pdf:
-            pdf_names = [Path(args.pdf).stem]
+            out_dirs = [output_base_dir / Path(args.pdf).stem]
         else:
-            # data/out/ 以下でページ単位または統合の corrections ファイルを持つ PDF を収集
-            # 新形式: prompts/page_{N}/<name>_visual_corrections_pageN.json
-            # 旧形式: prompts/<name>_visual_corrections*.json
-            def _pdf_name_from_corrections(p: Path) -> str:
-                # p.parent が page_* フォルダなら新形式
-                if p.parent.name.startswith("page_"):
-                    return p.parent.parent.parent.name
-                return p.parent.parent.name
-            pdf_names = sorted(set(
-                _pdf_name_from_corrections(p)
+            # corrections ファイルが存在する out_dir をすべて収集
+            out_dirs = sorted(set(
+                p.parent.parent.parent if p.parent.name.startswith("page_") else p.parent.parent
                 for p in output_base_dir.rglob("*_visual_corrections*.json")
             ))
 
-        if not pdf_names:
+        if not out_dirs:
             logger.warning(
                 "修正ファイルが見つかりません。\n"
                 "ビジョンLLMの出力JSONを以下のパスに保存してから再実行してください:\n"
-                "  data/out/<pdf_name>/prompts/page_1/<pdf_name>_visual_corrections_page1.json"
+                "  data/out/<name>/prompts/page_1/<pdf_name>_visual_corrections_page1.json"
             )
             return
 
-        for pdf_name in pdf_names:
-            out_dir = output_base_dir / pdf_name
+        for out_dir in out_dirs:
             prompts_dir = out_dir / "prompts"
+            # _layout.json からPDF名を特定（ディレクトリ名と異なる場合に対応）
+            layout_files = list(out_dir.glob("*_layout.json"))
+            if not layout_files:
+                logger.warning(f"⚠️  _layout.json が見つかりません: {out_dir}")
+                continue
+            pdf_name = layout_files[0].stem.replace("_layout", "")
             try:
-                # page_{N}/ フォルダ配下のページ単位ファイルを収集してマージ
-                page_files = sorted(prompts_dir.glob(f"page_*/{pdf_name}_visual_corrections_page*.json"))
-                # 旧形式（prompts/ 直下）にもフォールバック
+                # ワイルドカードでページ単位ファイルを収集してマージ
+                page_files = sorted(prompts_dir.glob("page_*/*_visual_corrections_page*.json"))
                 if not page_files:
-                    page_files = sorted(prompts_dir.glob(f"{pdf_name}_visual_corrections_page*.json"))
-                single_file = prompts_dir / f"{pdf_name}_visual_corrections.json"
+                    page_files = sorted(prompts_dir.glob("*_visual_corrections_page*.json"))
+                single_files = list(prompts_dir.glob("*_visual_corrections.json"))
 
                 if page_files:
                     merged_corrections: list = []
@@ -110,17 +108,17 @@ def main():
                         merged_corrections.extend(data.get("corrections", []))
                     corrections_json = json.dumps({"corrections": merged_corrections}, ensure_ascii=False)
                     logger.info(f"[correct] {len(page_files)} ページ分の修正ファイルをマージしました")
-                elif single_file.exists():
-                    corrections_json = single_file.read_text(encoding="utf-8")
+                elif single_files:
+                    corrections_json = single_files[0].read_text(encoding="utf-8")
                 else:
                     logger.warning(f"⚠️  修正ファイルが見つかりません: {prompts_dir}")
                     continue
 
                 pipeline.apply_corrections(pdf_name, corrections_json, specific_out_dir=str(out_dir))
-                pipeline.render_excel(pdf_name, specific_out_dir=str(out_dir))
-                logger.info(f"✅ correct 完了: {pdf_name}")
+                pipeline.render_excel(pdf_name, specific_out_dir=str(out_dir), apply_border_post_process=False)
+                logger.info(f"✅ correct 完了: {out_dir.name} ({pdf_name})")
             except Exception as e:
-                logger.error(f"❌ correct failed for {pdf_name}: {e}", exc_info=True)
+                logger.error(f"❌ correct failed for {out_dir.name}: {e}", exc_info=True)
 
 
 if __name__ == "__main__":
