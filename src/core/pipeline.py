@@ -766,8 +766,8 @@ class SheetlingPipeline:
         layout_json = _auto_generate_layout(extracted_data, grid_params)
         filled_json = _fill_missing_text(layout_json, extracted_data)
 
-        # _gen.py が参照するJSONとして保存
-        output_json_path = prompts_dir / f"{pdf_name}_step1_5_output.json"
+        # _gen.py が参照するレイアウトJSONとして保存
+        output_json_path = out_dir / f"{pdf_name}_layout.json"
         with open(output_json_path, "w", encoding="utf-8") as f:
             f.write(filled_json)
 
@@ -811,6 +811,14 @@ class SheetlingPipeline:
             review_path = page_dir / f"{pdf_name}_visual_review_page{page_num}.txt"
             review_path.write_text(prompt_text, encoding="utf-8")
             review_paths.append(str(review_path))
+
+            # 修正ファイルのテンプレートを自動生成（未存在時のみ）
+            corrections_path = page_dir / f"{pdf_name}_visual_corrections_page{page_num}.json"
+            if not corrections_path.exists():
+                corrections_path.write_text(
+                    json.dumps({"corrections": []}, ensure_ascii=False, indent=2),
+                    encoding="utf-8"
+                )
 
         if pdf_for_images is not None:
             pdf_for_images.close()
@@ -920,7 +928,7 @@ class SheetlingPipeline:
 
     def apply_corrections(self, pdf_name: str, corrections_json: str, specific_out_dir: str = None) -> None:
         """
-        ビジョンLLMが出力した修正指示を _step1_5_output.json に適用し、_gen.py を再生成する。
+        ビジョンLLMが出力した修正指示を _layout.json に適用し、_gen.py を再生成する。
 
         corrections_json の形式:
         {
@@ -938,11 +946,11 @@ class SheetlingPipeline:
         else:
             out_dir = self.output_base_dir / pdf_name
 
-        output_json_path  = out_dir / "prompts" / f"{pdf_name}_step1_5_output.json"
+        output_json_path  = out_dir / f"{pdf_name}_layout.json"
         grid_params_path  = out_dir / f"{pdf_name}_grid_params.json"
 
         if not output_json_path.exists():
-            raise FileNotFoundError(f"_step1_5_output.json が見つかりません: {output_json_path}")
+            raise FileNotFoundError(f"_layout.json が見つかりません: {output_json_path}")
         if not grid_params_path.exists():
             raise FileNotFoundError(f"_grid_params.json が見つかりません: {grid_params_path}")
 

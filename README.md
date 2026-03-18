@@ -64,13 +64,18 @@ python -m src.main auto --pdf data/in/sample.pdf [--grid-size <size>]
 
 ```text
 data/out/<pdf_name>/
-├── <pdf_name>_extracted.json          # PDFから抽出した生データ（グリッド座標付き）
-├── <pdf_name>_grid_params.json        # グリッドパラメータ（罫線後処理用）
-├── <pdf_name>_gen.py                  # 自動生成された Excel生成スクリプト
-├── <pdf_name>_Python版.xlsx           # 生成された Excel ファイル
+├── <pdf_name>_extracted.json     # PDFから抽出した生データ（グリッド座標付き）
+├── <pdf_name>_grid_params.json   # グリッドパラメータ（罫線後処理用）
+├── <pdf_name>_layout.json        # レイアウトJSON（_gen.py が参照）
+├── <pdf_name>_gen.py             # 自動生成された Excel生成スクリプト
+├── <pdf_name>_Python版.xlsx      # 生成された Excel ファイル
 └── prompts/
-    ├── <pdf_name>_step1_5_output.json       # レイアウトJSON（_gen.py が参照）
-    └── <pdf_name>_visual_review_page1.txt   # 視覚的検証プロンプト（ページごと）
+    ├── page_1/
+    │   ├── <pdf_name>_page1.png                         # PDFページ画像
+    │   ├── <pdf_name>_visual_review_page1.txt           # 視覚的検証プロンプト
+    │   └── <pdf_name>_visual_corrections_page1.json     # LLM修正指示（ユーザーが編集）
+    └── page_2/
+        └── ...
 ```
 
 ---
@@ -112,7 +117,7 @@ python -m src.main correct --pdf sample
 python -m src.main correct
 ```
 
-`_visual_corrections.json` の修正指示を `_step1_5_output.json` に適用し、`_gen.py` を再生成して Excel を出力します。
+`_visual_corrections_page{N}.json` の修正指示を `_layout.json` に適用し、`_gen.py` を再生成して Excel を出力します。
 
 **`_visual_corrections.json` の形式：**
 

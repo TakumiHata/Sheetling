@@ -73,7 +73,7 @@ EXCEL_ROW_HEIGHT = $excel_row_height
 DEFAULT_FONT_SIZE = $default_font_size
 
 _dir = Path(__file__).parent
-data = json.loads((_dir / "prompts" / "${pdf_name}_step1_5_output.json").read_text(encoding="utf-8"))
+data = json.loads((_dir / "${pdf_name}_layout.json").read_text(encoding="utf-8"))
 
 wb = Workbook()
 ws = wb.active
