@@ -178,6 +178,9 @@ VISUAL_REVIEW_PROMPT = """\
 PDFと比較して罫線に差異がある箇所のみ、以下のJSON形式で出力してください。
 修正不要な場合は `{{"corrections": []}}` のみ出力してください。
 
+- **add_border**: 画像2（Excelプレビュー）に存在しないが、画像1（PDF）には存在する罫線 → 追加
+- **remove_border**: 画像2（Excelプレビュー）に存在するが、画像1（PDF）には存在しない罫線 → 削除
+
 ```json
 {{
   "corrections": [
