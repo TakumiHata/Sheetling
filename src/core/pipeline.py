@@ -814,7 +814,7 @@ class SheetlingPipeline:
 
             # Excel罫線プレビュー画像の生成（Pillow で border_rect を描画）
             try:
-                from PIL import Image, ImageDraw
+                from PIL import Image, ImageDraw, ImageFont
                 cell_w = 20
                 cell_h = 14
                 max_c = int(grid_params.get('max_cols', 62))
@@ -843,6 +843,21 @@ class SheetlingPipeline:
                     if borders.get('bottom', True): draw.line([(c1, r2), (c2, r2)], fill='black', width=2)
                     if borders.get('left',   True): draw.line([(c1, r1), (c1, r2)], fill='black', width=2)
                     if borders.get('right',  True): draw.line([(c2, r1), (c2, r2)], fill='black', width=2)
+                # 座標グリッドラベルをオーバーレイ（5セルごと）
+                try:
+                    font = ImageFont.load_default(size=8)
+                except (AttributeError, TypeError):
+                    font = ImageFont.load_default()
+                label_color = (200, 0, 0)
+                label_interval = 5
+                for c in range(1, max_c + 1):
+                    if c == 1 or c % label_interval == 0:
+                        x = (c - 1) * cell_w + 1
+                        draw.text((x, 1), str(c), fill=label_color, font=font)
+                for r in range(1, max_r + 1):
+                    if r == 1 or r % label_interval == 0:
+                        y = (r - 1) * cell_h + 1
+                        draw.text((1, y), str(r), fill=label_color, font=font)
                 excel_img_path = page_dir / f"{pdf_name}_excel_page{page_num}.png"
                 excel_img.save(str(excel_img_path))
             except Exception as e:
