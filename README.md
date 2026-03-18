@@ -83,27 +83,27 @@ data/out/<pdf_name>/
 ### 視覚的検証（任意）：ビジョンLLMで再現度を高める
 
 `auto` 実行後、再現度をさらに高めたい場合にオプションで実施します。
+PDFページ画像・罫線プレビュー画像はどちらも `auto` 実行時に自動生成されます。
 
-**手順：**
+**手順（ページごとに繰り返す）：**
 
-1. PDFを開き、対象ページをスクリーンショットまたは画像として保存する
-2. 社内AIチャット（画像入力対応）に以下を貼り付ける：
-   - PDFページの画像
-   - `prompts/<pdf_name>_visual_review_page{N}.txt` の内容
-3. LLMが出力した修正指示JSON（`{"corrections": [...]}` 形式）を以下に保存する：
+1. 社内AIチャット（画像入力対応）に以下を投入する：
+   - `prompts/page_{N}/<pdf_name>_page{N}.png`（PDFページ画像）
+   - `prompts/page_{N}/<pdf_name>_excel_page{N}.png`（罫線プレビュー画像）
+   - `prompts/page_{N}/<pdf_name>_visual_review_page{N}.txt` の内容（プロンプト）
+2. LLMが出力した修正指示JSONを以下のファイルに上書き保存する：
    ```
-   data/out/<pdf_name>/prompts/<pdf_name>_visual_corrections.json
+   data/out/<pdf_name>/prompts/page_{N}/<pdf_name>_visual_corrections_page{N}.json
    ```
-4. `correct` コマンドで修正を適用する（次節）
+   ※ このファイルは `auto` 実行時に空テンプレートとして自動生成済み
+3. 全ページ分完了したら `correct` コマンドで修正を適用する（次節）
 
 **LLMが検出できる問題：**
-- 欠落しているテキスト
-- 位置がズレているテキスト
 - 欠落している罫線・枠
 - 不要な罫線
 
 > [!NOTE]
-> スクリプトが計算した精密な座標にLLMの視覚的な判断を組み合わせることで、座標精度と再現性の両方を確保できます。
+> スクリプトが計算した精密な座標にLLMの視覚的な判断を組み合わせることで、罫線の再現精度を向上できます。
 
 ---
 

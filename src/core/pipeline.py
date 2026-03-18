@@ -812,6 +812,42 @@ class SheetlingPipeline:
             review_path.write_text(prompt_text, encoding="utf-8")
             review_paths.append(str(review_path))
 
+            # Excel罫線プレビュー画像の生成（Pillow で border_rect を描画）
+            try:
+                from PIL import Image, ImageDraw
+                cell_w = 20
+                cell_h = 14
+                max_c = int(grid_params.get('max_cols', 62))
+                max_r = int(grid_params.get('max_rows', 76))
+                img_w = cell_w * max_c + 1
+                img_h = cell_h * max_r + 1
+                excel_img = Image.new('RGB', (img_w, img_h), 'white')
+                draw = ImageDraw.Draw(excel_img)
+                # 薄いグリッド線
+                for c in range(max_c + 1):
+                    x = c * cell_w
+                    draw.line([(x, 0), (x, img_h)], fill='#E0E0E0', width=1)
+                for r in range(max_r + 1):
+                    y = r * cell_h
+                    draw.line([(0, y), (img_w, y)], fill='#E0E0E0', width=1)
+                # border_rect を黒線で描画
+                for elem in page_layout.get('elements', []):
+                    if elem.get('type') != 'border_rect':
+                        continue
+                    r1 = (elem['row'] - 1) * cell_h
+                    r2 = elem['end_row'] * cell_h
+                    c1 = (elem['col'] - 1) * cell_w
+                    c2 = elem['end_col'] * cell_w
+                    borders = elem.get('borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
+                    if borders.get('top',    True): draw.line([(c1, r1), (c2, r1)], fill='black', width=2)
+                    if borders.get('bottom', True): draw.line([(c1, r2), (c2, r2)], fill='black', width=2)
+                    if borders.get('left',   True): draw.line([(c1, r1), (c1, r2)], fill='black', width=2)
+                    if borders.get('right',  True): draw.line([(c2, r1), (c2, r2)], fill='black', width=2)
+                excel_img_path = page_dir / f"{pdf_name}_excel_page{page_num}.png"
+                excel_img.save(str(excel_img_path))
+            except Exception as e:
+                logger.warning(f"[auto] Excel罫線プレビュー画像の生成に失敗しました: {e}")
+
             # 修正ファイルのテンプレートを自動生成（未存在時のみ）
             corrections_path = page_dir / f"{pdf_name}_visual_corrections_page{page_num}.json"
             if not corrections_path.exists():
