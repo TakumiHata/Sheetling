@@ -700,6 +700,7 @@ def _setup_grid_params(first_page: dict, grid_size: str) -> dict:
     """
     ref = GRID_SIZES.get(grid_size, GRID_SIZES["small"])
     grid_params = dict(ref)
+    grid_params['grid_size'] = grid_size
 
     # 実ページ寸法から max_cols / max_rows を動的計算
     pt_per_col = _A4_W_PT / ref['max_cols']
@@ -901,7 +902,19 @@ class SheetlingPipeline:
         else:
             out_dir = self.output_base_dir / pdf_name
 
-        output_xlsx_path = out_dir / f"{pdf_name}_Python版.xlsx"
+        # grid_size に応じてファイル名サフィックスを付与
+        _grid_params_path = out_dir / f"{pdf_name}_grid_params.json"
+        _grid_size_suffix = ""
+        if _grid_params_path.exists():
+            try:
+                with open(_grid_params_path, "r", encoding="utf-8") as _f:
+                    _gp = json.load(_f)
+                _gs = _gp.get("grid_size", "")
+                if _gs in ("pattern_1", "pattern_2"):
+                    _grid_size_suffix = f"_{_gs}"
+            except Exception:
+                pass
+        output_xlsx_path = out_dir / f"{pdf_name}_Python版{_grid_size_suffix}.xlsx"
         generated_code_path = out_dir / f"{pdf_name}_gen.py"
 
         if generated_code_path.exists():
