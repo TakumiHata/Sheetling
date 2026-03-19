@@ -25,9 +25,9 @@ def main():
     parser.add_argument(
         "--grid-size",
         type=str,
-        choices=["small", "medium", "large"],
-        default="small",
-        help="Grid size for Excel layout (small, medium, large)",
+        choices=["small", "medium", "large", "pattern_1", "pattern_2"],
+        default=None,
+        help="Grid size for Excel layout (small, medium, large, pattern_1, pattern_2). 省略時は pattern_1 と pattern_2 を両方生成。",
     )
     args = parser.parse_args()
 
@@ -43,27 +43,31 @@ def main():
             logger.warning("No PDF files found in data/in. Please place PDF files to process.")
             return
 
+        # --grid-size 未指定時は pattern_1 と pattern_2 を両方生成
+        grid_sizes = [args.grid_size] if args.grid_size else ["pattern_1", "pattern_2"]
+
         for pdf_path in pdf_files:
-            try:
-                result = pipeline.auto_layout(str(pdf_path), grid_size=args.grid_size)
-                page_imgs = result.get("page_image_paths", [])
-                review_paths = result.get("visual_review_paths", [])
-                img_lines = "\n".join(f"    {p}" for p in page_imgs)
-                prompt_lines = "\n".join(f"    {p}" for p in review_paths)
-                logger.info(
-                    f"✅ auto 完了: {pdf_path.stem}\n"
-                    f"  Excel:         {result['xlsx_path']}\n"
-                    f"  PDFページ画像:\n{img_lines}\n"
-                    f"  検証プロンプト:\n{prompt_lines}\n"
-                    f"  ※ 罫線修正あり なら:\n"
-                    f"    1. 各ページの PNG + Excelファイル + プロンプトテキストを社内LLMに投入\n"
-                    f"    2. 出力JSONを <pdf_name>_visual_corrections_page{{N}}.json に保存\n"
-                    f"    3. python -m src.main correct --pdf {pdf_path.stem}"
-                )
-            except FileNotFoundError as e:
-                logger.error(f"❌ {e}")
-            except Exception as e:
-                logger.error(f"❌ auto failed for {pdf_path.name}: {e}", exc_info=True)
+            for grid_size in grid_sizes:
+                try:
+                    result = pipeline.auto_layout(str(pdf_path), grid_size=grid_size)
+                    page_imgs = result.get("page_image_paths", [])
+                    review_paths = result.get("visual_review_paths", [])
+                    img_lines = "\n".join(f"    {p}" for p in page_imgs)
+                    prompt_lines = "\n".join(f"    {p}" for p in review_paths)
+                    logger.info(
+                        f"✅ auto 完了: {pdf_path.stem} [{grid_size}]\n"
+                        f"  Excel:         {result['xlsx_path']}\n"
+                        f"  PDFページ画像:\n{img_lines}\n"
+                        f"  検証プロンプト:\n{prompt_lines}\n"
+                        f"  ※ 罫線修正あり なら:\n"
+                        f"    1. 各ページの PNG + Excelファイル + プロンプトテキストを社内LLMに投入\n"
+                        f"    2. 出力JSONを <pdf_name>_visual_corrections_page{{N}}.json に保存\n"
+                        f"    3. python -m src.main correct --pdf {pdf_path.stem}"
+                    )
+                except FileNotFoundError as e:
+                    logger.error(f"❌ {e}")
+                except Exception as e:
+                    logger.error(f"❌ auto failed for {pdf_path.name} [{grid_size}]: {e}", exc_info=True)
 
     elif args.command == "correct":
         output_base_dir = Path("data/out")

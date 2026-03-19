@@ -46,6 +46,32 @@ GRID_SIZES = {
         "margin_top": 0.49,
         "margin_bottom": 0.49,
         "default_font_size": 11
+    },
+    "pattern_1": {
+        "col_width_mm": "2.76",
+        "row_height_mm": "6.44",
+        "max_cols": 90,
+        "max_rows": 47,
+        "excel_col_width": 1.0,
+        "excel_row_height": 18.25,
+        "margin_left": 0.43,
+        "margin_right": 0.43,
+        "margin_top": 0.41,
+        "margin_bottom": 0.41,
+        "default_font_size": 7
+    },
+    "pattern_2": {
+        "col_width_mm": "5.52",
+        "row_height_mm": "6.44",
+        "max_cols": 45,
+        "max_rows": 47,
+        "excel_col_width": 2.0,
+        "excel_row_height": 18.25,
+        "margin_left": 0.43,
+        "margin_right": 0.43,
+        "margin_top": 0.41,
+        "margin_bottom": 0.41,
+        "default_font_size": 7
     }
 }
 
@@ -66,6 +92,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.pagebreak import Break
 
 MAX_ROWS = $max_rows
+MAX_COLS = $max_cols
 COL_OFFSET = 1
 ROW_PADDING = 2
 EXCEL_COL_WIDTH = $excel_col_width
@@ -80,24 +107,13 @@ ws = wb.active
 thin = Side(style='thin')
 total_pages = len(data)
 
-# 使用範囲を先行スキャン（方眼サイズ適用をその範囲+3に限定するため）
-_pre_max_row = ROW_PADDING
-_pre_max_col = COL_OFFSET
-for _page in data:
-    _row_offset = (_page["page_number"] - 1) * MAX_ROWS + ROW_PADDING
-    for _item in _page["elements"]:
-        if _item["type"] == "text":
-            _pre_max_row = max(_pre_max_row, _item["row"] + _row_offset)
-            _pre_max_col = max(_pre_max_col, _item["col"] + COL_OFFSET)
-        elif _item["type"] == "border_rect":
-            _pre_max_row = max(_pre_max_row, _item["end_row"] + _row_offset)
-            _pre_max_col = max(_pre_max_col, _item["end_col"] + COL_OFFSET)
-_grid_rows = _pre_max_row + 3
-_grid_cols = _pre_max_col + 3
+# 全ページ分の方眼範囲（ページ全体）に方眼サイズを適用
+_full_cols = MAX_COLS + COL_OFFSET
+_full_rows = MAX_ROWS * total_pages + ROW_PADDING
 
-for c in range(1, _grid_cols + 1):
+for c in range(1, _full_cols + 1):
     ws.column_dimensions[get_column_letter(c)].width = EXCEL_COL_WIDTH
-for r in range(1, _grid_rows + 1):
+for r in range(1, _full_rows + 1):
     ws.row_dimensions[r].height = EXCEL_ROW_HEIGHT
 
 
