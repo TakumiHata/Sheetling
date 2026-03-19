@@ -118,8 +118,14 @@ def main():
                     logger.warning(f"⚠️  修正ファイルが見つかりません: {prompts_dir}")
                     continue
 
+                # レイアウト修正を適用（_layout.json を更新）
                 pipeline.apply_corrections(pdf_name, corrections_json, specific_out_dir=str(out_dir))
-                pipeline.render_excel(pdf_name, specific_out_dir=str(out_dir), apply_border_post_process=False)
+
+                # --grid-size 未指定時は pattern_1 と pattern_2 を両方生成
+                correct_grid_sizes = [args.grid_size] if args.grid_size else ["pattern_1", "pattern_2"]
+                for grid_size in correct_grid_sizes:
+                    pipeline.switch_pattern(pdf_name, grid_size, specific_out_dir=str(out_dir))
+                    pipeline.render_excel(pdf_name, specific_out_dir=str(out_dir), apply_border_post_process=False)
                 logger.info(f"✅ correct 完了: {out_dir.name} ({pdf_name})")
             except Exception as e:
                 logger.error(f"❌ correct failed for {out_dir.name}: {e}", exc_info=True)

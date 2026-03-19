@@ -694,27 +694,45 @@ def _setup_grid_params(first_page: dict, grid_size: str) -> dict:
     """
     ページ寸法に基づいてグリッドパラメータを設定する。
 
-    GRID_SIZES の A4 基準値から 1グリッドセルあたりのポイント数を算出し、
-    実際のページ寸法に比例して max_cols / max_rows を動的計算する。
-    これにより A4 以外の用紙サイズ（A3 など）にも正しく対応できる。
+    GRID_SIZES の col_width_mm / row_height_mm を使って印刷可能エリアに
+    収まる max_cols / max_rows を計算する。これにより Excel 出力がスケーリング
+    なしで元の用紙サイズ内に収まる。
     """
     ref = GRID_SIZES.get(grid_size, GRID_SIZES["small"])
     grid_params = dict(ref)
     grid_params['grid_size'] = grid_size
 
-    # 実ページ寸法から max_cols / max_rows を動的計算
-    pt_per_col = _A4_W_PT / ref['max_cols']
-    pt_per_row = _A4_H_PT / ref['max_rows']
-    grid_params['max_cols'] = max(1, round(first_page['width'] / pt_per_col))
-    grid_params['max_rows'] = max(1, round(first_page['height'] / pt_per_row))
-
-    # 用紙サイズ検出（long side > 1000pt → A3）
+    # 用紙サイズ・向き検出
     max_dim_pt = max(first_page['width'], first_page['height'])
     grid_params['paper_size'] = 8 if max_dim_pt > 1000 else 9  # 8=A3, 9=A4
-
-    # 向き
     is_landscape = first_page['width'] > first_page['height']
     grid_params['orientation'] = 'landscape' if is_landscape else 'portrait'
+
+    # 用紙の物理サイズ（mm）
+    _PAPER_DIMS_MM = {8: (297.0, 420.0), 9: (210.0, 297.0)}
+    paper_w_mm, paper_h_mm = _PAPER_DIMS_MM.get(grid_params['paper_size'], (210.0, 297.0))
+    if is_landscape:
+        paper_w_mm, paper_h_mm = paper_h_mm, paper_w_mm
+
+    # 印刷可能エリア（mm）= 用紙サイズ − マージン
+    margin_w_mm = (ref['margin_left'] + ref['margin_right']) * 25.4  # inch→mm
+    margin_h_mm = (ref['margin_top'] + ref['margin_bottom']) * 25.4
+    printable_w_mm = paper_w_mm - margin_w_mm
+    printable_h_mm = paper_h_mm - margin_h_mm
+
+    # 印刷可能エリアに収まる列数・行数を計算
+    col_width_mm = float(ref['col_width_mm'])
+    row_height_mm = float(ref['row_height_mm'])
+    max_cols_fit = max(1, int(printable_w_mm / col_width_mm))
+    max_rows_fit = max(1, int(printable_h_mm / row_height_mm))
+
+    grid_params['max_cols'] = max_cols_fit
+    grid_params['max_rows'] = max_rows_fit
+
+    logger.debug(
+        f"[grid] {grid_size}: printable={printable_w_mm:.1f}×{printable_h_mm:.1f}mm "
+        f"→ max_cols={max_cols_fit}, max_rows={max_rows_fit}"
+    )
 
     return grid_params
 
@@ -1089,6 +1107,29 @@ class SheetlingPipeline:
         gen_path = out_dir / f"{pdf_name}_gen.py"
         gen_path.write_text(gen_code, encoding="utf-8")
         logger.info(f"[correct] _gen.py を再生成しました: {gen_path}")
+
+    def switch_pattern(self, pdf_name: str, grid_size: str, specific_out_dir: str = None) -> None:
+        """
+        _grid_params.json のパターン固有の値を上書きして _gen.py を再生成する。
+        correct コマンドで複数パターンを出力する際に使用。
+        """
+        out_dir = Path(specific_out_dir) if specific_out_dir else self.output_base_dir / pdf_name
+        grid_params_path = out_dir / f"{pdf_name}_grid_params.json"
+
+        grid_params = json.loads(grid_params_path.read_text(encoding="utf-8"))
+        ref = GRID_SIZES.get(grid_size, GRID_SIZES["small"])
+        for key in ["col_width_mm", "row_height_mm", "excel_col_width", "excel_row_height",
+                    "margin_left", "margin_right", "margin_top", "margin_bottom", "default_font_size"]:
+            if key in ref:
+                grid_params[key] = ref[key]
+        grid_params["grid_size"] = grid_size
+
+        grid_params_path.write_text(json.dumps(grid_params, ensure_ascii=False), encoding="utf-8")
+
+        gen_code = self._auto_generate_code(pdf_name, grid_params)
+        gen_path = out_dir / f"{pdf_name}_gen.py"
+        gen_path.write_text(gen_code, encoding="utf-8")
+        logger.info(f"[correct] パターン切り替え完了: {grid_size}")
 
     def _generate_error_prompt(self, out_dir: Path, pdf_name: str, error_msg: str, current_code: str):
         prompt_text = CODE_ERROR_FIXING_PROMPT.format(error_msg=error_msg, code=current_code)

@@ -182,6 +182,7 @@ ws.page_margins.right = $margin_right
 ws.page_margins.top = $margin_top
 ws.page_margins.bottom = $margin_bottom
 ws.print_area = f"A1:{get_column_letter(max_used_col)}{max_used_row}"
+ws.page_setup.scale = 100
 
 wb.save("output.xlsx")
 """)
