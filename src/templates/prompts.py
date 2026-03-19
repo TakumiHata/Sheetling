@@ -107,14 +107,10 @@ ws = wb.active
 thin = Side(style='thin')
 total_pages = len(data)
 
-# 全ページ分の方眼範囲（ページ全体）に方眼サイズを適用
-_full_cols = MAX_COLS + COL_OFFSET
-_full_rows = MAX_ROWS * total_pages + ROW_PADDING
-
-for c in range(1, _full_cols + 1):
-    ws.column_dimensions[get_column_letter(c)].width = EXCEL_COL_WIDTH
-for r in range(1, _full_rows + 1):
-    ws.row_dimensions[r].height = EXCEL_ROW_HEIGHT
+# シート全体のデフォルト列幅・行高さを設定（全セルに方眼サイズを適用）
+ws.sheet_format.defaultColWidth = EXCEL_COL_WIDTH
+ws.sheet_format.defaultRowHeight = EXCEL_ROW_HEIGHT
+ws.sheet_format.customHeight = True
 
 
 def apply_border(ws, s_row, e_row, s_col, e_col, borders):
