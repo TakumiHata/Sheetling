@@ -48,7 +48,7 @@ GRID_SIZES = {
         "default_font_size": 11
     },
     "pattern_1": {
-        "col_width_mm": "2.76",
+        "col_width_mm": "3.61",
         "row_height_mm": "6.44",
         "max_cols": 90,
         "max_rows": 47,
