@@ -135,8 +135,8 @@ def apply_border(ws, s_row, e_row, s_col, e_col, borders):
                 pass
 
 
-max_used_row = ROW_PADDING
-max_used_col = COL_OFFSET
+max_used_row = MAX_ROWS * total_pages + ROW_PADDING
+max_used_col = MAX_COLS + COL_OFFSET
 
 for page in data:
     page_number = page["page_number"]
