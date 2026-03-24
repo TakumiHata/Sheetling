@@ -159,6 +159,8 @@ for page in data:
                 font_kwargs = {"size": item.get("font_size") or DEFAULT_FONT_SIZE}
                 if item.get("font_color"):
                     font_kwargs["color"] = item["font_color"]
+                if item.get("font_name"):
+                    font_kwargs["name"] = item["font_name"]
                 cell.font = Font(**font_kwargs)
                 max_used_row = max(max_used_row, r)
                 max_used_col = max(max_used_col, c)

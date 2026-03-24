@@ -168,6 +168,8 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                     raw_sz = first.get('size')
                     if raw_sz:
                         v_entry['font_size'] = round(float(raw_sz), 1)
+                    if first.get('fontname'):
+                        v_entry['fontname'] = first['fontname']
                     words.append(v_entry)
 
             # 表の内部構造（2次元配列）の取得（find_tables と同じ設定を使う）

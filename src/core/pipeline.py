@@ -13,6 +13,20 @@ from src.templates.prompts import CODE_ERROR_FIXING_PROMPT, GEN_CODE_TEMPLATE, V
 from src.utils.logger import get_logger
 
 
+def _normalize_font_name(raw_name: str):
+    """PDF フォント名を Excel に渡せる形式に整形する。
+    サブセットプレフィックス除去とハイフン→スペース変換のみ行い、
+    そのまま Excel の Font(name=...) に渡す。
+    Excel が認識できないフォント名はデフォルトフォントにフォールバックされる。"""
+    if not raw_name:
+        return None
+    # サブセットプレフィックスを除去 (例: "ABCDEF+MS-Gothic" → "MS-Gothic")
+    name = re.sub(r'^[A-Z]{6}\+', '', raw_name)
+    # ハイフン区切りをスペースに変換 (例: "MS-Gothic" → "MS Gothic")
+    name = name.replace('-', ' ')
+    return name.strip() or None
+
+
 def _sanitize_generated_code(code: str) -> tuple[str, list[str]]:
     """生成コードの既知の問題パターンを検出・自動修正する。"""
     fixes = []
@@ -562,6 +576,9 @@ def _fill_missing_text(layout_json_str: str, extracted_data: dict) -> str:
                 elem['font_color'] = first['font_color']
             if first.get('font_size'):
                 elem['font_size'] = first['font_size']
+            font_name = _normalize_font_name(first.get('fontname', ''))
+            if font_name:
+                elem['font_name'] = font_name
             added.append(elem)
 
         if added:
@@ -673,6 +690,9 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
                 elem['font_color'] = first['font_color']
             if first.get('font_size'):
                 elem['font_size'] = first['font_size']
+            font_name = _normalize_font_name(first.get('fontname', ''))
+            if font_name:
+                elem['font_name'] = font_name
             if first.get('is_vertical'):
                 elem['is_vertical'] = True
                 if '_end_row' in first:
