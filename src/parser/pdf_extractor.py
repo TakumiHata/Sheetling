@@ -80,7 +80,7 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                 "snap_y_tolerance": 5,
                 "join_tolerance": 5,
                 "join_y_tolerance": 5,
-                "edge_min_length": 20,
+                "edge_min_length": 5,
                 "intersection_tolerance": 5,
                 "intersection_x_tolerance": 5,
                 "intersection_y_tolerance": 5,

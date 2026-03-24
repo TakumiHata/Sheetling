@@ -112,6 +112,23 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
             sy = snap(y)
             y_vals.add(sy)
             table_row_y_anchors.add(sy)
+    # テーブル内の水平エッジをアンカーとして補完。
+    # pdfplumber がテーブル行境界を見逃した場合（セル幅が edge_min_length 未満等）、
+    # h_edges の水平線から内部行境界を復元する。
+    _h_edge_anchor_tol_x = 5.0  # エッジがテーブル幅に対してどれだけ短くてもよいか(pt)
+    _h_edge_anchor_tol_y = 1.0  # テーブル上下端からの除外マージン(pt)
+    for bbox in page.get('table_bboxes', []):
+        bx0, by0, bx1, by1 = bbox
+        for edge in page.get('h_edges', []):
+            ey = snap(edge['y'])
+            # テーブル内部のy座標（上下端は除外）
+            if not (by0 + _h_edge_anchor_tol_y < ey < by1 - _h_edge_anchor_tol_y):
+                continue
+            # エッジのx範囲がテーブルのx範囲と有意に重複している
+            if edge['x0'] > bx1 - _h_edge_anchor_tol_x or edge['x1'] < bx0 + _h_edge_anchor_tol_x:
+                continue
+            y_vals.add(ey)
+            table_row_y_anchors.add(ey)
     for cells in page.get('table_cells', []):
         for c in cells:
             y_vals.add(snap(c['top']))
@@ -267,24 +284,24 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
             v_edge_max_span[ci] = span
 
     def _overlaps_h(edges: list, col_s: int, col_e: int) -> bool:
-        """エッジリストの中に col_s〜col_e スパンと 50% 以上重複するものがあるか。"""
+        """エッジリストの中に col_s〜col_e スパンと 30% 以上重複するものがあるか。"""
         span = col_e - col_s
         if span <= 0:
             return any(cs <= col_s <= ce for cs, ce in edges)
         for cs, ce in edges:
             overlap = min(ce, col_e) - max(cs, col_s)
-            if overlap >= span * 0.5:
+            if overlap >= span * 0.3:
                 return True
         return False
 
     def _overlaps_v(edges: list, row_s: int, row_e: int) -> bool:
-        """エッジリストの中に row_s〜row_e スパンと 50% 以上重複するものがあるか。"""
+        """エッジリストの中に row_s〜row_e スパンと 30% 以上重複するものがあるか。"""
         span = row_e - row_s
         if span <= 0:
             return any(rs <= row_s <= re for rs, re in edges)
         for rs, re in edges:
             overlap = min(re, row_e) - max(rs, row_s)
-            if overlap >= span * 0.5:
+            if overlap >= span * 0.3:
                 return True
         return False
 
