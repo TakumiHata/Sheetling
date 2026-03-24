@@ -92,37 +92,68 @@ def main():
 
         for out_dir in out_dirs:
             prompts_dir = out_dir / "prompts"
-            # _layout.json からPDF名を特定（ディレクトリ名と異なる場合に対応）
+            # パターン別 _layout.json からPDF名を特定
             layout_files = list(out_dir.glob("*_layout.json"))
             if not layout_files:
                 logger.warning(f"⚠️  _layout.json が見つかりません: {out_dir}")
                 continue
-            pdf_name = layout_files[0].stem.replace("_layout", "")
-            try:
-                # ワイルドカードでページ単位ファイルを収集してマージ
-                page_files = sorted(prompts_dir.glob("page_*/*_visual_corrections_page*.json"))
-                if not page_files:
-                    page_files = sorted(prompts_dir.glob("*_visual_corrections_page*.json"))
-                single_files = list(prompts_dir.glob("*_visual_corrections.json"))
+            # パターンサフィックスを除いたPDF名を取得（例: foo_pattern_1_layout.json → foo）
+            raw_stem = layout_files[0].stem.replace("_layout", "")
+            for _suf in ("_pattern_1", "_pattern_2"):
+                if raw_stem.endswith(_suf):
+                    raw_stem = raw_stem[: -len(_suf)]
+                    break
+            pdf_name = raw_stem
 
-                if page_files:
-                    merged_corrections: list = []
-                    for pf in page_files:
-                        data = json.loads(pf.read_text(encoding="utf-8"))
-                        merged_corrections.extend(data.get("corrections", []))
-                    corrections_json = json.dumps({"corrections": merged_corrections}, ensure_ascii=False)
-                    logger.info(f"[correct] {len(page_files)} ページ分の修正ファイルをマージしました")
-                elif single_files:
-                    corrections_json = single_files[0].read_text(encoding="utf-8")
-                else:
-                    logger.warning(f"⚠️  修正ファイルが見つかりません: {prompts_dir}")
-                    continue
+            # --grid-size 未指定時は pattern_1 と pattern_2 を両方処理
+            correct_grid_sizes = [args.grid_size] if args.grid_size else ["pattern_1", "pattern_2"]
 
-                pipeline.apply_corrections(pdf_name, corrections_json, specific_out_dir=str(out_dir))
-                pipeline.render_excel(pdf_name, specific_out_dir=str(out_dir), apply_border_post_process=False)
-                logger.info(f"✅ correct 完了: {out_dir.name} ({pdf_name})")
-            except Exception as e:
-                logger.error(f"❌ correct failed for {out_dir.name}: {e}", exc_info=True)
+            for grid_size in correct_grid_sizes:
+                layout_json_name = f"{pdf_name}_{grid_size}_layout.json"
+                gen_py_name = f"{pdf_name}_{grid_size}_gen.py"
+                grid_params_name = f"{pdf_name}_{grid_size}_grid_params.json"
+                pattern_prompts_dir = prompts_dir / grid_size
+
+                try:
+                    # パターン別ディレクトリから修正ファイルを収集
+                    page_files = sorted(pattern_prompts_dir.glob("page_*/*_visual_corrections_page*.json"))
+                    if not page_files:
+                        page_files = sorted(pattern_prompts_dir.glob("*_visual_corrections_page*.json"))
+                    single_files = list(pattern_prompts_dir.glob("*_visual_corrections.json"))
+
+                    if page_files:
+                        merged_corrections: list = []
+                        for pf in page_files:
+                            data = json.loads(pf.read_text(encoding="utf-8"))
+                            merged_corrections.extend(data.get("corrections", []))
+                        corrections_json = json.dumps({"corrections": merged_corrections}, ensure_ascii=False)
+                        logger.info(f"[correct] {grid_size}: {len(page_files)} ページ分の修正ファイルをマージしました")
+                    elif single_files:
+                        corrections_json = single_files[0].read_text(encoding="utf-8")
+                    else:
+                        logger.warning(f"⚠️  修正ファイルが見つかりません: {pattern_prompts_dir}")
+                        continue
+
+                    # レイアウト修正を適用してパターン別 _gen.py を再生成
+                    pipeline.apply_corrections(
+                        pdf_name, corrections_json,
+                        specific_out_dir=str(out_dir),
+                        layout_json_name=layout_json_name,
+                        gen_py_name=gen_py_name,
+                        grid_params_name=grid_params_name,
+                    )
+
+                    # パターン別 gen.py / grid_params で Excel を生成
+                    pipeline.render_excel(
+                        pdf_name,
+                        specific_out_dir=str(out_dir),
+                        apply_border_post_process=False,
+                        gen_py_name=gen_py_name,
+                        grid_params_name=grid_params_name,
+                    )
+                    logger.info(f"✅ correct 完了: {out_dir.name} ({pdf_name}) [{grid_size}]")
+                except Exception as e:
+                    logger.error(f"❌ correct failed for {out_dir.name} [{grid_size}]: {e}", exc_info=True)
 
 
 if __name__ == "__main__":
