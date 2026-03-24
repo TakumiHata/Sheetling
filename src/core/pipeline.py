@@ -791,8 +791,14 @@ class SheetlingPipeline:
             out_dir = self.output_base_dir / pdf_name
 
         out_dir.mkdir(parents=True, exist_ok=True)
-        prompts_dir = out_dir / "prompts"
+        # パターン別ディレクトリ: prompts/{grid_size}/page_{N}/
+        prompts_dir = out_dir / "prompts" / grid_size
         prompts_dir.mkdir(parents=True, exist_ok=True)
+
+        # パターン別ファイル名プレフィックス
+        layout_json_name = f"{pdf_name}_{grid_size}_layout.json"
+        gen_py_name = f"{pdf_name}_{grid_size}_gen.py"
+        grid_params_name = f"{pdf_name}_{grid_size}_grid_params.json"
 
         # PDF抽出 & グリッド座標付与
         extracted_data = extract_pdf_data(pdf_path)
@@ -801,29 +807,29 @@ class SheetlingPipeline:
         for page in extracted_data['pages']:
             _compute_grid_coords(page, grid_params['max_rows'], grid_params['max_cols'])
 
-        # 罫線後処理・デバッグ用に保存
+        # 罫線後処理・デバッグ用に保存（extracted.json はパターン共通）
         with open(out_dir / f"{pdf_name}_extracted.json", "w", encoding="utf-8") as f:
             json.dump(extracted_data, f, indent=2, ensure_ascii=False)
-        with open(out_dir / f"{pdf_name}_grid_params.json", "w", encoding="utf-8") as f:
+        with open(out_dir / grid_params_name, "w", encoding="utf-8") as f:
             json.dump(grid_params, f, ensure_ascii=False)
 
         # レイアウトJSON生成 & 欠落テキスト補完
         layout_json = _auto_generate_layout(extracted_data, grid_params)
         filled_json = _fill_missing_text(layout_json, extracted_data)
 
-        # _gen.py が参照するレイアウトJSONとして保存
-        output_json_path = out_dir / f"{pdf_name}_layout.json"
+        # _gen.py が参照するレイアウトJSONとして保存（パターン別）
+        output_json_path = out_dir / layout_json_name
         with open(output_json_path, "w", encoding="utf-8") as f:
             f.write(filled_json)
 
-        # _gen.py 生成
-        gen_code = self._auto_generate_code(pdf_name, grid_params)
-        gen_path = out_dir / f"{pdf_name}_gen.py"
+        # _gen.py 生成（パターン別）
+        gen_code = self._auto_generate_code(pdf_name, grid_params, layout_json_name=layout_json_name)
+        gen_path = out_dir / gen_py_name
         with open(gen_path, "w", encoding="utf-8") as f:
             f.write(gen_code)
         logger.info(f"[auto] _gen.py を生成しました: {gen_path}")
 
-        # PDFページ画像 + 視覚的検証プロンプトの生成（ページごとに page_{N}/ フォルダへ格納）
+        # PDFページ画像 + 視覚的検証プロンプトの生成（パターン別: prompts/{grid_size}/page_{N}/）
         layout = json.loads(filled_json)
         page_image_paths = []
         review_paths = []
@@ -921,8 +927,13 @@ class SheetlingPipeline:
             logger.info(f"[auto] PDFページ画像を生成しました: {len(page_image_paths)} ページ")
         logger.info(f"[auto] 視覚的検証プロンプトを生成しました: {len(review_paths)} ページ")
 
-        # Excel生成
-        xlsx_path = self.render_excel(pdf_name, specific_out_dir=str(out_dir))
+        # Excel生成（パターン別 gen.py / grid_params を使用）
+        xlsx_path = self.render_excel(
+            pdf_name,
+            specific_out_dir=str(out_dir),
+            gen_py_name=gen_py_name,
+            grid_params_name=grid_params_name,
+        )
 
         return {
             "xlsx_path": xlsx_path,
@@ -931,14 +942,18 @@ class SheetlingPipeline:
             "visual_review_paths": review_paths,
         }
 
-    def _auto_generate_code(self, pdf_name: str, grid_params: dict) -> str:
+    def _auto_generate_code(self, pdf_name: str, grid_params: dict, layout_json_name: str = None) -> str:
         """GEN_CODE_TEMPLATE からランタイムにJSONを読み込む _gen.py コードを生成する。"""
-        return GEN_CODE_TEMPLATE.substitute(pdf_name=pdf_name, **grid_params)
+        if layout_json_name is None:
+            layout_json_name = f"{pdf_name}_layout.json"
+        return GEN_CODE_TEMPLATE.substitute(layout_json_name=layout_json_name, **grid_params)
 
-    def render_excel(self, pdf_name: str, specific_out_dir: str = None, apply_border_post_process: bool = True) -> str:
+    def render_excel(self, pdf_name: str, specific_out_dir: str = None, apply_border_post_process: bool = True,
+                     gen_py_name: str = None, grid_params_name: str = None) -> str:
         """
         Phase 3: AI出力の生成コードを読み込み、Excel方眼紙を描画する。
         apply_border_post_process=False のとき _apply_borders_to_xlsx をスキップする（correct 実行時）。
+        gen_py_name / grid_params_name を指定するとパターン別ファイルを使用する。
         """
         logger.info(f"--- [Phase 3] Excel生成: {pdf_name} ---")
         if specific_out_dir:
@@ -946,8 +961,12 @@ class SheetlingPipeline:
         else:
             out_dir = self.output_base_dir / pdf_name
 
-        # grid_size に応じてファイル名サフィックスを付与
-        _grid_params_path = out_dir / f"{pdf_name}_grid_params.json"
+        # grid_params_name が指定されていればそれを使用、なければ旧来のパスにフォールバック
+        if grid_params_name:
+            _grid_params_path = out_dir / grid_params_name
+        else:
+            _grid_params_path = out_dir / f"{pdf_name}_grid_params.json"
+
         _grid_size_suffix = ""
         if _grid_params_path.exists():
             try:
@@ -959,7 +978,12 @@ class SheetlingPipeline:
             except Exception:
                 pass
         output_xlsx_path = out_dir / f"{pdf_name}_Python版{_grid_size_suffix}.xlsx"
-        generated_code_path = out_dir / f"{pdf_name}_gen.py"
+
+        # gen_py_name が指定されていればそれを使用、なければ旧来のパスにフォールバック
+        if gen_py_name:
+            generated_code_path = out_dir / gen_py_name
+        else:
+            generated_code_path = out_dir / f"{pdf_name}_gen.py"
 
         if generated_code_path.exists():
             with open(generated_code_path, "r", encoding="utf-8") as f:
@@ -1036,9 +1060,11 @@ class SheetlingPipeline:
 
         raise RuntimeError(f"Excelの生成に失敗しました ({pdf_name})")
 
-    def apply_corrections(self, pdf_name: str, corrections_json: str, specific_out_dir: str = None) -> None:
+    def apply_corrections(self, pdf_name: str, corrections_json: str, specific_out_dir: str = None,
+                          layout_json_name: str = None, gen_py_name: str = None, grid_params_name: str = None) -> None:
         """
         ビジョンLLMが出力した修正指示を _layout.json に適用し、_gen.py を再生成する。
+        layout_json_name / gen_py_name / grid_params_name を指定するとパターン別ファイルを使用する。
 
         corrections_json の形式:
         {
@@ -1056,8 +1082,12 @@ class SheetlingPipeline:
         else:
             out_dir = self.output_base_dir / pdf_name
 
-        output_json_path  = out_dir / f"{pdf_name}_layout.json"
-        grid_params_path  = out_dir / f"{pdf_name}_grid_params.json"
+        _layout_json_name = layout_json_name or f"{pdf_name}_layout.json"
+        _gen_py_name = gen_py_name or f"{pdf_name}_gen.py"
+        _grid_params_name = grid_params_name or f"{pdf_name}_grid_params.json"
+
+        output_json_path  = out_dir / _layout_json_name
+        grid_params_path  = out_dir / _grid_params_name
 
         if not output_json_path.exists():
             raise FileNotFoundError(f"_layout.json が見つかりません: {output_json_path}")
@@ -1128,9 +1158,9 @@ class SheetlingPipeline:
         output_json_path.write_text(updated_json, encoding="utf-8")
         logger.info(f"[correct] {applied} 件の修正を適用しました: {output_json_path}")
 
-        # _gen.py を再生成
-        gen_code = self._auto_generate_code(pdf_name, grid_params)
-        gen_path = out_dir / f"{pdf_name}_gen.py"
+        # _gen.py を再生成（パターン別ファイル名を使用）
+        gen_code = self._auto_generate_code(pdf_name, grid_params, layout_json_name=_layout_json_name)
+        gen_path = out_dir / _gen_py_name
         gen_path.write_text(gen_code, encoding="utf-8")
         logger.info(f"[correct] _gen.py を再生成しました: {gen_path}")
 
