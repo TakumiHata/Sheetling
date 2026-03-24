@@ -8,26 +8,25 @@ logger = get_logger(__name__)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sheetling: PDF to Excel conversion")
+    parser = argparse.ArgumentParser(description="Sheetling: PDF to Excel conversion (High Precision Auto)")
     parser.add_argument(
         "command",
         choices=["auto", "correct"],
         help=(
-            "auto: PDF から Excel を自動生成 (PDF解析 → レイアウト生成 → Excel出力), "
+            "auto: PDF から Excel を自動生成 (高精度 Pre版ロジック採用), "
             "correct: ビジョンLLMの修正指示を適用して Excel を再生成"
         ),
     )
     parser.add_argument(
         "--pdf",
         type=str,
-        help="PDF名（拡張子なし）または PDFファイルパス。correct では出力ディレクトリの特定に使用。",
+        help="PDF名またはパス。省略時は data/in 内の全PDFを処理、correct では出力フォルダ特定に使用。",
     )
     parser.add_argument(
         "--grid-size",
         type=str,
-        choices=["small", "medium", "large", "pattern_1", "pattern_2"],
-        default=None,
-        help="Grid size for Excel layout (small, medium, large, pattern_1, pattern_2). 省略時は pattern_1 と pattern_2 を両方生成。",
+        default="small",
+        help="Grid size (デフォルト: small)。Pre版ロジックでは small が基準となります。",
     )
     args = parser.parse_args()
 
@@ -35,125 +34,92 @@ def main():
 
     if args.command == "auto":
         if args.pdf:
-            pdf_files = [Path(args.pdf)]
+            if Path(args.pdf).exists():
+                pdf_files = [Path(args.pdf)]
+            else:
+                # 拡張子なしの指定に対応
+                p = Path("data/in") / (args.pdf if args.pdf.endswith(".pdf") else f"{args.pdf}.pdf")
+                if p.exists():
+                    pdf_files = [p]
+                else:
+                    # フォルダ検索
+                    pdf_files = list(Path("data/in").rglob(f"*{args.pdf}*.pdf"))
         else:
             pdf_files = list(Path("data/in").rglob("*.pdf"))
 
         if not pdf_files:
-            logger.warning("No PDF files found in data/in. Please place PDF files to process.")
+            logger.warning("処理対象の PDF ファイルが見つかりません。")
             return
 
-        # --grid-size 未指定時は pattern_1 と pattern_2 を両方生成
-        grid_sizes = [args.grid_size] if args.grid_size else ["pattern_1", "pattern_2"]
-
         for pdf_path in pdf_files:
-            for grid_size in grid_sizes:
-                try:
-                    result = pipeline.auto_layout(str(pdf_path), grid_size=grid_size)
-                    page_imgs = result.get("page_image_paths", [])
-                    review_paths = result.get("visual_review_paths", [])
-                    img_lines = "\n".join(f"    {p}" for p in page_imgs)
-                    prompt_lines = "\n".join(f"    {p}" for p in review_paths)
-                    logger.info(
-                        f"✅ auto 完了: {pdf_path.stem} [{grid_size}]\n"
-                        f"  Excel:         {result['xlsx_path']}\n"
-                        f"  PDFページ画像:\n{img_lines}\n"
-                        f"  検証プロンプト:\n{prompt_lines}\n"
-                        f"  ※ 罫線修正あり なら:\n"
-                        f"    1. 各ページの PNG + Excelファイル + プロンプトテキストを社内LLMに投入\n"
-                        f"    2. 出力JSONを <pdf_name>_visual_corrections_page{{N}}.json に保存\n"
-                        f"    3. python -m src.main correct --pdf {pdf_path.stem}"
-                    )
-                except FileNotFoundError as e:
-                    logger.error(f"❌ {e}")
-                except Exception as e:
-                    logger.error(f"❌ auto failed for {pdf_path.name} [{grid_size}]: {e}", exc_info=True)
+            try:
+                pipeline.auto_layout(str(pdf_path), grid_size=args.grid_size)
+            except Exception as e:
+                logger.error(f"❌ auto failed for {pdf_path.name}: {e}", exc_info=True)
 
     elif args.command == "correct":
         output_base_dir = Path("data/out")
-
-        # 処理対象の out_dir 一覧を収集
         if args.pdf:
-            out_dirs = [output_base_dir / Path(args.pdf).stem]
+            pdf_stem = Path(args.pdf).stem
+            out_dirs = [output_base_dir / pdf_stem]
         else:
-            # corrections ファイルが存在する out_dir をすべて収集
+            # 修正ファイルが存在するディレクトリを自動探索
             out_dirs = sorted(set(
                 p.parent.parent.parent if p.parent.name.startswith("page_") else p.parent.parent
                 for p in output_base_dir.rglob("*_visual_corrections*.json")
             ))
 
         if not out_dirs:
-            logger.warning(
-                "修正ファイルが見つかりません。\n"
-                "ビジョンLLMの出力JSONを以下のパスに保存してから再実行してください:\n"
-                "  data/out/<name>/prompts/page_1/<pdf_name>_visual_corrections_page1.json"
-            )
+            logger.warning("修正ファイル (*_visual_corrections*.json) が見つかりませんでした。")
             return
 
         for out_dir in out_dirs:
-            prompts_dir = out_dir / "prompts"
-            # パターン別 _layout.json からPDF名を特定
+            if not out_dir.exists(): continue
+            
+            # ディレクトリ名または layout.json から PDF 名を取得
             layout_files = list(out_dir.glob("*_layout.json"))
-            if not layout_files:
-                logger.warning(f"⚠️  _layout.json が見つかりません: {out_dir}")
-                continue
-            # パターンサフィックスを除いたPDF名を取得（例: foo_pattern_1_layout.json → foo）
-            raw_stem = layout_files[0].stem.replace("_layout", "")
-            for _suf in ("_pattern_1", "_pattern_2"):
-                if raw_stem.endswith(_suf):
-                    raw_stem = raw_stem[: -len(_suf)]
+            if not layout_files: continue
+            
+            pdf_name = layout_files[0].stem
+            # サフィックス除去
+            for s in ["_small", "_medium", "_large", "_pattern_1", "_pattern_2"]:
+                if pdf_name.endswith(s):
+                    pdf_name = pdf_name[:-len(s)]
                     break
-            pdf_name = raw_stem
-
-            # --grid-size 未指定時は pattern_1 と pattern_2 を両方処理
-            correct_grid_sizes = [args.grid_size] if args.grid_size else ["pattern_1", "pattern_2"]
-
-            for grid_size in correct_grid_sizes:
-                layout_json_name = f"{pdf_name}_{grid_size}_layout.json"
-                gen_py_name = f"{pdf_name}_{grid_size}_gen.py"
-                grid_params_name = f"{pdf_name}_{grid_size}_grid_params.json"
-                pattern_prompts_dir = prompts_dir / grid_size
-
-                try:
-                    # パターン別ディレクトリから修正ファイルを収集
-                    page_files = sorted(pattern_prompts_dir.glob("page_*/*_visual_corrections_page*.json"))
-                    if not page_files:
-                        page_files = sorted(pattern_prompts_dir.glob("*_visual_corrections_page*.json"))
-                    single_files = list(pattern_prompts_dir.glob("*_visual_corrections.json"))
-
-                    if page_files:
-                        merged_corrections: list = []
-                        for pf in page_files:
-                            data = json.loads(pf.read_text(encoding="utf-8"))
-                            merged_corrections.extend(data.get("corrections", []))
-                        corrections_json = json.dumps({"corrections": merged_corrections}, ensure_ascii=False)
-                        logger.info(f"[correct] {grid_size}: {len(page_files)} ページ分の修正ファイルをマージしました")
-                    elif single_files:
-                        corrections_json = single_files[0].read_text(encoding="utf-8")
-                    else:
-                        logger.warning(f"⚠️  修正ファイルが見つかりません: {pattern_prompts_dir}")
-                        continue
-
-                    # レイアウト修正を適用してパターン別 _gen.py を再生成
+            
+            grid_size = args.grid_size
+            layout_json_name = f"{pdf_name}_{grid_size}_layout.json"
+            grid_params_name = f"{pdf_name}_{grid_size}_grid_params.json"
+            
+            try:
+                # 修正ファイルの収集
+                prompts_dir = out_dir / "prompts" / grid_size
+                page_files = sorted(prompts_dir.glob("page_*/*_visual_corrections_page*.json"))
+                if not page_files:
+                    page_files = sorted(prompts_dir.glob("*_visual_corrections_page*.json"))
+                
+                if page_files:
+                    merged = []
+                    for pf in page_files:
+                        data = json.loads(pf.read_text(encoding="utf-8"))
+                        merged.extend(data.get("corrections", []))
+                    corrections_json = json.dumps({"corrections": merged}, ensure_ascii=False)
+                    
                     pipeline.apply_corrections(
                         pdf_name, corrections_json,
                         specific_out_dir=str(out_dir),
                         layout_json_name=layout_json_name,
-                        gen_py_name=gen_py_name,
-                        grid_params_name=grid_params_name,
+                        grid_params_name=grid_params_name
                     )
-
-                    # パターン別 gen.py / grid_params で Excel を生成
-                    pipeline.render_excel(
-                        pdf_name,
-                        specific_out_dir=str(out_dir),
-                        apply_border_post_process=False,
-                        gen_py_name=gen_py_name,
-                        grid_params_name=grid_params_name,
-                    )
-                    logger.info(f"✅ correct 完了: {out_dir.name} ({pdf_name}) [{grid_size}]")
-                except Exception as e:
-                    logger.error(f"❌ correct failed for {out_dir.name} [{grid_size}]: {e}", exc_info=True)
+                    
+                    # 再レンダリング
+                    pipeline.render_excel_from_layout(pdf_name, specific_out_dir=str(out_dir))
+                    logger.info(f"✅ correct 完了: {pdf_name} ({out_dir.name})")
+                else:
+                    logger.warning(f"⚠️ {pdf_name}: 修正ファイルが見つかりません: {prompts_dir}")
+                    
+            except Exception as e:
+                logger.error(f"❌ correct failed for {pdf_name}: {e}", exc_info=True)
 
 
 if __name__ == "__main__":
