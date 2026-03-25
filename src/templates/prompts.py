@@ -83,7 +83,7 @@ GRID_SIZES = {
     "1pt": {
         "col_width_mm": "3.48",
         "row_height_mm": "6.44",
-        "max_cols": 54,            # small と同じ: 54×1.71 MDU = A4幅
+        "max_cols": 57,            # 54+3: 右余白を埋めて A4 幅に合わせる
         "max_rows": 42,
         "excel_col_width": 1.71,
         "excel_row_height": 18.25,
