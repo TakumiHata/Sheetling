@@ -59,16 +59,41 @@ def main():
                     logger.error(f"❌ auto ({_gs}) failed for {pdf_path.name}: {e}", exc_info=True)
 
     elif args.command == "correct":
+        from src.templates.prompts import GRID_SIZES
+        all_grid_sizes = list(GRID_SIZES.keys())
+
         output_base_dir = Path("data/out")
+        in_base_dir = Path("data/in")
         if args.pdf:
-            pdf_stem = Path(args.pdf).stem
-            out_dirs = [output_base_dir / pdf_stem]
+            pdf_path_obj = Path(args.pdf)
+            pdf_stem = pdf_path_obj.stem
+            # auto と同じロジック: data/in/ からの相対パスで out_dir を決定
+            try:
+                rel = pdf_path_obj.parent.relative_to(in_base_dir)
+                out_dirs = [output_base_dir / rel]
+            except ValueError:
+                # パスが data/in/ 配下でない場合は layout ファイルを持つディレクトリを探索
+                candidate_dirs = [
+                    d for d in output_base_dir.rglob("*")
+                    if d.is_dir() and any(d.glob(f"{pdf_stem}_*_layout.json"))
+                ]
+                out_dirs = candidate_dirs if candidate_dirs else [output_base_dir / pdf_stem]
         else:
             # 修正ファイルが存在するディレクトリを自動探索
-            out_dirs = sorted(set(
-                p.parent.parent.parent if p.parent.name.startswith("page_") else p.parent.parent
-                for p in output_base_dir.rglob("*_visual_corrections*.json")
-            ))
+            # 構造: out_dir/prompts/{grid_size}/page_N/corrections.json（新）
+            #       out_dir/prompts/page_N/corrections.json（旧）
+            out_dir_set = set()
+            for p in output_base_dir.rglob("*_visual_corrections*.json"):
+                if p.parent.name.startswith("page_"):
+                    if p.parent.parent.name == "prompts":
+                        # 旧構造: out_dir/prompts/page_N/
+                        out_dir_set.add(p.parent.parent.parent)
+                    else:
+                        # 新構造: out_dir/prompts/{grid_size}/page_N/
+                        out_dir_set.add(p.parent.parent.parent.parent)
+                else:
+                    out_dir_set.add(p.parent.parent)
+            out_dirs = sorted(out_dir_set)
 
         if not out_dirs:
             logger.warning("修正ファイル (*_visual_corrections*.json) が見つかりませんでした。")
@@ -76,54 +101,59 @@ def main():
 
         for out_dir in out_dirs:
             if not out_dir.exists(): continue
-            
-            # ディレクトリ名または layout.json から PDF 名を取得
+
             layout_files = list(out_dir.glob("*_layout.json"))
             if not layout_files: continue
-            
-            pdf_name = layout_files[0].stem
-            # サフィックス除去
-            for s in ["_small", "_medium", "_large", "_pattern_1", "_pattern_2"]:
-                if pdf_name.endswith(s):
-                    pdf_name = pdf_name[:-len(s)]
-                    break
-            
-            grid_size = args.grid_size
-            layout_json_name = f"{pdf_name}_{grid_size}_layout.json"
-            grid_params_name = f"{pdf_name}_{grid_size}_grid_params.json"
-            
-            try:
-                # 修正ファイルの収集
-                prompts_dir = out_dir / "prompts" / grid_size
-                page_files = sorted(prompts_dir.glob("page_*/*_visual_corrections_page*.json"))
-                if not page_files:
-                    page_files = sorted(prompts_dir.glob("*_visual_corrections_page*.json"))
-                
-                if page_files:
-                    merged = []
-                    for pf in page_files:
-                        data = json.loads(pf.read_text(encoding="utf-8"))
-                        merged.extend(data.get("corrections", []))
-                    corrections_json = json.dumps({"corrections": merged}, ensure_ascii=False)
-                    
-                    pipeline.apply_corrections(
-                        pdf_name, corrections_json,
-                        specific_out_dir=str(out_dir),
-                        layout_json_name=layout_json_name,
-                        grid_params_name=grid_params_name
-                    )
 
-                    # 再レンダリング（grid_size サフィックス付きファイルを使用）
-                    pipeline.rerender_after_corrections(
-                        pdf_name, grid_size=grid_size,
-                        specific_out_dir=str(out_dir),
-                    )
-                    logger.info(f"✅ correct 完了: {pdf_name} ({out_dir.name})")
-                else:
-                    logger.warning(f"⚠️ {pdf_name}: 修正ファイルが見つかりません: {prompts_dir}")
-                    
-            except Exception as e:
-                logger.error(f"❌ correct failed for {pdf_name}: {e}", exc_info=True)
+            # layout ファイルから (pdf_name, grid_size) ペアを検出
+            # ファイル名: {pdf_name}_{grid_size}_layout.json → stem: {pdf_name}_{grid_size}_layout
+            pairs: list[tuple[str, str]] = []
+            for lf in layout_files:
+                stem = lf.stem  # e.g. "tirechange_1pt_layout"
+                if stem.endswith("_layout"):
+                    stem = stem[: -len("_layout")]  # → "tirechange_1pt"
+                for gs in all_grid_sizes:
+                    if stem.endswith(f"_{gs}"):
+                        pairs.append((stem[: -len(f"_{gs}")], gs))
+                        break
+
+            if not pairs:
+                continue
+
+            for pdf_name, grid_size in pairs:
+                layout_json_name = f"{pdf_name}_{grid_size}_layout.json"
+                grid_params_name = f"{pdf_name}_{grid_size}_grid_params.json"
+
+                try:
+                    # 修正ファイルの収集（新構造: prompts/{grid_size}/page_N/）
+                    prompts_dir = out_dir / "prompts" / grid_size
+                    page_files = sorted(prompts_dir.glob("page_*/*_visual_corrections_page*.json"))
+                    if not page_files:
+                        page_files = sorted(prompts_dir.glob("*_visual_corrections_page*.json"))
+
+                    if page_files:
+                        merged = []
+                        for pf in page_files:
+                            data = json.loads(pf.read_text(encoding="utf-8"))
+                            merged.extend(data.get("corrections", []))
+                        corrections_json = json.dumps({"corrections": merged}, ensure_ascii=False)
+
+                        pipeline.apply_corrections(
+                            pdf_name, corrections_json,
+                            specific_out_dir=str(out_dir),
+                            layout_json_name=layout_json_name,
+                            grid_params_name=grid_params_name
+                        )
+                        pipeline.rerender_after_corrections(
+                            pdf_name, grid_size=grid_size,
+                            specific_out_dir=str(out_dir),
+                        )
+                        logger.info(f"✅ correct 完了: {pdf_name} ({out_dir.name}, {grid_size})")
+                    else:
+                        logger.warning(f"⚠️ {pdf_name} ({grid_size}): 修正ファイルが見つかりません: {prompts_dir}")
+
+                except Exception as e:
+                    logger.error(f"❌ correct failed for {pdf_name} ({grid_size}): {e}", exc_info=True)
 
 
 if __name__ == "__main__":

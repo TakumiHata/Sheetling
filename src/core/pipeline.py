@@ -1609,10 +1609,12 @@ class SheetlingPipeline:
                         break
 
             elif action == "add_border":
+                _end_row = c.get("end_row") or c.get("row_end", c["row"])
+                _end_col = c.get("end_col") or c.get("col_end", c["col"])
                 elements.append({
                     "type": "border_rect",
-                    "row": c["row"], "end_row": c["end_row"],
-                    "col": c["col"], "end_col": c["end_col"],
+                    "row": c["row"], "end_row": _end_row,
+                    "col": c["col"], "end_col": _end_col,
                     "borders": c.get("borders", {"top": True, "bottom": True, "left": True, "right": True}),
                 })
                 applied += 1
@@ -1620,12 +1622,16 @@ class SheetlingPipeline:
             elif action == "remove_border":
                 # 指定範囲と重複する border_rect をすべて削除（完全一致ではなく重複判定）
                 before = len(elements)
-                def _overlaps(e: dict, c: dict) -> bool:
-                    return (e.get("type") == "border_rect"
-                            and e["row"]     <= c["end_row"] and e["end_row"] >= c["row"]
-                            and e["col"]     <= c["end_col"] and e["end_col"] >= c["col"])
-                # layout オブジェクトが参照する同一リストをインプレースで変更する
-                elements[:] = [e for e in elements if not _overlaps(e, c)]
+                _r  = c["row"]
+                _er = c.get("end_row") or c.get("row_end", _r)
+                _co = c["col"]
+                _ec = c.get("end_col") or c.get("col_end", _co)
+                elements[:] = [
+                    e for e in elements
+                    if not (e.get("type") == "border_rect"
+                            and e["row"] <= _er and e["end_row"] >= _r
+                            and e["col"] <= _ec and e["end_col"] >= _co)
+                ]
                 applied += before - len(elements)
 
         # 修正済みレイアウトを保存
