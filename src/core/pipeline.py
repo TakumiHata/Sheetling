@@ -133,6 +133,49 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
                 val_map[v] = idx
         return val_map
 
+    # -----------------------------------------------------------------------
+    # [修正] 同一視覚行ワードの top 正規化（y_vals 収集前に実施）
+    #
+    # 問題: 同一行でフォントサイズが異なる単語は top 差が clustering しきい値
+    #       (grid_h*0.35 ≈ 7pt) を超えると別行に分類される。
+    # 解決: 垂直スパンが「anchor ワードの高さの 50% 以上」重複するワードを
+    #       同一行とみなし、top を anchor の top に揃える。
+    #       比較を anchor 固定（グループ先頭ワード）にすることで推移的誤合算を防ぐ。
+    #       対象は水平ワード（is_vertical=False）かつ bottom 情報を持つものに限定。
+    _hw_sorted = sorted(
+        [w for w in page['words'] if not w.get('is_vertical') and 'bottom' in w],
+        key=lambda w: float(w['top']),
+    )
+    # グループ: [anchor_top(float), anchor_bottom(float), [words]]
+    _same_row_groups: list = []
+    for _w in _hw_sorted:
+        _wt = float(_w['top'])
+        _wb = float(_w['bottom'])
+        _wh = _wb - _wt
+        if _wh <= 0:
+            continue
+        _placed = False
+        for _g in _same_row_groups:
+            _at, _ab = _g[0], _g[1]
+            _ah = _ab - _at
+            _overlap = min(_ab, _wb) - max(_at, _wt)
+            # overlap / max(anchor_h, word_h) ≥ 0.5: 短い方ではなく長い方で割ることで
+            # 複数行にまたがる大きなワードが隣接行の小ワードを取り込むのを防ぐ
+            if _overlap > 0 and _ah > 0 and _wh > 0 and _overlap / max(_ah, _wh) >= 0.5:
+                _g[2].append(_w)
+                _placed = True
+                break
+        if not _placed:
+            _same_row_groups.append([_wt, _wb, [_w]])
+    for _g in _same_row_groups:
+        if len(_g[2]) < 2:
+            continue
+        _norm_top = _g[0]  # anchor top = グループ内の最小 top
+        for _w in _g[2]:
+            if float(_w['top']) != _norm_top:
+                _w['top'] = _norm_top  # y_vals 収集・_row 付与の両方に影響
+    # -----------------------------------------------------------------------
+
     # 全Y・X座標を収集
     y_vals: set = set()
     x_vals: set = set()
@@ -272,32 +315,9 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
             if yv > table_bottom_y:
                 y_map[yv] = min(y_map[yv] + 1, max_rows)
 
-    # y_map のキー一覧をキャッシュ（ニアレスト検索用）
-    _y_map_keys = sorted(y_map.keys())
-
-    def _nearest_y_row(val: float) -> int:
-        """y_map に登録されていない座標（垂直中心点など）に対して
-        最近傍キーのグリッド行番号を返す。"""
-        sv = snap(val)
-        if sv in y_map:
-            return y_map[sv]
-        if not _y_map_keys:
-            return 1
-        closest = min(_y_map_keys, key=lambda k: abs(k - sv))
-        return y_map[closest]
-
     # words に付与
     for w in page['words']:
-        # [修正] top 座標のみでクラスタ引きすると、同一行でフォントサイズが異なる
-        # 単語の top 差が clustering しきい値(grid_h*0.35)を超えた場合に
-        # 別行に割り当てられる問題があった。
-        # 垂直中心点を使うことで、異なるフォントサイズでも同一ベースラインの
-        # 単語が同一クラスタに収まりやすくなる。
-        if 'bottom' in w:
-            mid_y = (float(w['top']) + float(w['bottom'])) / 2
-            w['_row'] = _nearest_y_row(mid_y)
-        else:
-            w['_row'] = y_map[snap(w['top'])]
+        w['_row'] = y_map[snap(w['top'])]
         w['_col'] = x_map[snap(w['x0'])]
         if w.get('is_vertical') and 'bottom' in w:
             sv = snap(w['bottom'])
