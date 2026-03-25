@@ -1,6 +1,6 @@
 # Sheetling
 
-PDFを解析し、自動生成したPythonコードを実行することで、**任意のPDFレイアウトを維持したままA4/A3方眼Excelに変換**するツールです。
+PDFを解析し、**任意のPDFレイアウトを維持したままA4/A3方眼Excelに変換**するツールです。
 テーブルの列ズレのない高精度な方眼紙レイアウトへの変換を、LLMを最小限に抑えた完全自動パイプラインで実現します。
 
 ---
@@ -8,16 +8,16 @@ PDFを解析し、自動生成したPythonコードを実行することで、**
 ## 仕組み
 
 ```
-PDF → [auto] 解析 → グリッド座標計算 → レイアウトJSON生成 → _gen.py 生成 → Excel出力
-                                                                    ↓
-                                              （任意）ビジョンLLMによる視覚的検証
-                                                                    ↓
-                                             [correct] 修正適用 → Excel再生成
+PDF → [auto] 解析 → グリッド座標計算 → レイアウトJSON生成 → Excel直接描画
+                                                              ↓
+                                        （任意）ビジョンLLMによる視覚的検証
+                                                              ↓
+                                         [correct] 修正適用 → Excel再生成
 ```
 
 | コマンド | 実行者 | 内容 |
 |---------|--------|------|
-| `auto` | スクリプト | PDF解析 → グリッド座標計算 → レイアウトJSON自動生成 → `_gen.py` 生成 → Excel出力。視覚的検証プロンプトも出力 |
+| `auto` | スクリプト | PDF解析 → グリッド座標計算 → レイアウトJSON自動生成 → Excel直接描画。`1pt`・`2pt` の2サイズを同時出力。視覚的検証素材も自動生成 |
 | `correct` | 人間 + ビジョンLLM | PDFページ画像 + 検証プロンプトをAIチャットに投入。修正指示JSONを適用し Excel を再生成 |
 
 ---
@@ -44,10 +44,10 @@ pip install -r requirements.txt
 
 ```bash
 # 全PDF一括処理
-python -m src.main auto [--grid-size <size>]
+python -m src.main auto
 
 # 特定PDFのみ
-python -m src.main auto --pdf data/in/sample.pdf [--grid-size <size>]
+python -m src.main auto --pdf data/in/sample.pdf
 ```
 
 | 処理 | 内容 |
@@ -56,26 +56,30 @@ python -m src.main auto --pdf data/in/sample.pdf [--grid-size <size>]
 | レイアウトJSON生成 | `table_border_rects` / `rects` / `words` から直接生成（LLM不要） |
 | 座標検証・補正 | 整合性チェック・重複除去・クランプをスクリプトで確実に適用 |
 | テキスト補完 | 抽出データと照合して欠落テキストを補完 |
-| `_gen.py` 生成 | テンプレートから Excel生成スクリプトを生成 |
-| 視覚的検証プロンプト生成 | ページごとに `_visual_review_page{N}.txt` を出力 |
-| Excel出力 | `_gen.py` を実行して `_Python版.xlsx` を生成 |
+| Excel出力 | `1pt`・`2pt` の2サイズをそれぞれ直接描画して出力 |
+| 視覚的検証プロンプト生成 | サイズ・ページごとに `_visual_review_page{N}.txt` を出力 |
 
 実行後、`data/out/<pdf_name>/` に以下が生成されます：
 
 ```text
 data/out/<pdf_name>/
-├── <pdf_name>_extracted.json     # PDFから抽出した生データ（グリッド座標付き）
-├── <pdf_name>_grid_params.json   # グリッドパラメータ（罫線後処理用）
-├── <pdf_name>_layout.json        # レイアウトJSON（_gen.py が参照）
-├── <pdf_name>_gen.py             # 自動生成された Excel生成スクリプト
-├── <pdf_name>_Python版.xlsx      # 生成された Excel ファイル
+├── <pdf_name>_extracted.json              # PDFから抽出した生データ（グリッド座標付き）
+├── <pdf_name>_1pt_layout.json             # レイアウトJSON（1pt サイズ）
+├── <pdf_name>_2pt_layout.json             # レイアウトJSON（2pt サイズ）
+├── <pdf_name>_1pt_grid_params.json        # グリッドパラメータ（1pt サイズ）
+├── <pdf_name>_2pt_grid_params.json        # グリッドパラメータ（2pt サイズ）
+├── <pdf_name>_Python版_1pt.xlsx           # 生成された Excel ファイル（1pt）
+├── <pdf_name>_Python版_2pt.xlsx           # 生成された Excel ファイル（2pt）
 └── prompts/
-    ├── page_1/
-    │   ├── <pdf_name>_page1.png                         # PDFページ画像
-    │   ├── <pdf_name>_visual_review_page1.txt           # 視覚的検証プロンプト
-    │   └── <pdf_name>_visual_corrections_page1.json     # LLM修正指示（ユーザーが編集）
-    └── page_2/
-        └── ...
+    ├── 1pt/
+    │   └── page_1/
+    │       ├── <pdf_name>_page1.png                         # PDFページ画像
+    │       ├── <pdf_name>_excel_page1.png                   # 罫線プレビュー画像
+    │       ├── <pdf_name>_visual_review_page1.txt           # 視覚的検証プロンプト
+    │       └── <pdf_name>_visual_corrections_page1.json     # LLM修正指示（ユーザーが編集）
+    └── 2pt/
+        └── page_1/
+            └── ...
 ```
 
 ---
@@ -85,15 +89,15 @@ data/out/<pdf_name>/
 `auto` 実行後、再現度をさらに高めたい場合にオプションで実施します。
 PDFページ画像・罫線プレビュー画像はどちらも `auto` 実行時に自動生成されます。
 
-**手順（ページごとに繰り返す）：**
+**手順（サイズ・ページごとに繰り返す）：**
 
 1. 社内AIチャット（画像入力対応）に以下を投入する：
-   - `prompts/page_{N}/<pdf_name>_page{N}.png`（PDFページ画像）
-   - `prompts/page_{N}/<pdf_name>_excel_page{N}.png`（罫線プレビュー画像）
-   - `prompts/page_{N}/<pdf_name>_visual_review_page{N}.txt` の内容（プロンプト）
+   - `prompts/{grid_size}/page_{N}/<pdf_name>_page{N}.png`（PDFページ画像）
+   - `prompts/{grid_size}/page_{N}/<pdf_name>_excel_page{N}.png`（罫線プレビュー画像）
+   - `prompts/{grid_size}/page_{N}/<pdf_name>_visual_review_page{N}.txt` の内容（プロンプト）
 2. LLMが出力した修正指示JSONを以下のファイルに上書き保存する：
    ```
-   data/out/<pdf_name>/prompts/page_{N}/<pdf_name>_visual_corrections_page{N}.json
+   data/out/<pdf_name>/prompts/<grid_size>/page_{N}/<pdf_name>_visual_corrections_page{N}.json
    ```
    ※ このファイルは `auto` 実行時に空テンプレートとして自動生成済み
 3. 全ページ分完了したら `correct` コマンドで修正を適用する（次節）
@@ -113,19 +117,17 @@ PDFページ画像・罫線プレビュー画像はどちらも `auto` 実行時
 # 特定PDFのみ
 python -m src.main correct --pdf sample
 
-# data/out/ 以下の全 *_visual_corrections.json を一括処理
+# data/out/ 以下の全 *_visual_corrections*.json を一括処理
 python -m src.main correct
 ```
 
-`_visual_corrections_page{N}.json` の修正指示を `_layout.json` に適用し、`_gen.py` を再生成して Excel を出力します。
+`_visual_corrections_page{N}.json` の修正指示を `_layout.json` に適用し、Excel を再生成します。
 
 **`_visual_corrections.json` の形式：**
 
 ```json
 {
   "corrections": [
-    {"action": "add_text",     "page": 1, "row": 5, "col": 3, "content": "追加テキスト"},
-    {"action": "fix_text",     "page": 1, "row": 3, "col": 5, "new_row": 4, "new_col": 6},
     {"action": "add_border",   "page": 1, "row": 3, "end_row": 8, "col": 2, "end_col": 15,
                                "borders": {"top": true, "bottom": true, "left": true, "right": true}},
     {"action": "remove_border","page": 1, "row": 3, "end_row": 5, "col": 2, "end_col": 8}
@@ -143,28 +145,26 @@ python -m src.main <command> [options]
 
 | command | 説明 |
 |---------|------|
-| `auto` | PDF → Excel 自動生成（解析 → レイアウトJSON生成 → `_gen.py` 生成 → Excel出力） |
+| `auto` | PDF → Excel 自動生成（解析 → レイアウトJSON生成 → Excel直接描画）。`1pt`・`2pt` の2サイズを同時出力 |
 | `correct` | ビジョンLLMの修正指示（`_visual_corrections.json`）を適用して Excel を再生成 |
 
 | オプション | 対象command | 説明 |
 |-----------|------------|------|
 | `--pdf <path>` | `auto`, `correct` | 処理対象PDFのパスまたはPDF名（省略時は全対象を処理） |
-| `--grid-size <size>` | `auto` | 方眼サイズ: `small`（デフォルト）/ `medium` / `large` |
 
 ---
 
-## 方眼サイズ（`--grid-size`）の詳細仕様
+## グリッドサイズ仕様
 
-絶対等倍でのA4出力を保証するため、各サイズには数学的に計算された最大グリッド数が設定されています。A3など他の用紙サイズには動的に比例計算して対応します。
+`auto` コマンドは `1pt`・`2pt` の2サイズを常に同時出力します。用途に応じて出力ファイルを選択してください。
 
-| グリッドサイズ | 方眼の大きさ (mm) | 最大列数 (A4縦) | 最大行数 (A4縦) | Excel設定値 (幅/高さ) | デフォルトフォント |
+| グリッドサイズ | 列幅 (mm) | 行高 (mm) | 最大列数 (A4縦) | 最大行数 (A4縦) | デフォルトフォント |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`small`** | **約 4.0 mm** | **62 列** | **76 行** | 幅: 1.45 / 高さ: 11.34 | 7pt |
-| **`medium`** | **約 6.0 mm** | **36 列** | **50 行** | 幅: 2.53 / 高さ: 17.01 | 9pt |
-| **`large`** | **約 8.0 mm** | **26 列** | **38 行** | 幅: 3.61 / 高さ: 22.68 | 11pt |
+| **`1pt`** | **3.48 mm** | **6.44 mm** | **57 列** | **42 行** | 7pt (MS Gothic) |
+| **`2pt`** | **6.18 mm** | **6.44 mm** | **34 列** | **42 行** | 6pt (MS Gothic) |
 
 > [!NOTE]
-> これらの数値は、A4用紙の物理的な印字可能領域（余白を除いた約180mm x 270mm）を基準に、各サイズの正方形グリッドを敷き詰めた際の理論限界値です。A3等の他の用紙サイズはページ寸法に比例して自動計算されます。
+> `1pt` は高密度（細かいグリッド）、`2pt` は中密度（やや広いグリッド）です。Excel の列幅はデスクトップ Excel (MDW=8) での表示値に合わせて調整されています。
 
 ---
 
@@ -175,7 +175,7 @@ Sheetling/
 ├── src/
 │   ├── main.py              # CLI エントリポイント（auto / correct）
 │   ├── core/
-│   │   └── pipeline.py      # パイプライン全体の制御・座標計算・自動生成・ボーダー後処理
+│   │   └── pipeline.py      # パイプライン全体の制御・座標計算・自動生成・Excel直接描画
 │   ├── parser/
 │   │   └── pdf_extractor.py # PDFデータ抽出 (pdfplumber)
 │   ├── templates/
@@ -203,7 +203,7 @@ Sheetling/
 
 ## エラー発生時
 
-`auto` / `correct` コマンドで `_gen.py` の実行に失敗した場合、`prompts/<pdf_name>_prompt_error_fix.txt` にエラー修正用プロンプトが出力されます。その内容をAIチャットに投入してコードを修正し、`_gen.py` を上書き保存してから再度 `correct` を実行してください。
+`auto` / `correct` コマンドで Excel 生成に失敗した場合、`prompts/<pdf_name>_prompt_error_fix.txt` にエラー修正用プロンプトが出力されます。その内容をAIチャットに投入してコードを修正してください。
 
 ---
 
@@ -219,7 +219,7 @@ Sheetling/
 - **border_rect 生成**：`table_border_rects` / `rects` のフィールドをそのまま変換
 - **text 生成**：`words` を `(_row, _col)` でグループ化するだけ
 - **座標検証・補正**：整合性チェック・重複除去・クランプはすべて決定論的処理
-- **コード生成**：`_gen.py` は固定テンプレート + パラメータ差し込みで生成
+- **Excel直接描画**：`_render_layout_to_xlsx` で openpyxl に直接書き込み（`_gen.py` 経由不要）
 
 #### ビジョンLLMが担う処理（`correct` コマンド、任意）
 - **視覚的な差分検出**：スクリプトが計算した精密な座標 × LLMの目視確認で再現度を向上
