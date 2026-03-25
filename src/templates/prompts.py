@@ -238,10 +238,19 @@ VISUAL_REVIEW_PROMPT = """\
 - 画像2: 自動生成した罫線プレビュー（ページ {page_number}）
 
 ## 画像2（罫線プレビュー）の見方
+
 - 薄いグレーの縦横線はグリッド背景線です。**罫線ではありません。無視してください。**
 - 太い黒線のみが罫線（枠線）です。
-- 座標は左上セルを (row=1, col=1) とし、右・下方向に増加します。
 - グリッドサイズ: {max_rows} 行 × {max_cols} 列（1マス = {col_width_mm}mm × {row_height_mm}mm）
+
+### 座標の読み方（重要）
+
+赤いラベルは **セルの中央** に表示されており、**ラベルの数値 = JSON の `row`/`col` 値** に直接対応します。
+
+- ラベル `1` のセル → `col=1`（または `row=1`）
+- ラベル `6` のセル → `col=6`（または `row=6`）
+- ラベルのないセルはその前後の数値から数えてください（例: ラベル `6` の3つ右 → `col=9`）
+- 左上セルが `(row=1, col=1)`、右・下方向に増加します
 
 ## 判定基準（厳格に守ってください）
 
@@ -262,20 +271,47 @@ VISUAL_REVIEW_PROMPT = """\
 明らかに余分な罫線（PDFのどこにも対応する線がない）にのみ使用してください。
 
 ## 出力形式
+
 差異がない、または軽微な場合は `{{"corrections": []}}` のみ出力してください。
+
+### フィールド名の厳守
+- 列の終端: **`end_col`**（`col_end` は誤り）
+- 行の終端: **`end_row`**（`row_end` は誤り）
+
+### フォーマット
 
 ```json
 {{
   "corrections": [
-    {{"action": "add_border",    "page": {page_number}, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>, "borders": {{"top": true, "bottom": true, "left": true, "right": true}}}},
-    {{"action": "remove_border", "page": {page_number}, "row": <開始行>, "end_row": <終了行>, "col": <開始列>, "end_col": <終了列>}}
+    {{
+      "action": "add_border",
+      "page": {page_number},
+      "row": <開始行>,
+      "end_row": <終了行>,
+      "col": <開始列>,
+      "end_col": <終了列>,
+      "borders": {{"top": true, "bottom": true, "left": true, "right": true}}
+    }},
+    {{
+      "action": "remove_border",
+      "page": {page_number},
+      "row": <開始行>,
+      "end_row": <終了行>,
+      "col": <開始列>,
+      "end_col": <終了列>
+    }}
   ]
 }}
 ```
 
+### 記入例（下線のみ追加する場合）
+```json
+{{"corrections": [{{"action": "add_border", "page": {page_number}, "row": 5, "end_row": 6, "col": 3, "end_col": 12, "borders": {{"bottom": true, "top": false, "left": false, "right": false}}}}]}}
+```
+
 【最重要】出力はJSONのみ。説明文・前置き・コードブロック記号（```）は一切不要です。
 【最重要】疑わしい差異は報告しない。確実な差異のみ報告する。
-【補足】`add_border` の `borders` は辺ごとに指定できます（例: 下線のみ → {{"bottom": true, "top": false, "left": false, "right": false}}）。"""
+【最重要】フィールド名は `end_col`・`end_row` を使用すること（`col_end`・`row_end` は誤り）。"""
 
 
 # ---------------------------------------------------------------------------

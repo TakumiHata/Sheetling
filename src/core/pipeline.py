@@ -272,9 +272,32 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
             if yv > table_bottom_y:
                 y_map[yv] = min(y_map[yv] + 1, max_rows)
 
+    # y_map のキー一覧をキャッシュ（ニアレスト検索用）
+    _y_map_keys = sorted(y_map.keys())
+
+    def _nearest_y_row(val: float) -> int:
+        """y_map に登録されていない座標（垂直中心点など）に対して
+        最近傍キーのグリッド行番号を返す。"""
+        sv = snap(val)
+        if sv in y_map:
+            return y_map[sv]
+        if not _y_map_keys:
+            return 1
+        closest = min(_y_map_keys, key=lambda k: abs(k - sv))
+        return y_map[closest]
+
     # words に付与
     for w in page['words']:
-        w['_row'] = y_map[snap(w['top'])]
+        # [修正] top 座標のみでクラスタ引きすると、同一行でフォントサイズが異なる
+        # 単語の top 差が clustering しきい値(grid_h*0.35)を超えた場合に
+        # 別行に割り当てられる問題があった。
+        # 垂直中心点を使うことで、異なるフォントサイズでも同一ベースラインの
+        # 単語が同一クラスタに収まりやすくなる。
+        if 'bottom' in w:
+            mid_y = (float(w['top']) + float(w['bottom'])) / 2
+            w['_row'] = _nearest_y_row(mid_y)
+        else:
+            w['_row'] = y_map[snap(w['top'])]
         w['_col'] = x_map[snap(w['x0'])]
         if w.get('is_vertical') and 'bottom' in w:
             sv = snap(w['bottom'])
@@ -788,10 +811,11 @@ def _generate_border_preview(page_layout: dict, grid_params: dict, output_path: 
     except TypeError:
         font = ImageFont.load_default()
     label_color = (200, 0, 0)
-    for c in range(0, max_c + 1, 5):
-        draw.text((cx(c) + 1, 1), str(c), fill=label_color, font=font)
-    for r in range(0, max_r + 1, 5):
-        draw.text((1, cy(r) + 1), str(r), fill=label_color, font=font)
+    # 5セルごとにセル中央（1-based）にラベルを表示。ラベル番号 = JSON の col/row 値に直接対応。
+    for c in range(1, max_c + 1, 5):
+        draw.text((cx(c - 1) + cell_w / 2, 1), str(c), fill=label_color, font=font)
+    for r in range(1, max_r + 1, 5):
+        draw.text((1, cy(r - 1) + cell_h / 2), str(r), fill=label_color, font=font)
 
     img.save(output_path)
 
