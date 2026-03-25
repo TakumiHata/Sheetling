@@ -79,12 +79,12 @@ GRID_SIZES = {
         "default_font_size": 7,
         "position_tolerance_cells": "1〜2",
     },
-    # 方眼サイズ: 列幅 1 Excel単位 ≈ 2mm 正方形セル
+    # 方眼サイズ: 列幅細かめ（A4縦: 94列×42行、行高さ18.25pt=6.44mmに統一）
     "1pt": {
         "col_width_mm": "2.0",
-        "row_height_mm": "2.0",
-        "max_cols": 90,
-        "max_rows": 135,
+        "row_height_mm": "6.44",  # 18.25pt に対応
+        "max_cols": 94,            # A4縦基準: 595.28pt / (595.28/94) = 94
+        "max_rows": 42,            # A4縦基準: 841.89pt / (841.89/42) = 42
         "excel_col_width": 1.71,
         "excel_row_height": 18.25,
         "margin_left": 0.43,
@@ -93,14 +93,14 @@ GRID_SIZES = {
         "margin_bottom": 0.41,
         "default_font_size": 5,
         "font_name": "MS Gothic",
-        "position_tolerance_cells": "2〜4",  # 2mm/セルと細かいため多めに許容
+        "position_tolerance_cells": "2〜4",
     },
-    # 方眼サイズ: 列幅 2 Excel単位 ≈ 4mm 正方形セル
+    # 方眼サイズ: 列幅粗め（A4縦: 47列×42行、行高さ18.25pt=6.44mmに統一）
     "2pt": {
         "col_width_mm": "4.0",
-        "row_height_mm": "4.0",
-        "max_cols": 45,
-        "max_rows": 67,
+        "row_height_mm": "6.44",  # 18.25pt に対応
+        "max_cols": 47,            # A4縦基準: 595.28pt / (595.28/47) = 47
+        "max_rows": 42,            # A4縦基準: 841.89pt / (841.89/42) = 42
         "excel_col_width": 2.71,
         "excel_row_height": 18.25,
         "margin_left": 0.43,

@@ -1203,11 +1203,11 @@ _A4_H_PT: float = 841.89
 
 def _setup_grid_params(first_page: dict, grid_size: str) -> dict:
     """
-    ページ寸法に基づいてグリッドパラメータを設定する。
+    ページ寸法に基づいてグリッドパラメータを設定する（Sheetling-pre方式）。
 
-    GRID_SIZES の col_width_mm / row_height_mm を使って印刷可能エリアに
-    収まる max_cols / max_rows を計算する。これにより Excel 出力がスケーリング
-    なしで元の用紙サイズ内に収まる。
+    GRID_SIZES の max_cols / max_rows は A4縦(595.28×841.89pt)を基準とする。
+    _A4_W_PT / max_cols = pt/列 を基準に、実際のPDFページ寸法から動的にスケーリングし、
+    アスペクト比を維持したまま任意の用紙サイズに対応する。
     """
     ref = GRID_SIZES.get(grid_size, GRID_SIZES["small"])
     grid_params = dict(ref)
@@ -1219,35 +1219,21 @@ def _setup_grid_params(first_page: dict, grid_size: str) -> dict:
     is_landscape = first_page['width'] > first_page['height']
     grid_params['orientation'] = 'landscape' if is_landscape else 'portrait'
 
-    # 用紙の物理サイズ（mm）
-    _PAPER_DIMS_MM = {8: (297.0, 420.0), 9: (210.0, 297.0)}
-    paper_w_mm, paper_h_mm = _PAPER_DIMS_MM.get(grid_params['paper_size'], (210.0, 297.0))
-    if is_landscape:
-        paper_w_mm, paper_h_mm = paper_h_mm, paper_w_mm
+    # PDFページ寸法から max_cols / max_rows を動的計算（Sheetling-pre方式）
+    pt_per_col = _A4_W_PT / ref['max_cols']
+    pt_per_row = _A4_H_PT / ref['max_rows']
+    max_cols = max(1, round(first_page['width']  / pt_per_col))
+    max_rows = max(1, round(first_page['height'] / pt_per_row))
+    grid_params['max_cols'] = max_cols
+    grid_params['max_rows'] = max_rows
 
-    # 印刷可能エリア（mm）= 用紙サイズ − マージン
-    margin_w_mm = (ref['margin_left'] + ref['margin_right']) * 25.4  # inch→mm
-    margin_h_mm = (ref['margin_top'] + ref['margin_bottom']) * 25.4
-    printable_w_mm = paper_w_mm - margin_w_mm
-    printable_h_mm = paper_h_mm - margin_h_mm
-
-    # 印刷可能エリアに収まる列数・行数を計算
-    col_width_mm = float(ref['col_width_mm'])
-    row_height_mm = float(ref['row_height_mm'])
-    max_cols_fit = max(1, int(printable_w_mm / col_width_mm))
-    max_rows_fit = max(1, int(printable_h_mm / row_height_mm))
-
-    grid_params['max_cols'] = max_cols_fit
-    grid_params['max_rows'] = max_rows_fit
-
-    # 列幅を印刷可能エリアから動的算出（行高さは GRID_SIZES の固定値を使用）
-    _col_unit_per_mm = ref['excel_col_width'] / float(ref['col_width_mm'])
-    grid_params['excel_col_width'] = round((printable_w_mm / max_cols_fit) * _col_unit_per_mm, 4)
+    # 列幅をページ幅に比例スケール（A4縦基準から横・A3等への対応）
+    grid_params['excel_col_width'] = round(ref['excel_col_width'] * ref['max_cols'] / max_cols, 4)
 
     logger.debug(
         f"[grid] {grid_size} ({grid_params['orientation']}): "
-        f"printable={printable_w_mm:.1f}×{printable_h_mm:.1f}mm "
-        f"→ max_cols={max_cols_fit}, max_rows={max_rows_fit}, "
+        f"page={first_page['width']:.1f}×{first_page['height']:.1f}pt "
+        f"→ max_cols={max_cols}, max_rows={max_rows}, "
         f"excel_col_width={grid_params['excel_col_width']}"
     )
 
@@ -1668,16 +1654,18 @@ class SheetlingPipeline:
                 grid_params[key] = ref[key]
         grid_params["grid_size"] = grid_size
 
-        # 列幅をPDF用紙向き（portrait/landscape）から動的再算出
-        _PAPER_DIMS_MM = {8: (297.0, 420.0), 9: (210.0, 297.0)}
-        _pw, _ph = _PAPER_DIMS_MM.get(grid_params.get('paper_size', 9), (210.0, 297.0))
+        # PDFページ寸法から max_cols / max_rows を再計算（Sheetling-pre方式）
+        _PAPER_DIMS_PT = {8: (841.89, 1190.55), 9: (595.28, 841.89)}
+        page_w_pt, page_h_pt = _PAPER_DIMS_PT.get(grid_params.get('paper_size', 9), (595.28, 841.89))
         if grid_params.get('orientation') == 'landscape':
-            _pw, _ph = _ph, _pw
-        _printable_w = _pw - (ref['margin_left'] + ref['margin_right']) * 25.4
-        _max_cols = max(1, int(_printable_w / float(ref['col_width_mm'])))
-        _col_unit_per_mm = ref['excel_col_width'] / float(ref['col_width_mm'])
-        grid_params['max_cols'] = _max_cols
-        grid_params['excel_col_width'] = round((_printable_w / _max_cols) * _col_unit_per_mm, 4)
+            page_w_pt, page_h_pt = page_h_pt, page_w_pt
+        pt_per_col = _A4_W_PT / ref['max_cols']
+        pt_per_row = _A4_H_PT / ref['max_rows']
+        new_max_cols = max(1, round(page_w_pt / pt_per_col))
+        new_max_rows = max(1, round(page_h_pt / pt_per_row))
+        grid_params['max_cols'] = new_max_cols
+        grid_params['max_rows'] = new_max_rows
+        grid_params['excel_col_width'] = round(ref['excel_col_width'] * ref['max_cols'] / new_max_cols, 4)
 
         grid_params_path.write_text(json.dumps(grid_params, ensure_ascii=False), encoding="utf-8")
 
