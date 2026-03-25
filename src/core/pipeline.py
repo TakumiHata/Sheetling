@@ -1243,15 +1243,14 @@ def _setup_grid_params(first_page: dict, grid_size: str) -> dict:
     is_landscape = first_page['width'] > first_page['height']
     grid_params['orientation'] = 'landscape' if is_landscape else 'portrait'
 
-    # PDFページ寸法から max_cols / max_rows を動的計算
-    # col_width_mm / row_height_mm を基準に印刷可能幅から算出（横向きでも正確に埋まるよう余白を考慮）
-    _PT_PER_MM = 2.8346
-    margin_w_mm = (ref.get('margin_left', 0.43) + ref.get('margin_right',  0.43)) * 25.4
-    margin_h_mm = (ref.get('margin_top',  0.41) + ref.get('margin_bottom', 0.41)) * 25.4
-    col_width_mm  = float(ref['col_width_mm'])
-    row_height_mm = float(ref['row_height_mm'])
-    max_cols = max(1, round((first_page['width']  / _PT_PER_MM - margin_w_mm) / col_width_mm))
-    max_rows = max(1, round((first_page['height'] / _PT_PER_MM - margin_h_mm) / row_height_mm))
+    # PDFページ寸法から max_cols / max_rows を動的計算（Sheetling-pre方式）
+    # GRID_SIZES の max_cols / max_rows は A4縦(595.28×841.89pt)を基準とする。
+    # A4基準の pt/列・pt/行 を算出し、実際のページ寸法で比例スケールする。
+    # これにより margin 控除方式で発生していた「設計列数より少ない列数」問題を解消する。
+    pt_per_col = _A4_W_PT / ref['max_cols']
+    pt_per_row = _A4_H_PT / ref['max_rows']
+    max_cols = max(1, round(first_page['width']  / pt_per_col))
+    max_rows = max(1, round(first_page['height'] / pt_per_row))
     grid_params['max_cols'] = max_cols
     grid_params['max_rows'] = max_rows
 
@@ -1685,19 +1684,16 @@ class SheetlingPipeline:
                 grid_params[key] = ref[key]
         grid_params["grid_size"] = grid_size
 
-        # PDFページ寸法から max_cols / max_rows を再計算
-        # col_width_mm / row_height_mm を基準に印刷可能幅から算出（横向きでも正確に埋まるよう余白を考慮）
+        # PDFページ寸法から max_cols / max_rows を再計算（Sheetling-pre方式）
+        # _setup_grid_params と同じ比例スケール方式で算出する。
         _PAPER_DIMS_PT = {8: (841.89, 1190.55), 9: (595.28, 841.89)}
         page_w_pt, page_h_pt = _PAPER_DIMS_PT.get(grid_params.get('paper_size', 9), (595.28, 841.89))
         if grid_params.get('orientation') == 'landscape':
             page_w_pt, page_h_pt = page_h_pt, page_w_pt
-        _PT_PER_MM = 2.8346
-        margin_w_mm = (ref.get('margin_left', 0.43) + ref.get('margin_right',  0.43)) * 25.4
-        margin_h_mm = (ref.get('margin_top',  0.41) + ref.get('margin_bottom', 0.41)) * 25.4
-        col_width_mm  = float(ref['col_width_mm'])
-        row_height_mm = float(ref['row_height_mm'])
-        new_max_cols = max(1, round((page_w_pt / _PT_PER_MM - margin_w_mm) / col_width_mm))
-        new_max_rows = max(1, round((page_h_pt / _PT_PER_MM - margin_h_mm) / row_height_mm))
+        pt_per_col = _A4_W_PT / ref['max_cols']
+        pt_per_row = _A4_H_PT / ref['max_rows']
+        new_max_cols = max(1, round(page_w_pt / pt_per_col))
+        new_max_rows = max(1, round(page_h_pt / pt_per_row))
         grid_params['max_cols'] = new_max_cols
         grid_params['max_rows'] = new_max_rows
 
