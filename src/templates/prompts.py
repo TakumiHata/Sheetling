@@ -79,28 +79,28 @@ GRID_SIZES = {
         "default_font_size": 7,
         "position_tolerance_cells": "1〜2",
     },
-    # 方眼サイズ: 列幅細かめ（A4縦: 94列×42行、行高さ18.25pt=6.44mmに統一）
+    # Sheetling-pre "small"と同一セル密度（A4縦: 54列×42行）
     "1pt": {
-        "col_width_mm": "2.0",
-        "row_height_mm": "6.44",  # 18.25pt に対応
-        "max_cols": 94,            # A4縦基準: 595.28pt / (595.28/94) = 94
-        "max_rows": 42,            # A4縦基準: 841.89pt / (841.89/42) = 42
+        "col_width_mm": "3.48",
+        "row_height_mm": "6.44",
+        "max_cols": 54,            # small と同じ: 54×1.71 MDU = A4幅
+        "max_rows": 42,
         "excel_col_width": 1.71,
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
         "margin_top": 0.41,
         "margin_bottom": 0.41,
-        "default_font_size": 5,
+        "default_font_size": 7,
         "font_name": "MS Gothic",
-        "position_tolerance_cells": "2〜4",
+        "position_tolerance_cells": "1〜2",
     },
-    # 方眼サイズ: 列幅粗め（A4縦: 47列×42行、行高さ18.25pt=6.44mmに統一）
+    # 粗めセル密度（A4縦: 34列×42行）
     "2pt": {
-        "col_width_mm": "4.0",
-        "row_height_mm": "6.44",  # 18.25pt に対応
-        "max_cols": 47,            # A4縦基準: 595.28pt / (595.28/47) = 47
-        "max_rows": 42,            # A4縦基準: 841.89pt / (841.89/42) = 42
+        "col_width_mm": "6.18",
+        "row_height_mm": "6.44",
+        "max_cols": 34,            # 34×2.71 MDU ≈ A4幅
+        "max_rows": 42,
         "excel_col_width": 2.71,
         "excel_row_height": 18.25,
         "margin_left": 0.43,

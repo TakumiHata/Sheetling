@@ -1227,9 +1227,6 @@ def _setup_grid_params(first_page: dict, grid_size: str) -> dict:
     grid_params['max_cols'] = max_cols
     grid_params['max_rows'] = max_rows
 
-    # 列幅をページ幅に比例スケール（A4縦基準から横・A3等への対応）
-    grid_params['excel_col_width'] = round(ref['excel_col_width'] * ref['max_cols'] / max_cols, 4)
-
     logger.debug(
         f"[grid] {grid_size} ({grid_params['orientation']}): "
         f"page={first_page['width']:.1f}×{first_page['height']:.1f}pt "
@@ -1665,7 +1662,6 @@ class SheetlingPipeline:
         new_max_rows = max(1, round(page_h_pt / pt_per_row))
         grid_params['max_cols'] = new_max_cols
         grid_params['max_rows'] = new_max_rows
-        grid_params['excel_col_width'] = round(ref['excel_col_width'] * ref['max_cols'] / new_max_cols, 4)
 
         grid_params_path.write_text(json.dumps(grid_params, ensure_ascii=False), encoding="utf-8")
 
