@@ -85,7 +85,7 @@ GRID_SIZES = {
         "row_height_mm": "6.44",
         "max_cols": 57,            # 54+3: 右余白を埋めて A4 幅に合わせる
         "max_rows": 42,
-        "excel_col_width": 1.71,
+        "excel_col_width": 1.625,  # (1*8+5)/8: デスクトップExcel(MDW=8)で列幅1.00表示
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
@@ -101,7 +101,7 @@ GRID_SIZES = {
         "row_height_mm": "6.44",
         "max_cols": 34,            # 34×2.71 MDU ≈ A4幅
         "max_rows": 42,
-        "excel_col_width": 2.71,
+        "excel_col_width": 2.625,  # (2*8+5)/8: デスクトップExcel(MDW=8)で列幅2.00表示
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
