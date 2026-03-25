@@ -52,10 +52,11 @@ def main():
             return
 
         for pdf_path in pdf_files:
-            try:
-                pipeline.auto_layout(str(pdf_path), grid_size=args.grid_size)
-            except Exception as e:
-                logger.error(f"❌ auto failed for {pdf_path.name}: {e}", exc_info=True)
+            for _gs in ("1pt", "2pt"):
+                try:
+                    pipeline.auto_layout(str(pdf_path), grid_size=_gs)
+                except Exception as e:
+                    logger.error(f"❌ auto ({_gs}) failed for {pdf_path.name}: {e}", exc_info=True)
 
     elif args.command == "correct":
         output_base_dir = Path("data/out")
@@ -111,9 +112,12 @@ def main():
                         layout_json_name=layout_json_name,
                         grid_params_name=grid_params_name
                     )
-                    
-                    # 再レンダリング
-                    pipeline.render_excel_from_layout(pdf_name, specific_out_dir=str(out_dir))
+
+                    # 再レンダリング（grid_size サフィックス付きファイルを使用）
+                    pipeline.rerender_after_corrections(
+                        pdf_name, grid_size=grid_size,
+                        specific_out_dir=str(out_dir),
+                    )
                     logger.info(f"✅ correct 完了: {pdf_name} ({out_dir.name})")
                 else:
                     logger.warning(f"⚠️ {pdf_name}: 修正ファイルが見つかりません: {prompts_dir}")

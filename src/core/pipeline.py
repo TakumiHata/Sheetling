@@ -26,18 +26,51 @@ from src.templates.prompts import (
 from src.utils.logger import get_logger
 
 
-def _normalize_font_name(raw_name: str):
+# MS Access / Windows 環境でよく使われるフォント名の正規化テーブル。
+# PDF 埋め込み名はハイフン・スペース・大小文字が揺れるため、
+# Excel が認識できる表記に統一する。
+_FONT_ALIASES: dict = {
+    'MS Gothic':     'MS Gothic',
+    'MSGothic':      'MS Gothic',
+    'MS PGothic':    'MS PGothic',
+    'MSPGothic':     'MS PGothic',
+    'MS Mincho':     'MS Mincho',
+    'MSMincho':      'MS Mincho',
+    'MS PMincho':    'MS PMincho',
+    'MSPMincho':     'MS PMincho',
+    'MS UI Gothic':  'MS UI Gothic',
+    'MSUIGothic':    'MS UI Gothic',
+    'Meiryo':        'Meiryo',
+    'Meiryo UI':     'Meiryo UI',
+    'MeiryoUI':      'Meiryo UI',
+    'Yu Gothic':     'Yu Gothic',
+    'YuGothic':      'Yu Gothic',
+    'Yu Mincho':     'Yu Mincho',
+    'YuMincho':      'Yu Mincho',
+}
+
+
+def _normalize_font_name(raw_name):
     """PDF フォント名を Excel に渡せる形式に整形する。
-    サブセットプレフィックス除去とハイフン→スペース変換のみ行い、
-    そのまま Excel の Font(name=...) に渡す。
+    1. bytes / bytes repr 文字列（pdfminer が返す非ASCII名）を除外
+    2. サブセットプレフィックスを除去 (例: "ABCDEF+MS-Gothic" → "MS-Gothic")
+    3. ハイフン区切りをスペースに変換 (例: "MS-Gothic" → "MS Gothic")
+    4. _FONT_ALIASES でエイリアス解決（揺れ表記を正規表記に統一）
     Excel が認識できないフォント名はデフォルトフォントにフォールバックされる。"""
     if not raw_name:
+        return None
+    # bytes オブジェクトは使用不可
+    if isinstance(raw_name, bytes):
+        return None
+    # pdfminer が bytes を str() した "b'...'" 形式の文字列も使用不可
+    if isinstance(raw_name, str) and raw_name.startswith("b'"):
         return None
     # サブセットプレフィックスを除去 (例: "ABCDEF+MS-Gothic" → "MS-Gothic")
     name = re.sub(r'^[A-Z]{6}\+', '', raw_name)
     # ハイフン区切りをスペースに変換 (例: "MS-Gothic" → "MS Gothic")
-    name = name.replace('-', ' ')
-    return name.strip() or None
+    name = name.replace('-', ' ').strip()
+    # エイリアステーブルで正規化（大文字小文字も考慮して前方一致）
+    return _FONT_ALIASES.get(name, name) or None
 
 
 def _sanitize_generated_code(code: str) -> tuple[str, list[str]]:
@@ -76,12 +109,19 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
         近接する座標値をクラスタリングしてグリッドインデックスに変換する。
         anchor_vals に含まれる値は直前のクラスタと近接していても必ず独立したクラスタを開始する。
         これによりテーブル列境界が隣接列と合算されるのを防ぐ。
+
+        比較基準: clusters[-1][-1]（クラスタ末尾値）を使用する。
+        旧実装の clusters[-1][0]（先頭値）では、クラスタが拡張するにつれて
+        先頭から遠い値まで取り込み続けてしまい、密集した行が誤合算される原因になっていた。
+        しきい値も 0.5 → 0.35 に絞り、近接しすぎる行の分離精度を向上させる。
         """
         anchor_vals = anchor_vals or set()
         sorted_vals = sorted(raw_vals)
         clusters: list = []
         for v in sorted_vals:
-            if not clusters or v - clusters[-1][0] > grid_size * 0.5 or v in anchor_vals:
+            # [修正] clusters[-1][0](先頭) → clusters[-1][-1](末尾) との距離で判定し、
+            # しきい値を 0.5 → 0.35 に縮小。
+            if not clusters or v - clusters[-1][-1] > grid_size * 0.35 or v in anchor_vals:
                 clusters.append([v])
             else:
                 clusters[-1].append(v)
@@ -105,8 +145,29 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
         y_vals.add(snap(w['top']))
         x_vals.add(snap(w['x0']))
         x_vals.add(snap(w['x1']))
-        if w.get('is_vertical') and 'bottom' in w:
-            y_vals.add(snap(w['bottom']))  # 縦文字の下端もグリッドに含める
+        if 'bottom' in w:
+            # [修正] 縦文字に限らず全ワードの bottom を Y 座標セットに追加。
+            # これにより行間ギャップがクラスタ境界として機能し、
+            # 密集した行が誤合算されるのを防ぐ。
+            y_vals.add(snap(w['bottom']))
+
+    # [修正追加] 隣接する水平ワード間に有意な垂直ギャップがある場合、
+    # 次の行の top をアンカーとして登録し、クラスタリングで行が合算されないよう強制分離する。
+    _h_words_with_bottom = [
+        w for w in page['words']
+        if not w.get('is_vertical') and 'bottom' in w
+    ]
+    _h_words_sorted = sorted(_h_words_with_bottom, key=lambda w: float(w['top']))
+    _GAP_ANCHOR_THRESHOLD = 2.0  # pt: これを超える bottom→top ギャップで次行をアンカー化
+    for _i in range(len(_h_words_sorted) - 1):
+        _cur  = _h_words_sorted[_i]
+        _next = _h_words_sorted[_i + 1]
+        _cur_bottom  = float(_cur['bottom'])
+        _next_top    = float(_next['top'])
+        if _next_top - _cur_bottom > _GAP_ANCHOR_THRESHOLD:
+            _sy = snap(_next_top)
+            y_vals.add(_sy)
+            table_row_y_anchors.add(_sy)
     for r in page['rects']:
         y_vals.add(snap(r['top']))
         y_vals.add(snap(r['bottom']))
@@ -227,7 +288,9 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
         r['_end_col'] = x_map[snap(r['x1'])]
 
     # テーブル内に含まれる rects を除外（table_border_rects で代替するため）
-    tol = 1.0
+    # [修正] tol 1.0 → 3.0pt: テーブル外周ぎりぎりに配置された rect が
+    # 残存して table_border_rects と重複描画される問題を防ぐ。
+    tol = 3.0
     table_bboxes = page.get('table_bboxes', [])
 
     def is_inside_table(r: dict) -> bool:
@@ -319,12 +382,20 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
         return False
 
     def _has_h(row: int, col_s: int, col_e: int) -> bool:
-        """指定行に col_s〜col_e をカバーする水平エッジがあるか。"""
-        return _overlaps_h(h_edge_map.get(row, []), col_s, col_e)
+        """指定行に col_s〜col_e をカバーする水平エッジがあるか。
+        グリッド量子化誤差で ±1 行ずれる場合があるため近傍行も検索する。"""
+        for r in (row - 1, row, row + 1):
+            if _overlaps_h(h_edge_map.get(r, []), col_s, col_e):
+                return True
+        return False
 
     def _has_v(col: int, row_s: int, row_e: int) -> bool:
-        """指定列に row_s〜row_e をカバーする垂直エッジがあるか。"""
-        return _overlaps_v(v_edge_map.get(col, []), row_s, row_e)
+        """指定列に row_s〜row_e をカバーする垂直エッジがあるか。
+        グリッド量子化誤差で ±1 列ずれる場合があるため近傍列も検索する。"""
+        for c in (col - 1, col, col + 1):
+            if _overlaps_v(v_edge_map.get(c, []), row_s, row_e):
+                return True
+        return False
 
     # 主要垂直境界の閾値(pt): この高さ以上のエッジがある列は月区切り等の主要線とみなす。
     # 短いセル側辺（≈1行高≈20pt）は除外し、表高の30%超を占める線だけを採用する。
@@ -492,13 +563,35 @@ def _merge_table_border_rects(tbrs: list) -> list:
     return h_merged
 
 
+def _fix_empty_cell_type_attr(xlsx_path: str) -> None:
+    """
+    openpyxl 3.1.x は値なしでスタイル（罫線）のみ設定されたセルに t="n" 属性を付与する。
+    Excel Online はこれを不正な属性として修復処理（ブックが修復されました）を行い、
+    罫線スタイルを除去してしまう。
+    保存後に xlsx の ZIP 内 sheet XML を走査し、空セルの t="n" 属性を除去することで回避する。
+    対象: <c r="..." s="数字" t="n" /> 形式の空セル（子要素なし・値なし）
+    """
+    import zipfile, shutil, tempfile
+    pat = re.compile(r'(<c\s+r="[^"]+"\s+s="\d+"\s+)t="n"\s*(/>)')
+    tmp = xlsx_path + '.tmp_fix'
+    with zipfile.ZipFile(xlsx_path, 'r') as zin, zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename.startswith('xl/worksheets/') and item.filename.endswith('.xml'):
+                text = data.decode('utf-8')
+                text = pat.sub(r'\1\2', text)
+                data = text.encode('utf-8')
+            zout.writestr(item, data)
+    shutil.move(tmp, xlsx_path)
+
+
 def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) -> None:
     """
     レイアウト JSON を openpyxl で直接 Excel ファイルに描画する。
     LLM 生成コードを使わずにプログラム的に Excel を生成する。
 
     COL_OFFSET  = 1  （左1マス余白）
-    ROW_PADDING = 2  （ページ上部2マス余白）
+    ROW_PADDING = 1  （ページ上部1マス余白）
     row_offset for page N = (N-1) * max_rows + ROW_PADDING
     page break at page N  = N * (max_rows + ROW_PADDING)
     """
@@ -508,7 +601,7 @@ def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) ->
     from openpyxl.utils import get_column_letter
 
     COL_OFFSET = 1
-    ROW_PADDING = 2
+    ROW_PADDING = 1
     max_rows = grid_params['max_rows']
     col_width = grid_params.get('excel_col_width', 1.45)
     row_height = grid_params.get('excel_row_height', 11.34)
@@ -583,9 +676,24 @@ def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) ->
                     cell.value = elem.get('content', '')
                     if elem.get('is_vertical'):
                         cell.alignment = Alignment(text_rotation=255, vertical='top', wrap_text=False)
+                    else:
+                        # [修正] 水平テキストは PDF 座標準拠で left/top を明示。
+                        # Excel のデフォルト挙動（数値の自動右揃え等）を上書きし、
+                        # PDF の配置位置をそのまま再現する。
+                        # セル内改行（\n）を含む場合は wrap_text=True で折り返しを有効化する。
+                        cell.alignment = Alignment(
+                            horizontal='left', vertical='top',
+                            wrap_text=bool(elem.get('multiline')),
+                        )
+                    # [修正] フォント名: エイリアス解決済みの値、なければグリッドデフォルト
+                    resolved_font_name = elem.get('font_name') or font_name
+                    # [修正] フォントサイズ: PDF 値を優先しつつ、セル高さに収まる上限でクランプ
+                    raw_font_size = elem.get('font_size') or default_font_size
+                    max_font_size = row_height * 0.72  # row_height(pt) の約72%を上限とする
+                    resolved_font_size = min(float(raw_font_size), max_font_size)
                     font_kwargs = {
-                        'name': elem.get('font_name') or font_name,
-                        'size': elem.get('font_size') or default_font_size,
+                        'name': resolved_font_name,
+                        'size': resolved_font_size,
                     }
                     if elem.get('font_color'):
                         font_kwargs['color'] = elem['font_color']
@@ -615,10 +723,15 @@ def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) ->
     ws.page_margins.top    = margin_top
     ws.page_margins.bottom = margin_bottom
 
+    # 右端は max_cols + COL_OFFSET まで広げてグリッド幅を最大限利用する
+    max_cols = grid_params.get('max_cols', 54)
+    max_used_col = max(max_used_col, max_cols + COL_OFFSET)
+
     if max_used_row > 0 and max_used_col > 0:
         ws.print_area = f"A1:{get_column_letter(max_used_col)}{max_used_row}"
 
     wb.save(output_path)
+    _fix_empty_cell_type_attr(output_path)
     logger.info(f"[render_layout] Excel生成完了: {output_path} ({total_pages} ページ)")
 
 
@@ -732,14 +845,14 @@ def _apply_borders_to_xlsx(xlsx_path: str, extracted_data: dict, max_rows: int) 
 
     GEN_CODE_TEMPLATE と同じオフセット定数を使用:
       COL_OFFSET  = 1  （左1マス余白）
-      ROW_PADDING = 2  （ページ上部2マス余白）
+      ROW_PADDING = 1  （ページ上部1マス余白）
       row_offset for page N = (N-1) * max_rows + ROW_PADDING
     """
     from openpyxl import load_workbook
     from openpyxl.styles import Border, Side
 
     COL_OFFSET = 1
-    ROW_PADDING = 2
+    ROW_PADDING = 1
 
     wb = load_workbook(xlsx_path)
     ws = wb.active
@@ -812,6 +925,7 @@ def _apply_borders_to_xlsx(xlsx_path: str, extracted_data: dict, max_rows: int) 
             total += 1
 
     wb.save(xlsx_path)
+    _fix_empty_cell_type_attr(xlsx_path)
     logger.info(f"[apply_borders] {total} 個の罫線要素を適用しました")
 
 
@@ -923,10 +1037,20 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
     max_rows = grid_params['max_rows']
     max_cols = grid_params['max_cols']
 
+    def _is_near_duplicate(seen: list, r: int, er: int, c: int, ec: int, tol: int = 1) -> bool:
+        """グリッド座標が tol 以内の既登録要素があれば重複とみなす。
+        完全一致チェックだけでは grid 量子化誤差（±1行/列ずれ）による
+        実質同一矩形の二重登録を取りこぼすため、近似一致も除外する。"""
+        for (sr, ser, sc, sec) in seen:
+            if (abs(sr - r) <= tol and abs(ser - er) <= tol and
+                    abs(sc - c) <= tol and abs(sec - ec) <= tol):
+                return True
+        return False
+
     layout = []
     for page in extracted_data.get('pages', []):
         elements = []
-        seen_border_rects: set = set()
+        seen_border_rects: list = []  # [修正] set → list（近似一致検索のため）
 
         # table_border_rects → border_rect 要素
         for tbr in page.get('table_border_rects', []):
@@ -938,10 +1062,10 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
             if c > ec: c, ec = ec, c
             if r == er and c == ec:
                 continue
-            key = (r, er, c, ec)
-            if key in seen_border_rects:
+            # [修正] 完全一致 → ±1グリッド近似一致で重複を除外
+            if _is_near_duplicate(seen_border_rects, r, er, c, ec):
                 continue
-            seen_border_rects.add(key)
+            seen_border_rects.append((r, er, c, ec))
             elements.append({
                 'type': 'border_rect',
                 'row': r, 'end_row': er,
@@ -961,10 +1085,10 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
             if c > ec: c, ec = ec, c
             if r == er and c == ec:
                 continue
-            key = (r, er, c, ec)
-            if key in seen_border_rects:
+            # [修正] rects も同じ近似一致チェックで重複を除外
+            if _is_near_duplicate(seen_border_rects, r, er, c, ec):
                 continue
-            seen_border_rects.add(key)
+            seen_border_rects.append((r, er, c, ec))
             # 水平・垂直分割線の場合、_borders が旧データでも端キャップ除去を適用する
             raw_borders = rect.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
             if r == er and c != ec:
@@ -987,9 +1111,53 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
                 continue
             groups.setdefault((w['_row'], w['_col']), []).append(w)
 
+        # [修正追加] 同一 (row, col) グループ内でワードの垂直スパンが重ならない場合、
+        # 行を分割して別 row に振り直す。
+        # build_cluster_map をすり抜けた密集行の誤合算をここで最終補正する。
+        _SPLIT_GAP = 3.0  # pt: bottom → next_top のギャップがこれを超えたら別行
+        split_groups: dict = {}
+        for (row, col), gwords in groups.items():
+            if len(gwords) <= 1 or gwords[0].get('is_vertical'):
+                split_groups[(row, col)] = gwords
+                continue
+            # top 順にソートして垂直ギャップを検査
+            sw = sorted(gwords, key=lambda w: float(w['top']))
+            current: list = [sw[0]]
+            sub_row: int = row
+            for w in sw[1:]:
+                prev_bottom = float(current[-1].get('bottom', current[-1]['top']))
+                this_top    = float(w['top'])
+                if this_top - prev_bottom > _SPLIT_GAP:
+                    # ギャップあり → 現グループを確定し次サブグループを開始
+                    split_groups[(sub_row, col)] = current
+                    sub_row += 1
+                    current = [w]
+                else:
+                    current.append(w)
+            split_groups[(sub_row, col)] = current
+        groups = split_groups
+
         seen_text: set = set()
         for (row, col), words in sorted(groups.items()):
-            content = _join_word_texts([w.get('text', '') for w in words])
+            # 同一グループ内に複数の視覚行が含まれる場合（_SPLIT_GAP 以内の小さなギャップ）、
+            # 行ごとに \n で結合してセル内改行として表現する。
+            _INLINE_LINE_GAP = 1.0  # pt: この値を超えるギャップを行区切りとみなす
+            sw = sorted(words, key=lambda w: float(w.get('top', 0)))
+            vis_lines: list = [[sw[0]]]
+            for _w in sw[1:]:
+                prev_b = float(vis_lines[-1][-1].get('bottom', vis_lines[-1][-1]['top']))
+                this_t = float(_w.get('top', 0))
+                if this_t - prev_b > _INLINE_LINE_GAP:
+                    vis_lines.append([_w])
+                else:
+                    vis_lines[-1].append(_w)
+            if len(vis_lines) > 1:
+                content = '\n'.join(
+                    _join_word_texts([_w.get('text', '') for _w in _line])
+                    for _line in vis_lines
+                )
+            else:
+                content = _join_word_texts([w.get('text', '') for w in words])
             stripped = content.strip()
             if not stripped or (len(stripped) == 1 and stripped in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'):
                 continue
@@ -1007,6 +1175,8 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
                 'col': col_c,
                 'end_col': min(col_c + len(content), max_cols),
             }
+            if '\n' in content:
+                elem['multiline'] = True
             if first.get('font_color') and first['font_color'] != '000000':
                 elem['font_color'] = first['font_color']
             if first.get('font_size'):
@@ -1153,6 +1323,29 @@ class SheetlingPipeline:
                     for tbr in page['table_border_rects']:
                         tbr['_row'] -= row_shift
                         tbr['_end_row'] -= row_shift
+
+        # 3. 列シフト補正（左余白を1列に統一）
+        # 行シフト補正と同様に、コンテンツ最左列を1にそろえ、
+        # COL_OFFSET=1 で左側ちょうど1列の余白になるようにする。
+        for page in extracted_data['pages']:
+            all_cols = (
+                [w['_col'] for w in page['words'] if '_col' in w]
+                + [r['_col'] for r in page['rects'] if '_col' in r]
+                + [tbr['_col'] for tbr in page['table_border_rects']]
+            )
+            if all_cols:
+                col_shift = min(all_cols) - 1
+                if col_shift > 0:
+                    for w in page['words']:
+                        if '_col' in w:
+                            w['_col'] -= col_shift
+                    for r in page['rects']:
+                        if '_col' in r:
+                            r['_col'] -= col_shift
+                            r['_end_col'] -= col_shift
+                    for tbr in page['table_border_rects']:
+                        tbr['_col'] -= col_shift
+                        tbr['_end_col'] -= col_shift
         # ---------------------------------------------------------------------------
 
         # デバッグ用に中間データを保存
@@ -1172,13 +1365,63 @@ class SheetlingPipeline:
             f.write(filled_json_str)
 
         # 直接 Excel レンダリング (Pre版方式)
-        xlsx_path = out_dir / f"{pdf_name}_{grid_size}.xlsx"
+        # _1pt / _2pt のみサフィックスを付与。それ以外は従来どおり。
+        _xlsx_suffix = f"_{grid_size}" if grid_size in ("1pt", "2pt") else ""
+        xlsx_path = out_dir / f"{pdf_name}_Python版{_xlsx_suffix}.xlsx"
         try:
             _render_layout_to_xlsx(layout_data, grid_params, str(xlsx_path))
             logger.info(f"✅ Excel 生成完了: {xlsx_path.name}")
         except Exception as e:
             logger.error(f"❌ Excel 生成に失敗しました: {e}")
             raise
+
+        # ---- ビジョンレビュー素材の自動生成 ----------------------------------------
+        # correct コマンドで AI 視覚比較できるよう、PDF 画像・罫線プレビュー・
+        # VISUAL_REVIEW_PROMPT・corrections テンプレートをまとめて出力する。
+        # prompts_dir はすでに auto_layout() 冒頭で作成済み。
+        try:
+            import pdfplumber as _pdfplumber
+            with _pdfplumber.open(pdf_path) as _pdf:
+                for _pg in _pdf.pages:
+                    _pn = _pg.page_number
+                    _pdir = prompts_dir / f"page_{_pn}"
+                    _pdir.mkdir(parents=True, exist_ok=True)
+                    _img = _pg.to_image(resolution=144)
+                    _img.save(str(_pdir / f"{pdf_name}_page{_pn}.png"))
+            logger.info(f"  PDF ページ画像を生成しました: {prompts_dir}/page_N/")
+        except Exception as _e:
+            logger.warning(f"PDF ページ画像の生成に失敗しました（correct フェーズは利用不可）: {_e}")
+
+        for _page_layout in layout_data:
+            _pn = _page_layout.get('page_number', 1)
+            _pdir = prompts_dir / f"page_{_pn}"
+            _pdir.mkdir(parents=True, exist_ok=True)
+
+            _pdf_img = _pdir / f"{pdf_name}_page{_pn}.png"
+            _preview  = _pdir / f"{pdf_name}_excel_page{_pn}.png"
+            try:
+                _generate_border_preview(_page_layout, grid_params, str(_preview),
+                                         pdf_image_path=str(_pdf_img))
+            except Exception as _e:
+                logger.warning(f"  ページ {_pn}: 罫線プレビュー生成に失敗しました: {_e}")
+
+            _gp_for_prompt = dict(grid_params)
+            _gp_for_prompt.setdefault('position_tolerance_cells', '1〜2')
+            _prompt_text = VISUAL_REVIEW_PROMPT.format(page_number=_pn, **_gp_for_prompt)
+            (_pdir / f"{pdf_name}_visual_review_page{_pn}.txt").write_text(_prompt_text, encoding="utf-8")
+
+            _corr_path = _pdir / f"{pdf_name}_visual_corrections_page{_pn}.json"
+            if not _corr_path.exists():
+                _corr_path.write_text('{"corrections": []}', encoding="utf-8")
+
+        logger.info(
+            f"  [review 素材] prompts/{grid_size}/page_N/ に PDF 画像・罫線プレビュー・プロンプトを出力しました\n"
+            f"  次のステップ:\n"
+            f"    1. PDF 画像と罫線プレビューを AI に渡し、visual_review プロンプトで比較させる\n"
+            f"    2. AI の出力 JSON を visual_corrections_page{{N}}.json に保存する\n"
+            f"    3. python -m src.main correct --pdf {pdf_name} --grid-size {grid_size} を実行する"
+        )
+        # -------------------------------------------------------------------------
 
         return {
             "xlsx_path": str(xlsx_path),
@@ -1803,6 +2046,8 @@ class SheetlingPipeline:
             layout = json.load(f)
         with open(grid_params_path, "r", encoding="utf-8") as f:
             grid_params = json.load(f)
+        # 旧 grid_params.json には position_tolerance_cells が未保存の場合があるためフォールバック
+        grid_params.setdefault('position_tolerance_cells', '1〜2')
 
         prompts_dir = out_dir / "prompts"
         generated = []
@@ -1850,4 +2095,40 @@ class SheetlingPipeline:
         logger.info("    3. LLM の出力 JSON を visual_corrections_page{N}.json に保存する")
         logger.info("    4. python -m src.main generate を実行する")
         return {"pages": generated}
+
+    def rerender_after_corrections(
+        self,
+        pdf_name: str,
+        grid_size: str,
+        specific_out_dir: str = None,
+    ) -> str:
+        """
+        correct コマンド用: 修正済み layout JSON + grid_params から Excel を再レンダリングする。
+
+        auto_layout() が生成する grid_size サフィックス付きファイルを参照する。
+          - {pdf_name}_{grid_size}_layout.json   （apply_corrections が更新済み）
+          - {pdf_name}_{grid_size}_grid_params.json
+        出力:
+          - {pdf_name}_Python版.xlsx          （1pt/2pt 以外）
+          - {pdf_name}_Python版_{grid_size}.xlsx  （1pt/2pt）
+        """
+        logger.info(f"--- [correct/rerender] Excel 再生成: {pdf_name} ({grid_size}) ---")
+        out_dir = Path(specific_out_dir) if specific_out_dir else self.output_base_dir / pdf_name
+
+        layout_path     = out_dir / f"{pdf_name}_{grid_size}_layout.json"
+        grid_params_path = out_dir / f"{pdf_name}_{grid_size}_grid_params.json"
+        _xlsx_suffix = f"_{grid_size}" if grid_size in ("1pt", "2pt") else ""
+        xlsx_path    = out_dir / f"{pdf_name}_Python版{_xlsx_suffix}.xlsx"
+
+        if not layout_path.exists():
+            raise FileNotFoundError(f"layout JSON が見つかりません: {layout_path}")
+        if not grid_params_path.exists():
+            raise FileNotFoundError(f"grid_params JSON が見つかりません: {grid_params_path}")
+
+        layout      = json.loads(layout_path.read_text(encoding="utf-8"))
+        grid_params = json.loads(grid_params_path.read_text(encoding="utf-8"))
+
+        _render_layout_to_xlsx(layout, grid_params, str(xlsx_path))
+        logger.info(f"✅ correct/rerender 完了: {xlsx_path.name}")
+        return str(xlsx_path)
 

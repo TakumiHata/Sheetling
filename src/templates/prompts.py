@@ -21,6 +21,7 @@ GRID_SIZES = {
         "margin_bottom": 0.41,
         "default_font_size": 7,
         "font_name": "MS Gothic",
+        "position_tolerance_cells": "1〜2",
     },
     "medium": {
         "col_width_mm": "6.0",
@@ -33,7 +34,8 @@ GRID_SIZES = {
         "margin_right": 0.47,
         "margin_top": 0.41,
         "margin_bottom": 0.41,
-        "default_font_size": 9
+        "default_font_size": 9,
+        "position_tolerance_cells": "1",
     },
     "large": {
         "col_width_mm": "8.0",
@@ -46,7 +48,8 @@ GRID_SIZES = {
         "margin_right": 0.51,
         "margin_top": 0.49,
         "margin_bottom": 0.49,
-        "default_font_size": 11
+        "default_font_size": 11,
+        "position_tolerance_cells": "1",
     },
     "pattern_1": {
         "col_width_mm": "3.48",
@@ -59,7 +62,8 @@ GRID_SIZES = {
         "margin_right": 0.43,
         "margin_top": 0.41,
         "margin_bottom": 0.41,
-        "default_font_size": 7
+        "default_font_size": 7,
+        "position_tolerance_cells": "1〜2",
     },
     "pattern_2": {
         "col_width_mm": "5.53",
@@ -72,8 +76,41 @@ GRID_SIZES = {
         "margin_right": 0.43,
         "margin_top": 0.41,
         "margin_bottom": 0.41,
-        "default_font_size": 7
-    }
+        "default_font_size": 7,
+        "position_tolerance_cells": "1〜2",
+    },
+    # 方眼サイズ: 列幅 1 Excel単位 ≈ 2mm 正方形セル
+    "1pt": {
+        "col_width_mm": "2.0",
+        "row_height_mm": "2.0",
+        "max_cols": 90,
+        "max_rows": 135,
+        "excel_col_width": 1.0,
+        "excel_row_height": 5.67,
+        "margin_left": 0.43,
+        "margin_right": 0.43,
+        "margin_top": 0.41,
+        "margin_bottom": 0.41,
+        "default_font_size": 5,
+        "font_name": "MS Gothic",
+        "position_tolerance_cells": "2〜4",  # 2mm/セルと細かいため多めに許容
+    },
+    # 方眼サイズ: 列幅 2 Excel単位 ≈ 4mm 正方形セル
+    "2pt": {
+        "col_width_mm": "4.0",
+        "row_height_mm": "4.0",
+        "max_cols": 45,
+        "max_rows": 67,
+        "excel_col_width": 2.0,
+        "excel_row_height": 11.34,
+        "margin_left": 0.43,
+        "margin_right": 0.43,
+        "margin_top": 0.41,
+        "margin_bottom": 0.41,
+        "default_font_size": 6,
+        "font_name": "MS Gothic",
+        "position_tolerance_cells": "1",  # 4mm/セルと粗いため厳しく
+    },
 }
 
 
@@ -215,7 +252,7 @@ VISUAL_REVIEW_PROMPT = """\
 **報告してはいけないもの（無視してください）**
 - テキスト・文字の差異（フォント・配置・内容の違いはすべて無視）
 - グリッド背景線（薄いグレー線）
-- 罫線の位置が1〜2セルずれている程度の微小なズレ
+- 罫線の位置が {position_tolerance_cells} セルずれている程度の微小なズレ
 - PDF の薄い罫線・飾り線・影など、Excel で表現不要な装飾的な線
 - すでにプレビューに描画されている罫線を「位置修正」するような操作
 - 判断に迷う・曖昧な差異（確信が持てない場合は報告しない）
