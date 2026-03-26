@@ -13,6 +13,7 @@ Sheetling パイプライン。
 """
 
 import json
+import math
 import re
 from collections import defaultdict
 from pathlib import Path
@@ -110,12 +111,95 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
         if w.get('is_vertical') and 'bottom' in w:
             w['_end_row'] = to_row(w['bottom'])
 
+    # 薄い矩形（線の太さ分）を統合して1つの矩形にする。
+    # 4本の線（上辺H + 下辺H + 左辺V + 右辺V）で構成される枠を検出し、
+    # 1つの完全な矩形に統合する。
+    _LINE_THICKNESS = 3.0  # pt: これ未満の幅/高さは線とみなす
+    _MERGE_TOL = 5.0  # pt: 端点がこの距離以内なら接続とみなす
+
+    h_lines = []  # (idx, x0, x1, y)
+    v_lines = []  # (idx, x, y0, y1)
+    normal_rects = []
+    for idx, r in enumerate(page['rects']):
+        w = abs(r['x1'] - r['x0'])
+        h = abs(r['bottom'] - r['top'])
+        if w < _LINE_THICKNESS and h >= _LINE_THICKNESS:
+            v_lines.append((idx, (r['x0'] + r['x1']) / 2, r['top'], r['bottom']))
+        elif h < _LINE_THICKNESS and w >= _LINE_THICKNESS:
+            h_lines.append((idx, r['x0'], r['x1'], (r['top'] + r['bottom']) / 2))
+        else:
+            normal_rects.append(idx)
+
+    # 線を統合して矩形を構築
+    used_indices: set = set()
+    merged_rects: list = []
+    for hi_top in range(len(h_lines)):
+        if h_lines[hi_top][0] in used_indices:
+            continue
+        _, hx0_t, hx1_t, hy_t = h_lines[hi_top]
+        # 同じ x 範囲で下にある横線を探す
+        for hi_bot in range(len(h_lines)):
+            if hi_bot == hi_top or h_lines[hi_bot][0] in used_indices:
+                continue
+            _, hx0_b, hx1_b, hy_b = h_lines[hi_bot]
+            if hy_b <= hy_t:
+                continue  # 上辺より上にある
+            if abs(hx0_t - hx0_b) > _MERGE_TOL or abs(hx1_t - hx1_b) > _MERGE_TOL:
+                continue  # x 範囲が合わない
+            # 左辺の縦線を探す
+            vl_found = None
+            for vi in range(len(v_lines)):
+                if v_lines[vi][0] in used_indices:
+                    continue
+                _, vx, vy0, vy1 = v_lines[vi]
+                if (abs(vx - min(hx0_t, hx0_b)) < _MERGE_TOL and
+                        abs(vy0 - hy_t) < _MERGE_TOL and abs(vy1 - hy_b) < _MERGE_TOL):
+                    vl_found = vi
+                    break
+            # 右辺の縦線を探す
+            vr_found = None
+            for vi in range(len(v_lines)):
+                if v_lines[vi][0] in used_indices:
+                    continue
+                _, vx, vy0, vy1 = v_lines[vi]
+                if (abs(vx - max(hx1_t, hx1_b)) < _MERGE_TOL and
+                        abs(vy0 - hy_t) < _MERGE_TOL and abs(vy1 - hy_b) < _MERGE_TOL):
+                    vr_found = vi
+                    break
+            # 少なくとも2辺以上見つかれば矩形として統合
+            if vl_found is not None or vr_found is not None:
+                used_indices.add(h_lines[hi_top][0])
+                used_indices.add(h_lines[hi_bot][0])
+                if vl_found is not None:
+                    used_indices.add(v_lines[vl_found][0])
+                if vr_found is not None:
+                    used_indices.add(v_lines[vr_found][0])
+                x0 = min(hx0_t, hx0_b)
+                x1 = max(hx1_t, hx1_b)
+                if vl_found is not None:
+                    x0 = min(x0, v_lines[vl_found][1])
+                if vr_found is not None:
+                    x1 = max(x1, v_lines[vr_found][1])
+                merged_rects.append({
+                    'x0': x0, 'top': hy_t, 'x1': x1, 'bottom': hy_b,
+                })
+                break  # 上辺に対して1つの矩形を統合したら次へ
+
+    # 統合されなかった線は個別に残す
+    remaining = [page['rects'][i] for i in range(len(page['rects']))
+                 if i not in used_indices]
+    # 統合された矩形を追加
+    remaining.extend(merged_rects)
+    page['rects'] = remaining
+
     # rects に行・列番号を付与
+    # end_row/end_col は +1 してテキストが枠内に収まるようにする。
+    # rects はテーブル外の独立した矩形のため、隣接セルとの重なりは問題にならない。
     for r in page['rects']:
         r['_row']     = to_row(r['top'])
-        r['_end_row'] = to_row(r['bottom'])
+        r['_end_row'] = to_row(r['bottom']) + 1
         r['_col']     = to_col(r['x0'])
-        r['_end_col'] = to_col(r['x1'])
+        r['_end_col'] = to_col(r['x1']) + 1
 
     # テーブル内に含まれる rects を除外（table_border_rects で代替するため）
     tol = 3.0
@@ -130,133 +214,34 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
 
     page['rects'] = [r for r in page['rects'] if not is_inside_table(r)]
 
-    # テーブルの列・行グリッドから border_rect を生成
+    # テーブルの cells_2d から border_rect を生成。
+    # bbox がある（None でない）セルのみ罫線を描画する。
+    # bbox が None のセルは結合延長であり罫線を引かない。
+    # これにより結合セル内部の不要な縦線・横線が除去される。
     table_border_rects = []
-    for col_xs, row_ys in zip(page.get('table_col_x_positions', []),
-                               page.get('table_row_y_positions', [])):
-        col_xs_s = sorted(set(round(float(x), 2) for x in col_xs))
-        row_ys_s = sorted(set(round(float(y), 2) for y in row_ys))
-        # 直接除算で潰れた重複インデックスを +1 でずらして単調増加に保つ
-        col_idxs = _to_monotone([to_col(x) for x in col_xs_s], max_cols)
-        row_idxs = _to_monotone([to_row(y) for y in row_ys_s], max_rows)
-        n_cols = len(col_idxs) - 1
-        n_rows = len(row_idxs) - 1
-        for ri in range(n_rows):
-            for ci in range(n_cols):
+    for _cells_2d in page.get('table_cells', []):
+        if not _cells_2d:
+            continue
+        for ri, row_cells in enumerate(_cells_2d):
+            for ci, cb in enumerate(row_cells):
+                if cb is None:
+                    continue  # 結合延長 → 罫線なし
+                r  = max(1, to_row(float(cb['top'])))
+                er = max(r + 1, min(max_rows, to_row(float(cb['bottom']))))
+                c  = max(1, to_col(float(cb['x0'])))
+                ec = max(c + 1, min(max_cols, to_col(float(cb['x1']))))
                 table_border_rects.append({
-                    '_row':        row_idxs[ri],
-                    '_end_row':    row_idxs[ri + 1],
-                    '_col':        col_idxs[ci],
-                    '_end_col':    col_idxs[ci + 1],
-                    '_pdf_x0':     col_xs_s[ci],
-                    '_pdf_top':    row_ys_s[ri],
-                    '_pdf_x1':     col_xs_s[ci + 1],
-                    '_pdf_bottom': row_ys_s[ri + 1],
-                    '_outer_left':  ci == 0,
-                    '_outer_right': ci == n_cols - 1,
+                    '_row': r, '_end_row': er,
+                    '_col': c, '_end_col': ec,
+                    '_pdf_x0': float(cb['x0']), '_pdf_top': float(cb['top']),
+                    '_pdf_x1': float(cb['x1']), '_pdf_bottom': float(cb['bottom']),
+                    '_borders': {'top': True, 'bottom': True, 'left': True, 'right': True},
                 })
     page['table_border_rects'] = table_border_rects
 
-    # ---- エッジから辺ごとの罫線有無を判定 ----------------------------------------
-
-    # エッジをグリッド座標に変換してマップ化
-    h_edge_map: dict = {}
-    for edge in page.get('h_edges', []):
-        ri = to_row(edge['y'])
-        cs = to_col(edge['x0'])
-        ce = to_col(edge['x1'])
-        h_edge_map.setdefault(ri, []).append((min(cs, ce), max(cs, ce)))
-
-    v_edge_map: dict = {}
-    v_edge_max_span: dict = {}
-    for edge in page.get('v_edges', []):
-        ci = to_col(edge['x'])
-        rs = to_row(edge['y0'])
-        re = to_row(edge['y1'])
-        v_edge_map.setdefault(ci, []).append((min(rs, re), max(rs, re)))
-        span = edge.get('span', abs(edge['y1'] - edge['y0']))
-        if span > v_edge_max_span.get(ci, 0):
-            v_edge_max_span[ci] = span
-
-    def _overlaps_h(edges: list, col_s: int, col_e: int) -> bool:
-        span = col_e - col_s
-        if span <= 0:
-            return any(cs <= col_s <= ce for cs, ce in edges)
-        for cs, ce in edges:
-            if min(ce, col_e) - max(cs, col_s) >= span * 0.3:
-                return True
-        return False
-
-    def _overlaps_v(edges: list, row_s: int, row_e: int) -> bool:
-        span = row_e - row_s
-        if span <= 0:
-            return any(rs <= row_s <= re for rs, re in edges)
-        for rs, re in edges:
-            if min(re, row_e) - max(rs, row_s) >= span * 0.3:
-                return True
-        return False
-
-    def _has_h(row: int, col_s: int, col_e: int) -> bool:
-        for r in (row - 1, row, row + 1):
-            if _overlaps_h(h_edge_map.get(r, []), col_s, col_e):
-                return True
-        return False
-
-    def _has_v(col: int, row_s: int, row_e: int) -> bool:
-        for c in (col - 1, col, col + 1):
-            if _overlaps_v(v_edge_map.get(c, []), row_s, row_e):
-                return True
-        return False
-
-    _MAJOR_V_SPAN_THRESHOLD = page['height'] * 0.30
-
-    # table_border_rects に _borders を付与
-    for tbr in page['table_border_rects']:
-        r, er, c, ec = tbr['_row'], tbr['_end_row'], tbr['_col'], tbr['_end_col']
-        tbr['_borders'] = {
-            'top':    _has_h(r,  c, ec),
-            'bottom': _has_h(er, c, ec),
-            'left':   _has_v(c,  r, er),
-            'right':  _has_v(ec, r, er),
-        }
-        tbr['_major_left']  = v_edge_max_span.get(c,  0) >= _MAJOR_V_SPAN_THRESHOLD
-        tbr['_major_right'] = v_edge_max_span.get(ec, 0) >= _MAJOR_V_SPAN_THRESHOLD
-
-    # rects に _borders を付与
+    # rects に _borders を付与（4辺全て True — テーブル外の矩形・罫線）
     for rect in page['rects']:
-        r, er = rect['_row'], rect['_end_row']
-        c, ec = rect['_col'], rect['_end_col']
-        if r == er and c != ec:
-            rect['_borders'] = {'top': _has_h(r, c, ec), 'bottom': False, 'left': False, 'right': False}
-        elif c == ec and r != er:
-            rect['_borders'] = {'top': False, 'bottom': False, 'left': _has_v(c, r, er), 'right': False}
-        else:
-            rect['_borders'] = {
-                'top':    _has_h(r,  c, ec),
-                'bottom': _has_h(er, c, ec),
-                'left':   _has_v(c,  r, er),
-                'right':  _has_v(ec, r, er),
-            }
-
-    # ---- 隣接セル間の _borders 整合性パス ---------------------------------------
-    tbrs = page['table_border_rects']
-    h_band: dict = {}
-    v_band: dict = {}
-    for tbr in tbrs:
-        h_band.setdefault((tbr['_row'], tbr['_end_row']), {})[tbr['_col']] = tbr
-        v_band.setdefault((tbr['_col'], tbr['_end_col']), {})[tbr['_row']] = tbr
-
-    for tbr in tbrs:
-        right_neighbor = h_band.get((tbr['_row'], tbr['_end_row']), {}).get(tbr['_end_col'])
-        if right_neighbor:
-            merged = tbr['_borders']['right'] or right_neighbor['_borders']['left']
-            tbr['_borders']['right'] = merged
-            right_neighbor['_borders']['left'] = merged
-        bottom_neighbor = v_band.get((tbr['_col'], tbr['_end_col']), {}).get(tbr['_end_row'])
-        if bottom_neighbor:
-            merged = tbr['_borders']['bottom'] or bottom_neighbor['_borders']['top']
-            tbr['_borders']['bottom'] = merged
-            bottom_neighbor['_borders']['top'] = merged
+        rect['_borders'] = {'top': True, 'bottom': True, 'left': True, 'right': True}
 
     # ---- PDF 余白分の空き行を除去するため _row を正規化 --------------------------------
     all_rows = (
@@ -433,16 +418,17 @@ def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) ->
             pass
 
     def _draw_border(s_row: int, e_row: int, s_col: int, e_col: int, borders: dict) -> None:
+        # e_row, e_col は exclusive: 枠は s_row <= r < e_row, s_col <= c < e_col
         has_top    = borders.get('top',    True)
         has_bottom = borders.get('bottom', True)
         has_left   = borders.get('left',   True)
         has_right  = borders.get('right',  True)
         if has_top:
             for c in range(s_col, e_col):
-                _set_border_side(s_row - 1, c, bottom=thin)
+                _set_border_side(s_row, c, top=thin)
         if has_bottom:
             for c in range(s_col, e_col):
-                _set_border_side(e_row, c, top=thin)
+                _set_border_side(e_row - 1, c, bottom=thin)
         if has_left:
             for r in range(s_row, e_row):
                 _set_border_side(r, s_col, left=thin)
@@ -612,6 +598,33 @@ def _join_word_texts(texts: list) -> str:
     return ' '.join(t for t in texts if t.strip())
 
 
+def _split_by_horizontal_gap(words: list, gap_factor: float = 2.0) -> list:
+    """
+    水平方向のギャップでワードリストを分割する。
+    前のワードの x1 と次のワードの x0 の間隔がフォントサイズ × gap_factor を
+    超えた場合、別グループとして分割する。
+    返り値: ワードリストのリスト（各サブリストは水平に連続するワード群）
+    """
+    if len(words) <= 1:
+        return [words]
+    sw = sorted(words, key=lambda w: float(w.get('x0', 0)))
+    groups: list = [[sw[0]]]
+    for w in sw[1:]:
+        prev = groups[-1][-1]
+        prev_x1 = float(prev.get('x1', prev.get('x0', 0)))
+        curr_x0 = float(w.get('x0', 0))
+        gap = curr_x0 - prev_x1
+        # 閾値: 前ワードと現ワードのフォントサイズの平均 × gap_factor
+        avg_fs = (float(prev.get('font_size', prev.get('size', 10)))
+                  + float(w.get('font_size', w.get('size', 10)))) / 2
+        threshold = avg_fs * gap_factor
+        if gap > threshold:
+            groups.append([w])
+        else:
+            groups[-1].append(w)
+    return groups
+
+
 def _table_text_elements_from_2d(page: dict, grid_params: dict) -> list:
     """
     pdfplumber の extract_tables() が返す 2D 配列と列/行境界座標を使って、
@@ -637,6 +650,8 @@ def _table_text_elements_from_2d(page: dict, grid_params: dict) -> list:
     col_shift = page.get('_col_shift', 0)
 
     elements: list = []
+    # 同一 word が複数セルの bbox に含まれる場合の重複処理を防止
+    _used_word_ids: set = set()
 
     # table_data_raw は \n 保持版（複数行検出に使用）。なければ cleaned 版にフォールバック
     _table_data_src = page.get('table_data_raw') or page.get('table_data', [])
@@ -701,40 +716,71 @@ def _table_text_elements_from_2d(page: dict, grid_params: dict) -> list:
                 grid_col = max(1, to_col(x0) - col_shift)
                 grid_end_col = max(grid_col + 1, min(max_cols, to_col(x1) - col_shift))
 
-                # 複数グリッド行にわたる結合セルかつ複数行コンテンツの場合、
-                # page['words'] の実際の y 座標でグループ化して正確に配置する。
-                # \n を均等1行ずつ分散するとセル境界を超えて隣接行に衝突するため。
-                cell_row_span = to_row(y1) - to_row(y0)
-                if cell_row_span > 1 and len(lines) > 1:
-                    cell_word_rows: dict = {}
-                    for w in page.get('words', []):
-                        if '_row' not in w:
-                            continue
-                        wx0 = float(w.get('x0', 0))
-                        wy0 = float(w.get('top', 0))
-                        if (x0 - 2.0 <= wx0 <= x1 + 2.0
-                                and y0 - 2.0 <= wy0 <= y1 + 2.0):
-                            wr = w['_row']
-                            cell_word_rows.setdefault(wr, []).append(w)
-                    if cell_word_rows:
-                        for wr, wds in sorted(cell_word_rows.items()):
-                            line_text = _join_word_texts(
-                                [w.get('text', '') for w in sorted(wds, key=lambda x: float(x.get('x0', 0)))]
-                            ).strip()
-                            if not line_text:
-                                continue
-                            elements.append({
-                                'type': 'text',
-                                'content': line_text,
-                                'row': min(max_rows, wr),
-                                'col': grid_col,
-                                'end_col': grid_end_col,
-                            })
-                        continue  # word ベース配置完了、\n 分散をスキップ
-                    # words が見つからない場合は \n 分散にフォールバック
+                # セル内の words を実座標ベースで検索し、word 座標で配置する。
+                # word が見つからない場合のみ 2D テキストのフォールバックを使用する。
+                # 既に別セルで処理済みの word は除外する。
+                cell_words: list = []
+                for w in page.get('words', []):
+                    if '_row' not in w:
+                        continue
+                    wid = id(w)
+                    if wid in _used_word_ids:
+                        continue
+                    wx0 = float(w.get('x0', 0))
+                    wy0 = float(w.get('top', 0))
+                    if (x0 - 2.0 <= wx0 <= x1 + 2.0
+                            and y0 - 2.0 <= wy0 <= y1 + 2.0):
+                        cell_words.append(w)
 
-                # 単一行セル、または word ルックアップ不成立時: \n 行をグリッド行に分散配置。
-                # セルの底辺グリッド行を超えないようにクリップする。
+                if cell_words:
+                    # 処理済みとしてマーク
+                    for w in cell_words:
+                        _used_word_ids.add(id(w))
+                    # word 座標ベース配置: _row でグループ化
+                    # テキストがセルの border_rect 外にはみ出さないようクリップ
+                    cell_max_row = max(grid_row, to_row(y1) - row_shift - 1)
+                    cell_word_rows: dict = {}
+                    for w in cell_words:
+                        wr_clipped = min(w['_row'], cell_max_row)
+                        cell_word_rows.setdefault(wr_clipped, []).append(w)
+
+                    for wr, wds in sorted(cell_word_rows.items()):
+                        # 同一 _row 内でも top 座標のギャップで視覚行分割する。
+                        _VIS_GAP = 3.0
+                        sw_cell = sorted(wds, key=lambda w: float(w.get('top', 0)))
+                        vis_lines_cell: list = [[sw_cell[0]]]
+                        for _cw in sw_cell[1:]:
+                            prev_bottom = max(float(v.get('bottom', v.get('top', 0))) for v in vis_lines_cell[-1])
+                            this_top = float(_cw.get('top', 0))
+                            if this_top - prev_bottom > _VIS_GAP:
+                                vis_lines_cell.append([_cw])
+                            else:
+                                vis_lines_cell[-1].append(_cw)
+
+                        for vl_idx, vl_words in enumerate(vis_lines_cell):
+                            vl_row = wr + vl_idx
+                            # 水平ギャップで分割して別要素として配置
+                            h_groups = _split_by_horizontal_gap(
+                                sorted(vl_words, key=lambda x: float(x.get('x0', 0)))
+                            )
+                            for hg in h_groups:
+                                line_text = _join_word_texts(
+                                    [w.get('text', '') for w in hg]
+                                ).strip()
+                                if not line_text:
+                                    continue
+                                hg_col = max(1, to_col(float(hg[0].get('x0', 0))) - col_shift)
+                                hg_end_col = max(hg_col + 1, min(max_cols, to_col(float(hg[-1].get('x1', hg[-1].get('x0', 0)))) - col_shift))
+                                elements.append({
+                                    'type': 'text',
+                                    'content': line_text,
+                                    'row': min(max_rows, vl_row),
+                                    'col': hg_col,
+                                    'end_col': hg_end_col,
+                                })
+                    continue  # word ベース配置完了
+
+                # フォールバック: words が見つからない場合は 2D テキストを分散配置
                 grid_end_row = max(grid_row, to_row(y1) - row_shift - 1)
                 for line_idx, line in enumerate(lines):
                     line_row = grid_row + line_idx
@@ -751,7 +797,7 @@ def _table_text_elements_from_2d(page: dict, grid_params: dict) -> list:
     return elements
 
 
-def _fill_missing_text(layout_json_str: str, extracted_data: dict) -> str:
+def _fill_missing_text(layout_json_str: str, extracted_data: dict, grid_params: dict | None = None) -> str:
     """
     LLMが生成したレイアウトJSONに対し、extracted_dataのwordsと照合して
     欠落しているテキスト要素をプログラム的に補完する。
@@ -782,15 +828,42 @@ def _fill_missing_text(layout_json_str: str, extracted_data: dict) -> str:
 
         # words を (_row, _col) でグループ化
         # テーブル内ワードは _auto_generate_layout で 2D 配列から処理済みのためスキップ
+        # ただしテーブル2D配列でNoneセルに該当するワードはテーブル外として扱う
         _tol_f = 2.0
         _tbboxes = page_data.get('table_bboxes', [])
+
+        _tcell_bboxes: list = []
+        _td_src = page_data.get('table_data_raw') or page_data.get('table_data', [])
+        for _td, _c2d in zip(_td_src, page_data.get('table_cells', [])):
+            if not _td or not _c2d:
+                continue
+            for _ri, _trow in enumerate(_td):
+                for _ci, _cc in enumerate(_trow):
+                    if _cc is None:
+                        continue
+                    if (_c2d and _ri < len(_c2d)
+                            and _ci < len(_c2d[_ri])
+                            and _c2d[_ri][_ci] is not None):
+                        _cb = _c2d[_ri][_ci]
+                        _tcell_bboxes.append(
+                            (float(_cb['x0']), float(_cb['top']),
+                             float(_cb['x1']), float(_cb['bottom']))
+                        )
 
         def _in_tbl(w: dict) -> bool:
             wx = float(w.get('x0', 0))
             wy = float(w.get('top', 0))
+            in_any = False
             for _b in _tbboxes:
                 if (_b[0] - _tol_f <= wx <= _b[2] + _tol_f and
                         _b[1] - _tol_f <= wy <= _b[3] + _tol_f):
+                    in_any = True
+                    break
+            if not in_any:
+                return False
+            for _cb in _tcell_bboxes:
+                if (_cb[0] - _tol_f <= wx <= _cb[2] + _tol_f and
+                        _cb[1] - _tol_f <= wy <= _cb[3] + _tol_f):
                     return True
             return False
 
@@ -805,30 +878,41 @@ def _fill_missing_text(layout_json_str: str, extracted_data: dict) -> str:
 
         added = []
         for (row, col), words in sorted(groups.items()):
-            if (row, col) in existing:
-                continue
-            content = _join_word_texts([w.get('text', '') for w in words])
-            stripped = content.strip()
-            # 空白・純粋な区切り記号（ASCII句読点の1文字）はスキップ
-            # ただし △▼○● 等の図形記号・日本語1文字は意味があるため残す
-            if not stripped or (len(stripped) == 1 and stripped in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'):
-                continue
-            elem: dict = {
-                'type': 'text',
-                'content': content,
-                'row': row,
-                'col': col,
-                'end_col': col + len(content),
-            }
-            first = words[0]
-            if first.get('font_color') and first['font_color'] != '000000':
-                elem['font_color'] = first['font_color']
-            if first.get('font_size'):
-                elem['font_size'] = first['font_size']
-            font_name = _normalize_font_name(first.get('fontname', ''))
-            if font_name:
-                elem['font_name'] = font_name
-            added.append(elem)
+            # 水平ギャップで分割して2段表示を検出
+            h_groups = _split_by_horizontal_gap(words)
+            for hg in h_groups:
+                hg_col = hg[0].get('_col', col)
+                if (row, hg_col) in existing:
+                    continue
+                content = _join_word_texts([w.get('text', '') for w in hg])
+                stripped = content.strip()
+                # 空白・純粋な区切り記号（ASCII句読点の1文字）はスキップ
+                # ただし △▼○● 等の図形記号・日本語1文字は意味があるため残す
+                if not stripped or (len(stripped) == 1 and stripped in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'):
+                    continue
+                last_w = hg[-1]
+                if grid_params:
+                    _grid_w = float(page_data['width']) / grid_params['max_cols']
+                    _max_cols = grid_params['max_cols']
+                    hg_end = max(hg_col + 1, min(_max_cols, 1 + int(float(last_w.get('x1', last_w.get('x0', 0))) / _grid_w)))
+                else:
+                    hg_end = hg_col + len(content)
+                elem: dict = {
+                    'type': 'text',
+                    'content': content,
+                    'row': row,
+                    'col': hg_col,
+                    'end_col': hg_end,
+                }
+                first = hg[0]
+                if first.get('font_color') and first['font_color'] != '000000':
+                    elem['font_color'] = first['font_color']
+                if first.get('font_size'):
+                    elem['font_size'] = first['font_size']
+                font_name = _normalize_font_name(first.get('fontname', ''))
+                if font_name:
+                    elem['font_name'] = font_name
+                added.append(elem)
 
         if added:
             page_layout['elements'].extend(added)
@@ -865,6 +949,7 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
     for page in extracted_data.get('pages', []):
         elements = []
         seen_border_rects: list = []  # [修正] set → list（近似一致検索のため）
+        grid_w = float(page['width']) / max_cols
 
         # table_border_rects → border_rect 要素
         for tbr in page.get('table_border_rects', []):
@@ -888,6 +973,7 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
             })
 
         # rects → border_rect 要素
+        # 薄い矩形（線の太さ分）は水平線/垂直線として処理する。
         for rect in page.get('rects', []):
             if '_row' not in rect:
                 continue
@@ -897,40 +983,95 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
             ec = min(rect['_end_col'], max_cols)
             if r > er: r, er = er, r
             if c > ec: c, ec = ec, c
+
+            # 横線 (r == er): 水平罫線として描画
+            if r == er and c != ec:
+                key = (r, r + 1, c, ec)
+                if _is_near_duplicate(seen_border_rects, *key):
+                    continue
+                seen_border_rects.append(key)
+                elements.append({
+                    'type': 'border_rect',
+                    'row': r, 'end_row': r + 1,
+                    'col': c, 'end_col': ec,
+                    'borders': {'top': True, 'bottom': False, 'left': False, 'right': False},
+                })
+                continue
+
+            # 縦線 (c == ec): 垂直罫線として描画
+            if c == ec and r != er:
+                key = (r, er, c, c + 1)
+                if _is_near_duplicate(seen_border_rects, *key):
+                    continue
+                seen_border_rects.append(key)
+                elements.append({
+                    'type': 'border_rect',
+                    'row': r, 'end_row': er,
+                    'col': c, 'end_col': c + 1,
+                    'borders': {'top': False, 'bottom': False, 'left': True, 'right': False},
+                })
+                continue
+
+            # 通常の矩形
             if r == er and c == ec:
                 continue
-            # [修正] rects も同じ近似一致チェックで重複を除外
             if _is_near_duplicate(seen_border_rects, r, er, c, ec):
                 continue
             seen_border_rects.append((r, er, c, ec))
-            # 水平・垂直分割線の場合、_borders が旧データでも端キャップ除去を適用する
-            raw_borders = rect.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
-            if r == er and c != ec:
-                borders = {'top': raw_borders.get('top', True), 'bottom': False, 'left': False, 'right': False}
-            elif c == ec and r != er:
-                borders = {'top': False, 'bottom': False, 'left': raw_borders.get('left', True), 'right': False}
-            else:
-                borders = raw_borders
             elements.append({
                 'type': 'border_rect',
                 'row': r, 'end_row': er,
                 'col': c, 'end_col': ec,
-                'borders': borders,
+                'borders': {'top': True, 'bottom': True, 'left': True, 'right': True},
             })
 
         # words → text 要素（_row, _col でグループ化）
         # テーブル内ワードは _table_text_elements_from_2d で処理するためスキップする。
+        # ただしテーブル2D配列でNoneセル（結合延長）に該当するワードは
+        # テーブルで処理されないため、テーブル外として扱う。
         _tol = 2.0
         _table_bboxes = page.get('table_bboxes', [])
+
+        # テーブルの有効セル（None でない）のbboxリストを構築
+        _table_cell_bboxes: list = []
+        _table_data_src = page.get('table_data_raw') or page.get('table_data', [])
+        for _td, _cells_2d in zip(
+            _table_data_src,
+            page.get('table_cells', []),
+        ):
+            if not _td or not _cells_2d:
+                continue
+            for _ri, _trow in enumerate(_td):
+                for _ci, _cell_content in enumerate(_trow):
+                    if _cell_content is None:
+                        continue  # 結合延長セル → ワードはここには属さない
+                    if (_cells_2d and _ri < len(_cells_2d)
+                            and _ci < len(_cells_2d[_ri])
+                            and _cells_2d[_ri][_ci] is not None):
+                        cb = _cells_2d[_ri][_ci]
+                        _table_cell_bboxes.append(
+                            (float(cb['x0']), float(cb['top']),
+                             float(cb['x1']), float(cb['bottom']))
+                        )
 
         def _in_table(w: dict) -> bool:
             wx = float(w.get('x0', 0))
             wy = float(w.get('top', 0))
+            # まずテーブルbbox内かチェック
+            in_any_table = False
             for _bbox in _table_bboxes:
                 if (_bbox[0] - _tol <= wx <= _bbox[2] + _tol and
                         _bbox[1] - _tol <= wy <= _bbox[3] + _tol):
+                    in_any_table = True
+                    break
+            if not in_any_table:
+                return False
+            # テーブルbbox内でも、有効セルのbboxに含まれているか確認
+            for cb in _table_cell_bboxes:
+                if (cb[0] - _tol <= wx <= cb[2] + _tol and
+                        cb[1] - _tol <= wy <= cb[3] + _tol):
                     return True
-            return False
+            return False  # テーブルbbox内だが有効セルに属さない → テーブル外扱い
 
         groups: dict = {}
         for w in page.get('words', []):
@@ -977,67 +1118,78 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
                 # 最低でも1行ずつ下にずれるよう保証する。
                 prev_row_c = row_c - 1
                 for _line in vis_lines:
-                    _line_content = _join_word_texts([_w.get('text', '') for _w in _line])
-                    _stripped = _line_content.strip()
-                    if not _stripped or (len(_stripped) == 1 and _stripped in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'):
-                        prev_row_c += 1
-                        continue
-                    # 先頭ワードのシフト済み _row を直接使用する
+                    # 水平ギャップで分割して2段表示を検出
+                    _h_groups = _split_by_horizontal_gap(_line)
                     _word_row = _line[0].get('_row', row_c)
                     _line_row_c = min(max_rows, max(prev_row_c + 1, _word_row))
-                    _pos = (_line_row_c, col_c)
-                    if _pos in seen_text:
-                        prev_row_c = _line_row_c
-                        continue
-                    seen_text.add(_pos)
-                    first = _line[0]
-                    _elem: dict = {
-                        'type': 'text',
-                        'content': _line_content,
-                        'row': _line_row_c,
-                        'col': col_c,
-                        'end_col': min(col_c + len(_line_content), max_cols),
-                    }
-                    if first.get('font_color') and first['font_color'] != '000000':
-                        _elem['font_color'] = first['font_color']
-                    if first.get('font_size'):
-                        _elem['font_size'] = first['font_size']
-                    _fn = _normalize_font_name(first.get('fontname', ''))
-                    if _fn:
-                        _elem['font_name'] = _fn
-                    elements.append(_elem)
+                    for _hg in _h_groups:
+                        _line_content = _join_word_texts([_w.get('text', '') for _w in _hg])
+                        _stripped = _line_content.strip()
+                        if not _stripped or (len(_stripped) == 1 and _stripped in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'):
+                            continue
+                        _hg_col = _hg[0].get('_col', col_c)
+                        _hg_col_c = min(_hg_col, max_cols)
+                        _pos = (_line_row_c, _hg_col_c)
+                        if _pos in seen_text:
+                            continue
+                        seen_text.add(_pos)
+                        first = _hg[0]
+                        last = _hg[-1]
+                        _hg_end_col = max(_hg_col_c + 1, min(max_cols, 1 + int(float(last.get('x1', last.get('x0', 0))) / grid_w)))
+                        _elem: dict = {
+                            'type': 'text',
+                            'content': _line_content,
+                            'row': _line_row_c,
+                            'col': _hg_col_c,
+                            'end_col': _hg_end_col,
+                        }
+                        if first.get('font_color') and first['font_color'] != '000000':
+                            _elem['font_color'] = first['font_color']
+                        if first.get('font_size'):
+                            _elem['font_size'] = first['font_size']
+                        _fn = _normalize_font_name(first.get('fontname', ''))
+                        if _fn:
+                            _elem['font_name'] = _fn
+                        elements.append(_elem)
                     prev_row_c = _line_row_c
                 continue  # vis_lines > 1 の場合はここで処理完了
 
-            content = _join_word_texts([w.get('text', '') for w in words])
-            stripped = content.strip()
-            if not stripped or (len(stripped) == 1 and stripped in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'):
-                continue
-            pos = (row_c, col_c)
-            if pos in seen_text:
-                continue
-            seen_text.add(pos)
-            first = words[0]
-            elem: dict = {
-                'type': 'text',
-                'content': content,
-                'row': row_c,
-                'col': col_c,
-                'end_col': min(col_c + len(content), max_cols),
-            }
-            if first.get('font_color') and first['font_color'] != '000000':
-                elem['font_color'] = first['font_color']
-            if first.get('font_size'):
-                elem['font_size'] = first['font_size']
-            font_name = _normalize_font_name(first.get('fontname', ''))
-            if font_name:
-                elem['font_name'] = font_name
-            if first.get('is_vertical'):
-                elem['is_vertical'] = True
-                if '_end_row' in first:
-                    elem['end_row'] = min(first['_end_row'], max_rows)
-                elem['end_col'] = min(col_c + 1, max_cols)
-            elements.append(elem)
+            # 単一視覚行でも水平ギャップ分割を適用
+            h_groups = _split_by_horizontal_gap(words)
+            for hg in h_groups:
+                content = _join_word_texts([w.get('text', '') for w in hg])
+                stripped = content.strip()
+                if not stripped or (len(stripped) == 1 and stripped in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'):
+                    continue
+                hg_col = hg[0].get('_col', col_c)
+                hg_col_c = min(hg_col, max_cols)
+                pos = (row_c, hg_col_c)
+                if pos in seen_text:
+                    continue
+                seen_text.add(pos)
+                first = hg[0]
+                last_w = hg[-1]
+                hg_end_col = max(hg_col_c + 1, min(max_cols, 1 + int(float(last_w.get('x1', last_w.get('x0', 0))) / grid_w)))
+                elem: dict = {
+                    'type': 'text',
+                    'content': content,
+                    'row': row_c,
+                    'col': hg_col_c,
+                    'end_col': hg_end_col,
+                }
+                if first.get('font_color') and first['font_color'] != '000000':
+                    elem['font_color'] = first['font_color']
+                if first.get('font_size'):
+                    elem['font_size'] = first['font_size']
+                font_name = _normalize_font_name(first.get('fontname', ''))
+                if font_name:
+                    elem['font_name'] = font_name
+                if first.get('is_vertical'):
+                    elem['is_vertical'] = True
+                    if '_end_row' in first:
+                        elem['end_row'] = min(first['_end_row'], max_rows)
+                    elem['end_col'] = min(hg_col_c + 1, max_cols)
+                elements.append(elem)
 
         # テーブル内テキストを 2D 配列から生成（merged cell / colspan 対応）
         for tbl_elem in _table_text_elements_from_2d(page, grid_params):
@@ -1125,11 +1277,9 @@ class SheetlingPipeline:
             _compute_grid_coords(page, grid_params['max_rows'], grid_params['max_cols'])
 
         # ---- [Sheetling-pre 移植ロジック] -----------------------------------------
-        # 1. 結合セルのマージ
-        for page in extracted_data['pages']:
-            page['table_border_rects'] = _merge_table_border_rects(page['table_border_rects'])
+        # 結合セルのマージは不要（有効セルベースで生成済み）
 
-        # 2. 行シフト補正（上部余白の除去）
+        # 行シフト補正（上部余白の除去）
         for page in extracted_data['pages']:
             all_rows = (
                 [w['_row'] for w in page['words'] if '_row' in w]
@@ -1183,7 +1333,7 @@ class SheetlingPipeline:
 
         # レイアウトJSON生成 & 欠落テキスト補完
         layout_json_str = _auto_generate_layout(extracted_data, grid_params)
-        filled_json_str = _fill_missing_text(layout_json_str, extracted_data)
+        filled_json_str = _fill_missing_text(layout_json_str, extracted_data, grid_params)
         layout_data = json.loads(filled_json_str)
 
         # table_data / table_row_y_positions / table_cells は layout 生成後不要なため削除
