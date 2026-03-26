@@ -771,13 +771,22 @@ def _table_text_elements_from_2d(page: dict, grid_params: dict) -> list:
                                     continue
                                 hg_col = max(1, to_col(float(hg[0].get('x0', 0))) - col_shift)
                                 hg_end_col = max(hg_col + 1, min(max_cols, to_col(float(hg[-1].get('x1', hg[-1].get('x0', 0)))) - col_shift))
-                                elements.append({
+                                first_w = hg[0]
+                                te: dict = {
                                     'type': 'text',
                                     'content': line_text,
                                     'row': min(max_rows, vl_row),
                                     'col': hg_col,
                                     'end_col': hg_end_col,
-                                })
+                                }
+                                if first_w.get('font_color') and first_w['font_color'] != '000000':
+                                    te['font_color'] = first_w['font_color']
+                                if first_w.get('font_size'):
+                                    te['font_size'] = first_w['font_size']
+                                _fn = _normalize_font_name(first_w.get('fontname', ''))
+                                if _fn:
+                                    te['font_name'] = _fn
+                                elements.append(te)
                     continue  # word ベース配置完了
 
                 # フォールバック: words が見つからない場合は 2D テキストを分散配置
