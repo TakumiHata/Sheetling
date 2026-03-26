@@ -8,12 +8,12 @@ logger = get_logger(__name__)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sheetling: PDF to Excel conversion (High Precision Auto)")
+    parser = argparse.ArgumentParser(description="Sheetling: PDF to Excel conversion")
     parser.add_argument(
         "command",
         choices=["auto", "correct"],
         help=(
-            "auto: PDF から Excel を自動生成 (高精度 Pre版ロジック採用), "
+            "auto: PDF から Excel を自動生成, "
             "correct: ビジョンLLMの修正指示を適用して Excel を再生成"
         ),
     )
@@ -21,12 +21,6 @@ def main():
         "--pdf",
         type=str,
         help="PDF名またはパス。省略時は data/in 内の全PDFを処理、correct では出力フォルダ特定に使用。",
-    )
-    parser.add_argument(
-        "--grid-size",
-        type=str,
-        default="small",
-        help="Grid size (デフォルト: small)。Pre版ロジックでは small が基準となります。",
     )
     args = parser.parse_args()
 
@@ -122,7 +116,6 @@ def main():
 
             for pdf_name, grid_size in pairs:
                 layout_json_name = f"{pdf_name}_{grid_size}_layout.json"
-                grid_params_name = f"{pdf_name}_{grid_size}_grid_params.json"
 
                 try:
                     # 修正ファイルの収集（新構造: prompts/{grid_size}/page_N/）
@@ -142,7 +135,6 @@ def main():
                             pdf_name, corrections_json,
                             specific_out_dir=str(out_dir),
                             layout_json_name=layout_json_name,
-                            grid_params_name=grid_params_name
                         )
                         pipeline.rerender_after_corrections(
                             pdf_name, grid_size=grid_size,
