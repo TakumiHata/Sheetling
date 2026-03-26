@@ -104,11 +104,16 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                     ))
                     table_col_x_positions.append(col_xs)
                     table_row_y_positions.append(row_ys)
-                    table_cells.append([
-                        {'x0': float(c[0]), 'top': float(c[1]),
-                         'x1': float(c[2]), 'bottom': float(c[3])}
-                        for c in valid_cells
-                    ])
+                    cells_2d = [
+                        [
+                            {'x0': float(c[0]), 'top': float(c[1]),
+                             'x1': float(c[2]), 'bottom': float(c[3])}
+                            if c is not None else None
+                            for c in row.cells
+                        ]
+                        for row in table.rows
+                    ]
+                    table_cells.append(cells_2d)
                 except Exception:
                     table_col_x_positions.append([])
                     table_row_y_positions.append([])
@@ -306,7 +311,8 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                 "table_col_x_positions": table_col_x_positions,
                 "table_row_y_positions": table_row_y_positions,
                 "table_cells": table_cells,
-                "table_data": cleaned_tables,
+                "table_data": cleaned_tables,     # \n をスペース置換済み（後方互換）
+                "table_data_raw": table_data,     # \n を保持（複数行検出用）
                 "rects": rects,
                 "h_edges": h_edges,
                 "v_edges": v_edges,
