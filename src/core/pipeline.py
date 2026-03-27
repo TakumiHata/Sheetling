@@ -512,10 +512,15 @@ def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) ->
     logger.info(f"[render_layout] Excel生成完了: {output_path} ({total_pages} ページ)")
 
 
-def _generate_border_preview(page_layout: dict, grid_params: dict, output_path: str, pdf_image_path: str | None = None) -> None:
+def _generate_border_preview(page_layout: dict, grid_params: dict, output_path: str,
+                              pdf_image_path: str | None = None,
+                              row_shift: int = 0, col_shift: int = 0) -> None:
     """
     layout の border_rect 要素を PIL キャンバスに描画し、罫線プレビュー画像を生成する。
     pdf_image_path が指定された場合、その画像と同じ解像度・アスペクト比で生成する。
+
+    row_shift / col_shift: auto_layout で除去された余白のセル数。
+    プレビュー描画時にこの分だけオフセットを加え、PDF画像と同じ位置に罫線を配置する。
     """
     from PIL import Image, ImageDraw, ImageFont
 
@@ -550,26 +555,48 @@ def _generate_border_preview(page_layout: dict, grid_params: dict, output_path: 
     for elem in page_layout.get('elements', []):
         if elem.get('type') != 'border_rect':
             continue
-        r1 = cy(elem['row'] - 1)
-        r2 = cy(elem['end_row'] - 1)
-        c1 = cx(elem['col'] - 1)
-        c2 = cx(elem['end_col'] - 1)
+        # シフト量を加算してPDF画像と同じ位置に描画
+        r1 = cy(elem['row'] - 1 + row_shift)
+        r2 = cy(elem['end_row'] - 1 + row_shift)
+        c1 = cx(elem['col'] - 1 + col_shift)
+        c2 = cx(elem['end_col'] - 1 + col_shift)
         borders = elem.get('borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
         if borders.get('top',    True): draw.line([(c1, r1), (c2, r1)], fill='black', width=border_width)
         if borders.get('bottom', True): draw.line([(c1, r2), (c2, r2)], fill='black', width=border_width)
         if borders.get('left',   True): draw.line([(c1, r1), (c1, r2)], fill='black', width=border_width)
         if borders.get('right',  True): draw.line([(c2, r1), (c2, r2)], fill='black', width=border_width)
 
+    # コンテンツの有効範囲を計算し、範囲外をグレーアウトする
+    border_elems = [e for e in page_layout.get('elements', []) if e.get('type') == 'border_rect']
+    if border_elems:
+        content_max_col = max(e.get('end_col', e['col']) for e in border_elems)
+        content_max_row = max(e.get('end_row', e['row']) for e in border_elems)
+        grey_x = cx(content_max_col - 1 + col_shift)
+        grey_y = cy(content_max_row - 1 + row_shift)
+        grey_fill = (210, 210, 210)
+        # コンテンツ右端より右をグレーアウト
+        if grey_x < img_w:
+            draw.rectangle([(grey_x, 0), (img_w, img_h)], fill=grey_fill)
+        # コンテンツ下端より下をグレーアウト
+        if grey_y < img_h:
+            right_limit = min(grey_x, img_w)
+            draw.rectangle([(0, grey_y), (right_limit, img_h)], fill=grey_fill)
+
     try:
         font = ImageFont.load_default(size=max(8, int(cell_h * 0.8)))
     except TypeError:
         font = ImageFont.load_default()
     label_color = (200, 0, 0)
-    # 5セルごとにセル中央（1-based）にラベルを表示。ラベル番号 = JSON の col/row 値に直接対応。
+    # 5セルごとにセル中央にラベルを表示。ラベル番号 = JSON の col/row 値（シフト後）に直接対応。
+    # 描画位置はシフト量分ずらして PDF 画像と同じ位置に配置する。
     for c in range(1, max_c + 1, 5):
-        draw.text((cx(c - 1) + cell_w / 2, 1), str(c), fill=label_color, font=font)
+        lx = cx(c - 1 + col_shift) + cell_w / 2
+        if 0 <= lx < img_w:
+            draw.text((lx, 1), str(c), fill=label_color, font=font)
     for r in range(1, max_r + 1, 5):
-        draw.text((1, cy(r - 1) + cell_h / 2), str(r), fill=label_color, font=font)
+        ly = cy(r - 1 + row_shift) + cell_h / 2
+        if 0 <= ly < img_h:
+            draw.text((1, ly), str(r), fill=label_color, font=font)
 
     img.save(output_path)
 
@@ -1345,6 +1372,15 @@ class SheetlingPipeline:
         filled_json_str = _fill_missing_text(layout_json_str, extracted_data, grid_params)
         layout_data = json.loads(filled_json_str)
 
+        # プレビュー生成用にページごとのシフト量を退避
+        _page_shifts = {}
+        for page in extracted_data['pages']:
+            _pn = page.get('page_number', 1)
+            _page_shifts[_pn] = {
+                'row_shift': page.get('_row_shift', 0),
+                'col_shift': page.get('_col_shift', 0),
+            }
+
         # table_data / table_row_y_positions / table_cells は layout 生成後不要なため削除
         for page in extracted_data['pages']:
             page.pop('table_data', None)
@@ -1394,14 +1430,23 @@ class SheetlingPipeline:
 
             _pdf_img = _pdir / f"{pdf_name}_page{_pn}.png"
             _preview  = _pdir / f"{pdf_name}_excel_page{_pn}.png"
+            _shifts = _page_shifts.get(_pn, {'row_shift': 0, 'col_shift': 0})
             try:
                 _generate_border_preview(_page_layout, grid_params, str(_preview),
-                                         pdf_image_path=str(_pdf_img))
+                                         pdf_image_path=str(_pdf_img),
+                                         row_shift=_shifts['row_shift'],
+                                         col_shift=_shifts['col_shift'])
             except Exception as _e:
                 logger.warning(f"  ページ {_pn}: 罫線プレビュー生成に失敗しました: {_e}")
 
             _gp_for_prompt = dict(grid_params)
             _gp_for_prompt.setdefault('position_tolerance_cells', '1〜2')
+            # コンテンツの有効範囲を計算（AIが範囲外の座標を指定しないよう制約する）
+            _elems = _page_layout.get('elements', [])
+            _all_end_rows = [e.get('end_row', e.get('row', 1)) for e in _elems if e.get('type') == 'border_rect']
+            _all_end_cols = [e.get('end_col', e.get('col', 1)) for e in _elems if e.get('type') == 'border_rect']
+            _gp_for_prompt['content_max_row'] = max(_all_end_rows) if _all_end_rows else grid_params['max_rows']
+            _gp_for_prompt['content_max_col'] = max(_all_end_cols) if _all_end_cols else grid_params['max_cols']
             _prompt_text = VISUAL_REVIEW_PROMPT.format(page_number=_pn, **_gp_for_prompt)
             (_pdir / f"{pdf_name}_visual_review_page{_pn}.txt").write_text(_prompt_text, encoding="utf-8")
 
@@ -1464,6 +1509,19 @@ class SheetlingPipeline:
         # ページ番号 → elements のマップを構築
         page_map: dict = {p["page_number"]: p["elements"] for p in layout}
 
+        # コンテンツの有効範囲を計算（範囲外の corrections をクランプする）
+        content_bounds: dict = {}
+        for p in layout:
+            pn = p["page_number"]
+            border_elems = [e for e in p["elements"] if e.get("type") == "border_rect"]
+            if border_elems:
+                content_bounds[pn] = {
+                    "max_row": max(e.get("end_row", e["row"]) for e in border_elems),
+                    "max_col": max(e.get("end_col", e["col"]) for e in border_elems),
+                }
+            else:
+                content_bounds[pn] = {"max_row": 9999, "max_col": 9999}
+
         applied = 0
         for c in corrections:
             action  = c.get("action")
@@ -1494,6 +1552,10 @@ class SheetlingPipeline:
             elif action == "add_border":
                 _end_row = c.get("end_row") or c.get("row_end", c["row"])
                 _end_col = c.get("end_col") or c.get("col_end", c["col"])
+                # コンテンツ範囲外の座標をクランプ
+                bounds = content_bounds.get(page_no, {})
+                _end_row = min(_end_row, bounds.get("max_row", _end_row))
+                _end_col = min(_end_col, bounds.get("max_col", _end_col))
                 elements.append({
                     "type": "border_rect",
                     "row": c["row"], "end_row": _end_row,
@@ -1503,7 +1565,9 @@ class SheetlingPipeline:
                 applied += 1
 
             elif action == "remove_border":
-                # 指定範囲と重複する border_rect をすべて削除（完全一致ではなく重複判定）
+                # 指定範囲に完全に包含される border_rect のみ削除する。
+                # 重複（overlap）判定だと外枠など大きなボーダーが巻き添えで
+                # 削除されてしまうため、包含（containment）判定を使用する。
                 before = len(elements)
                 _r  = c["row"]
                 _er = c.get("end_row") or c.get("row_end", _r)
@@ -1512,8 +1576,8 @@ class SheetlingPipeline:
                 elements[:] = [
                     e for e in elements
                     if not (e.get("type") == "border_rect"
-                            and e["row"] <= _er and e["end_row"] >= _r
-                            and e["col"] <= _ec and e["end_col"] >= _co)
+                            and e["row"] >= _r and e["end_row"] <= _er
+                            and e["col"] >= _co and e["end_col"] <= _ec)
                 ]
                 applied += before - len(elements)
 
