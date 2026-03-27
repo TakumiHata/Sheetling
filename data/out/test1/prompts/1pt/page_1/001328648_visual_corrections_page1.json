@@ -1,1 +1,246 @@
-{"corrections": []}
+{
+    "corrections": [
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 6,
+            "end_row": 15,
+            "col": 17,
+            "end_col": 17,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 8,
+            "end_row": 9,
+            "col": 23,
+            "end_col": 23,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 12,
+            "end_row": 15,
+            "col": 26,
+            "end_col": 26,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 12,
+            "end_row": 15,
+            "col": 32,
+            "end_col": 32,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 12,
+            "end_row": 15,
+            "col": 38,
+            "end_col": 38,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 12,
+            "end_row": 15,
+            "col": 44,
+            "end_col": 44,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 12,
+            "end_row": 15,
+            "col": 50,
+            "end_col": 50,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 16,
+            "end_row": 18,
+            "col": 17,
+            "end_col": 17,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 19,
+            "end_row": 20,
+            "col": 17,
+            "end_col": 17,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 19,
+            "end_row": 20,
+            "col": 24,
+            "end_col": 24,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 20,
+            "end_row": 20,
+            "col": 25,
+            "end_col": 55,
+            "borders": {
+                "bottom": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 21,
+            "end_row": 22,
+            "col": 17,
+            "end_col": 17,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 21,
+            "end_row": 22,
+            "col": 24,
+            "end_col": 24,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 30,
+            "end_row": 32,
+            "col": 23,
+            "end_col": 23,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 30,
+            "end_row": 32,
+            "col": 30,
+            "end_col": 30,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 30,
+            "end_row": 32,
+            "col": 51,
+            "end_col": 51,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 39,
+            "end_row": 41,
+            "col": 44,
+            "end_col": 44,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 39,
+            "end_row": 41,
+            "col": 46,
+            "end_col": 46,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 39,
+            "end_row": 41,
+            "col": 48,
+            "end_col": 48,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 39,
+            "end_row": 41,
+            "col": 50,
+            "end_col": 50,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 39,
+            "end_row": 41,
+            "col": 52,
+            "end_col": 52,
+            "borders": {
+                "right": true
+            }
+        },
+        {
+            "action": "add_border",
+            "page": 1,
+            "row": 39,
+            "end_row": 41,
+            "col": 54,
+            "end_col": 54,
+            "borders": {
+                "right": true
+            }
+        }
+    ]
+}

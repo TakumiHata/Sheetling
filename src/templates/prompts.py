@@ -97,6 +97,12 @@ VISUAL_REVIEW_PROMPT = """\
 プレビューに罫線があり、PDFにも類似した線がある場合は、削除を提案しないでください。
 明らかに余分な罫線（PDFのどこにも対応する線がない）にのみ使用してください。
 
+## 座標の範囲制約（厳守）
+
+コンテンツが配置されている有効範囲は **row: 1〜{content_max_row}、col: 1〜{content_max_col}** です。
+この範囲外の座標を corrections に指定しないでください。
+罫線の `end_row` は {content_max_row} 以下、`end_col` は {content_max_col} 以下としてください。
+
 ## 出力形式
 
 差異がない、または軽微な場合は `{{"corrections": []}}` のみ出力してください。
