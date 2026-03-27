@@ -1242,17 +1242,21 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
 def _setup_grid_params(first_page: dict, grid_size: str) -> dict:
     """
     グリッドパラメータを設定する。
-    A4固定の前提で GRID_SIZES の値をそのまま使用する（動的スケーリング不要）。
-    横向き(landscape)の場合は max_cols_landscape / max_rows_landscape を使用する。
+    用紙サイズ (A4/A3) と向き (縦/横) を検出し、対応する GRID_SIZES 定数を使用する。
     """
-    ref = GRID_SIZES.get(grid_size, GRID_SIZES["1pt"])
+    # 用紙サイズ・向き検出
+    page_w = float(first_page['width'])
+    page_h = float(first_page['height'])
+    max_dim_pt = max(page_w, page_h)
+    is_a3 = max_dim_pt > 1000
+    is_landscape = page_w > page_h
+
+    # A3 の場合は "{grid_size}_a3" キーを使用
+    ref_key = f"{grid_size}_a3" if is_a3 else grid_size
+    ref = GRID_SIZES.get(ref_key, GRID_SIZES.get(grid_size, GRID_SIZES["1pt"]))
     grid_params = dict(ref)
     grid_params['grid_size'] = grid_size
-
-    # 用紙サイズ・向き検出
-    max_dim_pt = max(first_page['width'], first_page['height'])
-    grid_params['paper_size'] = 8 if max_dim_pt > 1000 else 9  # 8=A3, 9=A4
-    is_landscape = first_page['width'] > first_page['height']
+    grid_params['paper_size'] = 8 if is_a3 else 9  # 8=A3, 9=A4
     grid_params['orientation'] = 'landscape' if is_landscape else 'portrait'
 
     # 横向きの場合は専用の max_cols / max_rows を上書き
@@ -1261,7 +1265,8 @@ def _setup_grid_params(first_page: dict, grid_size: str) -> dict:
         grid_params['max_rows'] = ref['max_rows_landscape']
 
     logger.debug(
-        f"[grid] {grid_size} ({grid_params['orientation']}): "
+        f"[grid] {grid_size} ({grid_params['orientation']}, "
+        f"{'A3' if is_a3 else 'A4'}): "
         f"max_cols={grid_params['max_cols']}, max_rows={grid_params['max_rows']}, "
         f"excel_col_width={grid_params['excel_col_width']}"
     )
