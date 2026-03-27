@@ -44,10 +44,10 @@ pip install -r requirements.txt
 
 ```bash
 # 全PDF一括処理
-python -m src.main auto
+docker compose exec app python -m src.main auto
 
 # 特定PDFのみ
-python -m src.main auto --pdf data/in/sample.pdf
+docker compose exec app python -m src.main auto --pdf data/in/test1/001328648.pdf
 ```
 
 | 処理 | 内容 |
@@ -57,12 +57,12 @@ python -m src.main auto --pdf data/in/sample.pdf
 | 座標検証・補正 | 整合性チェック・重複除去・クランプをスクリプトで確実に適用 |
 | テキスト補完 | 抽出データと照合して欠落テキストを補完 |
 | Excel出力 | `1pt`・`2pt` の2サイズをそれぞれ直接描画して出力 |
-| 視覚的検証プロンプト生成 | サイズ・ページごとに `_visual_review_page{N}.txt` を出力 |
+| 視覚的検証素材生成 | PDFページ画像・罫線プレビュー画像・検証プロンプトをページごとに出力 |
 
 実行後、`data/out/<pdf_name>/` に以下が生成されます：
 
 ```text
-data/out/<pdf_name>/
+data/out/<relative_path>/
 ├── <pdf_name>_extracted.json              # PDFから抽出した生データ（グリッド座標付き）
 ├── <pdf_name>_1pt_layout.json             # レイアウトJSON（1pt サイズ）
 ├── <pdf_name>_2pt_layout.json             # レイアウトJSON（2pt サイズ）
@@ -74,13 +74,16 @@ data/out/<pdf_name>/
     ├── 1pt/
     │   └── page_1/
     │       ├── <pdf_name>_page1.png                         # PDFページ画像
-    │       ├── <pdf_name>_excel_page1.png                   # 罫線プレビュー画像
+    │       ├── <pdf_name>_excel_page1.png                   # 罫線プレビュー画像（コンテンツ範囲外はグレー表示）
     │       ├── <pdf_name>_visual_review_page1.txt           # 視覚的検証プロンプト
     │       └── <pdf_name>_visual_corrections_page1.json     # LLM修正指示（ユーザーが編集）
     └── 2pt/
         └── page_1/
             └── ...
 ```
+
+> [!NOTE]
+> 出力先ディレクトリは `data/in/` からの相対パスで決まります。例: `data/in/test1/sample.pdf` → `data/out/test1/`
 
 ---
 
@@ -97,7 +100,7 @@ PDFページ画像・罫線プレビュー画像はどちらも `auto` 実行時
    - `prompts/{grid_size}/page_{N}/<pdf_name>_visual_review_page{N}.txt` の内容（プロンプト）
 2. LLMが出力した修正指示JSONを以下のファイルに上書き保存する：
    ```
-   data/out/<pdf_name>/prompts/<grid_size>/page_{N}/<pdf_name>_visual_corrections_page{N}.json
+   data/out/<relative_path>/prompts/<grid_size>/page_{N}/<pdf_name>_visual_corrections_page{N}.json
    ```
    ※ このファイルは `auto` 実行時に空テンプレートとして自動生成済み
 3. 全ページ分完了したら `correct` コマンドで修正を適用する（次節）
@@ -108,20 +111,25 @@ PDFページ画像・罫線プレビュー画像はどちらも `auto` 実行時
 
 > [!NOTE]
 > スクリプトが計算した精密な座標にLLMの視覚的な判断を組み合わせることで、罫線の再現精度を向上できます。
+> プレビュー画像ではコンテンツ範囲外がグレー表示され、プロンプトにも座標の範囲制約が含まれるため、AIの座標誤認を防止しています。
 
 ---
 
 ### correct：視覚的検証の修正を適用
 
 ```bash
-# 特定PDFのみ
-python -m src.main correct --pdf sample
+# 特定PDFを指定して修正適用（推奨）
+docker compose exec app python -m src.main correct --pdf data/in/test1/001328648.pdf
 
 # data/out/ 以下の全 *_visual_corrections*.json を一括処理
-python -m src.main correct
+docker compose exec app python -m src.main correct
 ```
 
 `_visual_corrections_page{N}.json` の修正指示を `_layout.json` に適用し、Excel を再生成します。
+
+**安全機構：**
+- `add_border` の座標はコンテンツ範囲内に自動クランプされます（範囲外のはみ出しを防止）
+- `remove_border` は指定範囲に完全に包含されるボーダーのみ削除します（外枠の巻き添え削除を防止）
 
 **`_visual_corrections.json` の形式：**
 
@@ -140,7 +148,7 @@ python -m src.main correct
 ## CLIリファレンス
 
 ```
-python -m src.main <command> [options]
+docker compose exec app python -m src.main <command> [options]
 ```
 
 | command | 説明 |
@@ -154,16 +162,37 @@ python -m src.main <command> [options]
 
 ---
 
+## 対応用紙サイズ
+
+PDF の寸法から用紙サイズ（A4/A3）と向き（縦/横）を自動検出します。
+
+| 用紙 | 寸法 (pt) | 判定条件 |
+|------|----------|---------|
+| A4 | 595 × 842 | 長辺 ≤ 1000pt |
+| A3 | 842 × 1190 | 長辺 > 1000pt |
+
+---
+
 ## グリッドサイズ仕様
 
 `auto` コマンドは `1pt`・`2pt` の2サイズを常に同時出力します。用途に応じて出力ファイルを選択してください。
 
-| グリッドサイズ | 列幅 (mm) | 行高 (mm) | 最大列数 (A4縦) | 最大行数 (A4縦) | デフォルトフォント |
+### A4
+
+| グリッド | 列幅 (mm) | 行高 (mm) | 縦 (cols × rows) | 横 (cols × rows) | フォント |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`1pt`** | **3.48 mm** | **6.44 mm** | **57 列** | **42 行** | 7pt (MS Gothic) |
-| **`2pt`** | **6.18 mm** | **6.44 mm** | **34 列** | **42 行** | 6pt (MS Gothic) |
+| **1pt** | 3.48 | 6.44 | 62 × 42 | 96 × 30 | 7pt MS Gothic |
+| **2pt** | 6.18 | 6.44 | 37 × 42 | 58 × 30 | 6pt MS Gothic |
+
+### A3
+
+| グリッド | 列幅 (mm) | 行高 (mm) | 縦 (cols × rows) | 横 (cols × rows) | フォント |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1pt** | 3.48 | 6.44 | 92 × 61 | 128 × 44 | 7pt MS Gothic |
+| **2pt** | 6.18 | 6.44 | 57 × 61 | 79 × 44 | 6pt MS Gothic |
 
 > [!NOTE]
+> セルサイズは A4/A3 で同一です。用紙が大きい分だけ列数・行数が増えます。
 > `1pt` は高密度（細かいグリッド）、`2pt` は中密度（やや広いグリッド）です。Excel の列幅はデスクトップ Excel (MDW=8) での表示値に合わせて調整されています。
 
 ---
@@ -179,7 +208,7 @@ Sheetling/
 │   ├── parser/
 │   │   └── pdf_extractor.py # PDFデータ抽出 (pdfplumber)
 │   ├── templates/
-│   │   └── prompts.py       # コード生成テンプレート・視覚的検証プロンプト・グリッドサイズ設定
+│   │   └── prompts.py       # 視覚的検証プロンプト・グリッドサイズ設定（A4/A3）
 │   └── utils/
 │       └── logger.py        # ログ出力管理
 ├── data/
@@ -198,12 +227,7 @@ Sheetling/
 |-----------|------|
 | `pdfplumber` | PDF内のテキスト、表、罫線の詳細な座標情報を抽出 |
 | `openpyxl` | Excelファイルの生成、セルのスタイリング、印刷範囲設定 |
-
----
-
-## エラー発生時
-
-`auto` / `correct` コマンドで Excel 生成に失敗した場合、`prompts/<pdf_name>_prompt_error_fix.txt` にエラー修正用プロンプトが出力されます。その内容をAIチャットに投入してコードを修正してください。
+| `Pillow` | 罫線プレビュー画像の生成（コンテンツ範囲外のグレーアウト含む） |
 
 ---
 
@@ -219,16 +243,8 @@ Sheetling/
 - **border_rect 生成**：`table_border_rects` / `rects` のフィールドをそのまま変換
 - **text 生成**：`words` を `(_row, _col)` でグループ化するだけ
 - **座標検証・補正**：整合性チェック・重複除去・クランプはすべて決定論的処理
-- **Excel直接描画**：`_render_layout_to_xlsx` で openpyxl に直接書き込み（`_gen.py` 経由不要）
+- **Excel直接描画**：`_render_layout_to_xlsx` で openpyxl に直接書き込み
 
 #### ビジョンLLMが担う処理（`correct` コマンド、任意）
 - **視覚的な差分検出**：スクリプトが計算した精密な座標 × LLMの目視確認で再現度を向上
 - **意味的な判断が必要なケース**：複雑なレイアウトでスクリプトが見落とした欠落要素の検出
-
-### TODO / 改善案
-
-#### 複数ページ・データ量大への対応
-
-`auto` コマンドはページ全体を一括処理するため、ビジョン検証プロンプトはページごとに分割して出力されます。PDFのページ数が多い場合は、代表ページのみを検証することで作業量を削減できます。
-
-**将来対応案：** `auto` コマンドに `--pages 1-3` のようなオプションを追加して、処理対象ページを絞り込む。
