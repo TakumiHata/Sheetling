@@ -6,6 +6,9 @@ Sheetling 用の LLM プロンプト定義集。
 """
 
 GRID_SIZES = {
+    # =========================================================================
+    # A4 (595pt × 842pt)
+    # =========================================================================
     # Sheetling "1pt": A4縦 62列×42行 / A4横 96列×30行（列幅1.00表示）
     # 縦横のグリッド数は A4 ポイント寸法とセル幅から算出後に余白列を加算:
     #   縦: 595pt÷(595/57)pt ≈ 57列 + 5列 = 62列, 842pt÷(842/42)pt ≈ 42行
@@ -51,6 +54,55 @@ GRID_SIZES = {
         "default_font_size": 6,
         "font_name": "MS Gothic",
         "position_tolerance_cells": "1",  # 4mm/セルと粗いため厳しく
+    },
+    # =========================================================================
+    # A3 (842pt × 1190pt) — セルサイズは A4 と同一、用紙が大きい分だけ列数・行数が増える
+    # =========================================================================
+    # A3 1pt: A3縦 92列×61行 / A3横 128列×44行（列幅1.00表示）
+    # セルサイズは A4 "1pt" と同一 (≈9.60pt × 20.05pt):
+    #   縦: 842pt÷9.60pt ≈ 87列 + 5列 = 92列,  1190pt÷20.05pt ≈ 59行 + 2行 = 61行
+    #   横: 1190pt÷9.60pt ≈ 123列 + 5列 = 128列, 842pt÷20.05pt ≈ 42行 + 2行 = 44行
+    "1pt_a3": {
+        "col_width_mm": "3.48",
+        "row_height_mm": "6.44",
+        # A3縦
+        "max_cols":            92,   # 算出値87 + 余白5列
+        "max_rows":            61,   # 算出値59 + 余白2行
+        # A3横
+        "max_cols_landscape": 128,   # 算出値123 + 余白5列
+        "max_rows_landscape":  44,   # 算出値42 + 余白2行
+        "excel_col_width": 1.625,
+        "excel_row_height": 18.25,
+        "margin_left": 0.43,
+        "margin_right": 0.43,
+        "margin_top": 0.41,
+        "margin_bottom": 0.41,
+        "default_font_size": 7,
+        "font_name": "MS Gothic",
+        "position_tolerance_cells": "1〜2",
+    },
+    # A3 2pt: A3縦 57列×61行 / A3横 79列×44行（列幅2.00表示）
+    # セルサイズは A4 "2pt" と同一 (≈16.08pt × 20.05pt):
+    #   縦: 842pt÷16.08pt ≈ 52列 + 5列 = 57列,  1190pt÷20.05pt ≈ 59行 + 2行 = 61行
+    #   横: 1190pt÷16.08pt ≈ 74列 + 5列 = 79列,  842pt÷20.05pt ≈ 42行 + 2行 = 44行
+    "2pt_a3": {
+        "col_width_mm": "6.18",
+        "row_height_mm": "6.44",
+        # A3縦
+        "max_cols":            57,   # 算出値52 + 余白5列
+        "max_rows":            61,   # 算出値59 + 余白2行
+        # A3横
+        "max_cols_landscape":  79,   # 算出値74 + 余白5列
+        "max_rows_landscape":  44,   # 算出値42 + 余白2行
+        "excel_col_width": 2.625,
+        "excel_row_height": 18.25,
+        "margin_left": 0.43,
+        "margin_right": 0.43,
+        "margin_top": 0.41,
+        "margin_bottom": 0.41,
+        "default_font_size": 6,
+        "font_name": "MS Gothic",
+        "position_tolerance_cells": "1",
     },
 }
 
