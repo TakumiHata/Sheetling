@@ -450,13 +450,13 @@ def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) ->
 
 def _generate_border_preview(page_layout: dict, grid_params: dict, output_path: str,
                               pdf_image_path: str | None = None,
-                              row_shift: int = 0, col_shift: int = 0) -> None:
+                              content_bounds: dict | None = None) -> None:
     """
     layout の border_rect 要素を PIL キャンバスに描画し、罫線プレビュー画像を生成する。
     pdf_image_path が指定された場合、その画像と同じ解像度・アスペクト比で生成する。
 
-    row_shift / col_shift: auto_layout で除去された余白のセル数。
-    プレビュー描画時にこの分だけオフセットを加え、PDF画像と同じ位置に罫線を配置する。
+    content_bounds: コンテンツ境界情報。PDF画像上の正しい位置に罫線を配置するために使用。
+      {min_x, min_y, grid_w, grid_h, page_width, page_height}
     """
     from PIL import Image, ImageDraw, ImageFont
 
@@ -466,36 +466,57 @@ def _generate_border_preview(page_layout: dict, grid_params: dict, output_path: 
     if pdf_image_path and Path(pdf_image_path).exists():
         with Image.open(pdf_image_path) as ref:
             img_w, img_h = ref.size
-        cell_w = img_w / max_c
-        cell_h = img_h / max_r
     else:
-        cell_w = 20.0
-        cell_h = 14.0
-        img_w = int(cell_w * max_c) + 1
-        img_h = int(cell_h * max_r) + 1
+        img_w = int(20.0 * max_c) + 1
+        img_h = int(14.0 * max_r) + 1
 
     img = Image.new('RGB', (img_w, img_h), 'white')
     draw = ImageDraw.Draw(img)
 
-    def cx(col: float) -> int: return int(col * cell_w)
-    def cy(row: float) -> int: return int(row * cell_h)
+    # コンテンツ境界ベースの描画座標計算
+    if content_bounds:
+        min_x = content_bounds.get('min_x', 0.0)
+        min_y = content_bounds.get('min_y', 0.0)
+        c_grid_w = content_bounds.get('grid_w', 1.0)
+        c_grid_h = content_bounds.get('grid_h', 1.0)
+        page_w = content_bounds.get('page_width', 1.0)
+        page_h = content_bounds.get('page_height', 1.0)
+        # PDF座標→画像ピクセルの変換係数
+        px_per_pt_x = img_w / page_w
+        px_per_pt_y = img_h / page_h
+        # コンテンツ開始位置（ピクセル）
+        offset_x = min_x * px_per_pt_x
+        offset_y = min_y * px_per_pt_y
+        # 1セルのピクセルサイズ
+        cell_w = c_grid_w * px_per_pt_x
+        cell_h = c_grid_h * px_per_pt_y
+    else:
+        offset_x = 0.0
+        offset_y = 0.0
+        cell_w = img_w / max_c
+        cell_h = img_h / max_r
 
+    def cx(col: float) -> int: return int(offset_x + col * cell_w)
+    def cy(row: float) -> int: return int(offset_y + row * cell_h)
+
+    # グリッド線（コンテンツ範囲内のみ描画）
     for c in range(max_c + 1):
         x = cx(c)
-        draw.line([(x, 0), (x, img_h)], fill='#E0E0E0', width=1)
+        if 0 <= x < img_w:
+            draw.line([(x, 0), (x, img_h)], fill='#E0E0E0', width=1)
     for r in range(max_r + 1):
         y = cy(r)
-        draw.line([(0, y), (img_w, y)], fill='#E0E0E0', width=1)
+        if 0 <= y < img_h:
+            draw.line([(0, y), (img_w, y)], fill='#E0E0E0', width=1)
 
     border_width = max(2, int(min(cell_w, cell_h) / 7))
     for elem in page_layout.get('elements', []):
         if elem.get('type') != 'border_rect':
             continue
-        # シフト量を加算してPDF画像と同じ位置に描画
-        r1 = cy(elem['row'] - 1 + row_shift)
-        r2 = cy(elem['end_row'] - 1 + row_shift)
-        c1 = cx(elem['col'] - 1 + col_shift)
-        c2 = cx(elem['end_col'] - 1 + col_shift)
+        r1 = cy(elem['row'] - 1)
+        r2 = cy(elem['end_row'] - 1)
+        c1 = cx(elem['col'] - 1)
+        c2 = cx(elem['end_col'] - 1)
         borders = elem.get('borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
         if borders.get('top',    True): draw.line([(c1, r1), (c2, r1)], fill='black', width=border_width)
         if borders.get('bottom', True): draw.line([(c1, r2), (c2, r2)], fill='black', width=border_width)
@@ -507,13 +528,11 @@ def _generate_border_preview(page_layout: dict, grid_params: dict, output_path: 
     if border_elems:
         content_max_col = max(e.get('end_col', e['col']) for e in border_elems)
         content_max_row = max(e.get('end_row', e['row']) for e in border_elems)
-        grey_x = cx(content_max_col - 1 + col_shift)
-        grey_y = cy(content_max_row - 1 + row_shift)
+        grey_x = cx(content_max_col - 1)
+        grey_y = cy(content_max_row - 1)
         grey_fill = (210, 210, 210)
-        # コンテンツ右端より右をグレーアウト
         if grey_x < img_w:
             draw.rectangle([(grey_x, 0), (img_w, img_h)], fill=grey_fill)
-        # コンテンツ下端より下をグレーアウト
         if grey_y < img_h:
             right_limit = min(grey_x, img_w)
             draw.rectangle([(0, grey_y), (right_limit, img_h)], fill=grey_fill)
@@ -523,14 +542,12 @@ def _generate_border_preview(page_layout: dict, grid_params: dict, output_path: 
     except TypeError:
         font = ImageFont.load_default()
     label_color = (200, 0, 0)
-    # 5セルごとにセル中央にラベルを表示。ラベル番号 = JSON の col/row 値（シフト後）に直接対応。
-    # 描画位置はシフト量分ずらして PDF 画像と同じ位置に配置する。
     for c in range(1, max_c + 1, 5):
-        lx = cx(c - 1 + col_shift) + cell_w / 2
+        lx = cx(c - 1) + cell_w / 2
         if 0 <= lx < img_w:
             draw.text((lx, 1), str(c), fill=label_color, font=font)
     for r in range(1, max_r + 1, 5):
-        ly = cy(r - 1 + row_shift) + cell_h / 2
+        ly = cy(r - 1) + cell_h / 2
         if 0 <= ly < img_h:
             draw.text((1, ly), str(r), fill=label_color, font=font)
 
@@ -1136,6 +1153,19 @@ class SheetlingPipeline:
         layout_json_str = _auto_generate_layout(extracted_data, grid_params)
         layout_data = json.loads(layout_json_str)
 
+        # プレビュー生成用にコンテンツ境界情報を退避
+        _page_content_bounds = {}
+        for page in extracted_data['pages']:
+            _pn = page.get('page_number', 1)
+            _page_content_bounds[_pn] = {
+                'min_x': page.get('_content_min_x', 0.0),
+                'min_y': page.get('_content_min_y', 0.0),
+                'grid_w': page.get('_content_grid_w', float(page['width']) / grid_params['max_cols']),
+                'grid_h': page.get('_content_grid_h', float(page['height']) / grid_params['max_rows']),
+                'page_width': float(page['width']),
+                'page_height': float(page['height']),
+            }
+
         # table_data / table_row_y_positions / table_cells は layout 生成後不要なため削除
         for page in extracted_data['pages']:
             page.pop('table_data', None)
@@ -1193,9 +1223,11 @@ class SheetlingPipeline:
 
             _pdf_img = _pdir / f"{pdf_name}_page{_pn}.png"
             _preview  = _pdir / f"{pdf_name}_excel_page{_pn}.png"
+            _bounds = _page_content_bounds.get(_pn, {})
             try:
                 _generate_border_preview(_page_layout, grid_params, str(_preview),
-                                         pdf_image_path=str(_pdf_img))
+                                         pdf_image_path=str(_pdf_img),
+                                         content_bounds=_bounds)
             except Exception as _e:
                 logger.warning(f"  ページ {_pn}: 罫線プレビュー生成に失敗しました: {_e}")
 
