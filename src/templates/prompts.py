@@ -9,20 +9,20 @@ GRID_SIZES = {
     # =========================================================================
     # A4 (595pt × 842pt)
     # =========================================================================
-    # Sheetling "1pt": A4縦 62列×42行 / A4横 96列×30行（列幅1.00表示）
+    # Sheetling "1pt": A4縦 62列×42行 / A4横 85列×32行（列幅1.00表示）
     # 縦横のグリッド数は A4 ポイント寸法とセル幅から算出後に余白列を加算:
     #   縦: 595pt÷(595/57)pt ≈ 57列 + 5列 = 62列, 842pt÷(842/42)pt ≈ 42行
-    #   横: 842pt÷(595/57)pt ≈ 81列 + 15列 = 96列, 595pt÷(842/42)pt ≈ 30行
+    #   横: 実測値 85列×32行（Excel印刷プレビューで1ページに収まる範囲）
     "1pt": {
         "col_width_mm": "3.48",
         "row_height_mm": "6.44",
         # A4縦
-        "max_cols":            62,   # 算出値57 + 余白5列
-        "max_rows":            42,
+        "max_cols": 61,  # 67 - 6列（印刷プレビュー実測に合わせて調整）
+        "max_rows": 42,
         # A4横（縦と同一セルサイズ、枚数が変わる）
-        "max_cols_landscape":  96,   # 算出値81 + 余白15列
-        "max_rows_landscape":  30,
-        "excel_col_width": 1.625,    # (1*8+5)/8: デスクトップExcel(MDW=8)で列幅1.00表示
+        "max_cols_landscape": 89,  # A4横でコンテンツを広く使うため拡張
+        "max_rows_landscape": 30,  # 30を超えると空白ページが発生するため固定
+        "excel_col_width": 1.625,  # (1*8+5)/8: デスクトップExcel(MDW=8)で列幅1.00表示
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
@@ -40,12 +40,12 @@ GRID_SIZES = {
         "col_width_mm": "6.18",
         "row_height_mm": "6.44",
         # A4縦
-        "max_cols":            37,   # 算出値34 + 余白3列
-        "max_rows":            42,
+        "max_cols": 37,  # 算出値34 + 余白3列
+        "max_rows": 42,
         # A4横（縦と同一セルサイズ、枚数が変わる）
-        "max_cols_landscape":  58,   # 算出値48 + 余白10列
-        "max_rows_landscape":  30,
-        "excel_col_width": 2.625,    # (2*8+5)/8: デスクトップExcel(MDW=8)で列幅2.00表示
+        "max_cols_landscape": 58,  # 算出値48 + 余白10列
+        "max_rows_landscape": 30,
+        "excel_col_width": 2.625,  # (2*8+5)/8: デスクトップExcel(MDW=8)で列幅2.00表示
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
@@ -66,11 +66,11 @@ GRID_SIZES = {
         "col_width_mm": "3.48",
         "row_height_mm": "6.44",
         # A3縦
-        "max_cols":            92,   # 算出値87 + 余白5列
-        "max_rows":            61,   # 算出値59 + 余白2行
+        "max_cols": 92,  # 算出値87 + 余白5列
+        "max_rows": 61,  # 算出値59 + 余白2行
         # A3横
-        "max_cols_landscape": 128,   # 算出値123 + 余白5列
-        "max_rows_landscape":  44,   # 算出値42 + 余白2行
+        "max_cols_landscape": 128,  # 算出値123 + 余白5列
+        "max_rows_landscape": 44,  # 算出値42 + 余白2行
         "excel_col_width": 1.625,
         "excel_row_height": 18.25,
         "margin_left": 0.43,
@@ -89,11 +89,11 @@ GRID_SIZES = {
         "col_width_mm": "6.18",
         "row_height_mm": "6.44",
         # A3縦
-        "max_cols":            57,   # 算出値52 + 余白5列
-        "max_rows":            61,   # 算出値59 + 余白2行
+        "max_cols": 57,  # 算出値52 + 余白5列
+        "max_rows": 61,  # 算出値59 + 余白2行
         # A3横
-        "max_cols_landscape":  79,   # 算出値74 + 余白5列
-        "max_rows_landscape":  44,   # 算出値42 + 余白2行
+        "max_cols_landscape": 79,  # 算出値74 + 余白5列
+        "max_rows_landscape": 44,  # 算出値42 + 余白2行
         "excel_col_width": 2.625,
         "excel_row_height": 18.25,
         "margin_left": 0.43,

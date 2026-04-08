@@ -19,7 +19,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 27,
+          "_row": 28,
           "_col": 5
         },
         {
@@ -36,8 +36,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 27,
-          "_col": 11
+          "_row": 28,
+          "_col": 12
         },
         {
           "text": "印鑑カードの廃止届出、",
@@ -53,8 +53,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 27,
-          "_col": 17
+          "_row": 28,
+          "_col": 19
         },
         {
           "text": "印鑑及び印鑑カード",
@@ -70,8 +70,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 27,
-          "_col": 26
+          "_row": 28,
+          "_col": 28
         },
         {
           "text": "の廃止届出、",
@@ -87,7 +87,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 27,
+          "_row": 29,
           "_col": 5
         },
         {
@@ -104,7 +104,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 27,
+          "_row": 29,
           "_col": 10
         },
         {
@@ -121,8 +121,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 28,
-          "_col": 8
+          "_row": 29,
+          "_col": 9
         },
         {
           "text": "月",
@@ -138,7 +138,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 28,
+          "_row": 29,
           "_col": 11
         },
         {
@@ -155,8 +155,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 28,
-          "_col": 13
+          "_row": 29,
+          "_col": 14
         },
         {
           "text": "代表取締役・取締役・代表社員・代表理事・理事・支配人",
@@ -173,7 +173,7 @@
           "font_color": "000000",
           "font_size": 10.9,
           "_row": 9,
-          "_col": 14
+          "_col": 15
         },
         {
           "text": "（地方）法務局",
@@ -190,7 +190,7 @@
           "font_color": "000000",
           "font_size": 12.0,
           "_row": 5,
-          "_col": 6
+          "_col": 5
         },
         {
           "text": "支局・出張所",
@@ -207,7 +207,7 @@
           "font_color": "000000",
           "font_size": 12.0,
           "_row": 5,
-          "_col": 14
+          "_col": 15
         },
         {
           "text": "年",
@@ -224,7 +224,7 @@
           "font_color": "000000",
           "font_size": 12.0,
           "_row": 5,
-          "_col": 22
+          "_col": 24
         },
         {
           "text": "月",
@@ -241,7 +241,7 @@
           "font_color": "000000",
           "font_size": 12.0,
           "_row": 5,
-          "_col": 25
+          "_col": 28
         },
         {
           "text": "日",
@@ -258,7 +258,7 @@
           "font_color": "000000",
           "font_size": 12.0,
           "_row": 5,
-          "_col": 28
+          "_col": 31
         },
         {
           "text": "届出",
@@ -275,7 +275,7 @@
           "font_color": "000000",
           "font_size": 12.0,
           "_row": 5,
-          "_col": 29
+          "_col": 32
         },
         {
           "text": "(",
@@ -292,7 +292,7 @@
           "font_color": "000000",
           "font_size": 12.0,
           "_row": 10,
-          "_col": 15
+          "_col": 16
         },
         {
           "text": ")",
@@ -309,7 +309,7 @@
           "font_color": "000000",
           "font_size": 12.0,
           "_row": 10,
-          "_col": 31
+          "_col": 34
         },
         {
           "text": "大・昭・平・西暦",
@@ -325,8 +325,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 13,
-          "_col": 15
+          "_row": 14,
+          "_col": 16
         },
         {
           "text": "年",
@@ -342,8 +342,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 13,
-          "_col": 24
+          "_row": 14,
+          "_col": 26
         },
         {
           "text": "月",
@@ -359,8 +359,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 13,
-          "_col": 27
+          "_row": 14,
+          "_col": 29
         },
         {
           "text": "日生",
@@ -376,8 +376,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 13,
-          "_col": 29
+          "_row": 14,
+          "_col": 33
         },
         {
           "text": "（注２）",
@@ -393,8 +393,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 35,
-          "_col": 3
+          "_row": 36,
+          "_col": 2
         },
         {
           "text": "代理人が届け出るときは、代理人の住所・氏名を記載してください。この場合、委任状に所要",
@@ -410,7 +410,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 35,
+          "_row": 36,
           "_col": 6
         },
         {
@@ -427,7 +427,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 35,
+          "_row": 37,
           "_col": 5
         },
         {
@@ -444,7 +444,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 36,
+          "_row": 38,
           "_col": 6
         },
         {
@@ -461,7 +461,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
+          "_row": 38,
           "_col": 5
         },
         {
@@ -479,7 +479,7 @@
           "font_color": "000000",
           "font_size": 12.0,
           "_row": 6,
-          "_col": 10
+          "_col": 11
         },
         {
           "text": "本店・主たる事務所",
@@ -512,8 +512,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
-          "_col": 16
+          "_row": 39,
+          "_col": 18
         },
         {
           "text": "（乙号・10)",
@@ -529,8 +529,8 @@
           "fontname": "b'TARTDN+\\x82l\\x82r\\x83S\\x83V\\x83b\\x83N'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 40,
-          "_col": 3
+          "_row": 42,
+          "_col": 2
         },
         {
           "text": "印",
@@ -546,7 +546,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
+          "_row": 2,
           "_col": 9
         },
         {
@@ -563,8 +563,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
-          "_col": 10
+          "_row": 2,
+          "_col": 11
         },
         {
           "text": "・",
@@ -580,8 +580,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
-          "_col": 12
+          "_row": 2,
+          "_col": 13
         },
         {
           "text": "印",
@@ -597,8 +597,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
-          "_col": 14
+          "_row": 2,
+          "_col": 15
         },
         {
           "text": "鑑",
@@ -614,8 +614,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
-          "_col": 15
+          "_row": 2,
+          "_col": 16
         },
         {
           "text": "カ",
@@ -631,8 +631,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
-          "_col": 17
+          "_row": 2,
+          "_col": 18
         },
         {
           "text": "ー",
@@ -648,8 +648,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
-          "_col": 19
+          "_row": 2,
+          "_col": 20
         },
         {
           "text": "ド",
@@ -665,8 +665,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
-          "_col": 20
+          "_row": 2,
+          "_col": 22
         },
         {
           "text": "廃",
@@ -682,8 +682,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
-          "_col": 22
+          "_row": 2,
+          "_col": 24
         },
         {
           "text": "止",
@@ -699,8 +699,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
-          "_col": 24
+          "_row": 2,
+          "_col": 26
         },
         {
           "text": "届",
@@ -716,8 +716,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
-          "_col": 25
+          "_row": 2,
+          "_col": 28
         },
         {
           "text": "書",
@@ -733,8 +733,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 19.6,
-          "_row": 3,
-          "_col": 27
+          "_row": 2,
+          "_col": 30
         },
         {
           "text": "資",
@@ -768,7 +768,7 @@
           "font_color": "000000",
           "font_size": 12.0,
           "_row": 10,
-          "_col": 13
+          "_col": 14
         },
         {
           "text": "氏",
@@ -784,7 +784,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 11,
+          "_row": 12,
           "_col": 11
         },
         {
@@ -801,8 +801,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 11,
-          "_col": 13
+          "_row": 12,
+          "_col": 14
         },
         {
           "text": "生年月日",
@@ -818,7 +818,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 13,
+          "_row": 14,
           "_col": 11
         },
         {
@@ -836,7 +836,7 @@
           "font_color": "000000",
           "font_size": 9.8,
           "_row": 10,
-          "_col": 9
+          "_col": 10
         },
         {
           "text": "鑑",
@@ -853,7 +853,7 @@
           "font_color": "000000",
           "font_size": 9.8,
           "_row": 11,
-          "_col": 9
+          "_col": 10
         },
         {
           "text": "提",
@@ -870,7 +870,7 @@
           "font_color": "000000",
           "font_size": 9.8,
           "_row": 12,
-          "_col": 9
+          "_col": 10
         },
         {
           "text": "出",
@@ -886,8 +886,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 12,
-          "_col": 9
+          "_row": 13,
+          "_col": 10
         },
         {
           "text": "者",
@@ -904,7 +904,7 @@
           "font_color": "000000",
           "font_size": 9.8,
           "_row": 13,
-          "_col": 9
+          "_col": 10
         },
         {
           "text": "印鑑カード番号",
@@ -920,7 +920,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 15,
+          "_row": 16,
           "_col": 10
         },
         {
@@ -955,7 +955,7 @@
           "font_color": "000000",
           "font_size": 12.0,
           "_row": 19,
-          "_col": 11
+          "_col": 12
         },
         {
           "text": "人（注２）",
@@ -988,8 +988,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 13,
-          "_col": 3
+          "_row": 14,
+          "_col": 2
         },
         {
           "text": "登",
@@ -1005,7 +1005,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 14,
+          "_row": 15,
           "_col": 3
         },
         {
@@ -1022,7 +1022,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 14,
+          "_row": 15,
           "_col": 4
         },
         {
@@ -1039,7 +1039,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 14,
+          "_row": 15,
           "_col": 5
         },
         {
@@ -1056,8 +1056,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 14,
-          "_col": 6
+          "_row": 15,
+          "_col": 5
         },
         {
           "text": "提",
@@ -1073,7 +1073,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 14,
+          "_row": 15,
           "_col": 6
         },
         {
@@ -1090,7 +1090,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 14,
+          "_row": 15,
           "_col": 7
         },
         {
@@ -1107,7 +1107,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 14,
+          "_row": 15,
           "_col": 8
         },
         {
@@ -1124,7 +1124,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 14,
+          "_row": 15,
           "_col": 9
         },
         {
@@ -1210,7 +1210,7 @@
           "font_color": "000000",
           "font_size": 8.8,
           "_row": 15,
-          "_col": 7
+          "_col": 8
         },
         {
           "text": "欄",
@@ -1227,7 +1227,7 @@
           "font_color": "000000",
           "font_size": 8.8,
           "_row": 15,
-          "_col": 8
+          "_col": 9
         },
         {
           "text": "（",
@@ -1243,8 +1243,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 21,
-          "_col": 3
+          "_row": 22,
+          "_col": 2
         },
         {
           "text": "印",
@@ -1260,7 +1260,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 21,
+          "_row": 22,
           "_col": 3
         },
         {
@@ -1277,7 +1277,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 21,
+          "_row": 22,
           "_col": 4
         },
         {
@@ -1294,7 +1294,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 21,
+          "_row": 22,
           "_col": 5
         },
         {
@@ -1311,7 +1311,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 21,
+          "_row": 22,
           "_col": 6
         },
         {
@@ -1328,7 +1328,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 21,
+          "_row": 22,
           "_col": 7
         },
         {
@@ -1345,7 +1345,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 21,
+          "_row": 22,
           "_col": 8
         },
         {
@@ -1362,7 +1362,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 21,
+          "_row": 22,
           "_col": 9
         },
         {
@@ -1379,8 +1379,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 22,
-          "_col": 3
+          "_row": 23,
+          "_col": 2
         },
         {
           "text": "し",
@@ -1396,8 +1396,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 22,
-          "_col": 4
+          "_row": 23,
+          "_col": 3
         },
         {
           "text": "て",
@@ -1413,7 +1413,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 22,
+          "_row": 23,
           "_col": 4
         },
         {
@@ -1430,7 +1430,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 22,
+          "_row": 23,
           "_col": 5
         },
         {
@@ -1447,7 +1447,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 22,
+          "_row": 23,
           "_col": 6
         },
         {
@@ -1464,7 +1464,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 22,
+          "_row": 23,
           "_col": 7
         },
         {
@@ -1481,7 +1481,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 22,
+          "_row": 23,
           "_col": 7
         },
         {
@@ -1498,7 +1498,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 22,
+          "_row": 23,
           "_col": 8
         },
         {
@@ -1515,7 +1515,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 22,
+          "_row": 23,
           "_col": 9
         },
         {
@@ -1532,8 +1532,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 24,
-          "_col": 15
+          "_row": 25,
+          "_col": 16
         },
         {
           "text": "任",
@@ -1549,8 +1549,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 24,
-          "_col": 18
+          "_row": 25,
+          "_col": 20
         },
         {
           "text": "状",
@@ -1566,8 +1566,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 24,
-          "_col": 21
+          "_row": 25,
+          "_col": 23
         },
         {
           "text": "私は、（住所）",
@@ -1583,7 +1583,7 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 25,
+          "_row": 26,
           "_col": 5
         },
         {
@@ -1600,7 +1600,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 26,
+          "_row": 27,
           "_col": 6
         },
         {
@@ -1617,7 +1617,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
+          "_row": 39,
           "_col": 3
         },
         {
@@ -1634,7 +1634,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
+          "_row": 39,
           "_col": 6
         },
         {
@@ -1651,8 +1651,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
-          "_col": 22
+          "_row": 39,
+          "_col": 24
         },
         {
           "text": "付",
@@ -1668,8 +1668,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
-          "_col": 23
+          "_row": 39,
+          "_col": 26
         },
         {
           "text": "合は、返納してください。この場合",
@@ -1685,8 +1685,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 38,
-          "_col": 6
+          "_row": 40,
+          "_col": 5
         },
         {
           "text": "には、(注１)の押印及び(注２)の委",
@@ -1702,8 +1702,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 39,
-          "_col": 6
+          "_row": 40,
+          "_col": 5
         },
         {
           "text": "任状は不要です。",
@@ -1719,8 +1719,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 39,
-          "_col": 6
+          "_row": 41,
+          "_col": 5
         },
         {
           "text": "印鑑の廃止届出",
@@ -1821,7 +1821,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 16,
+          "_row": 17,
           "_col": 11
         },
         {
@@ -1838,8 +1838,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 16,
-          "_col": 19
+          "_row": 17,
+          "_col": 20
         },
         {
           "text": "その他",
@@ -1855,8 +1855,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 16,
-          "_col": 27
+          "_row": 17,
+          "_col": 30
         },
         {
           "text": "汚損（著しく汚れた)",
@@ -1872,8 +1872,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 17,
-          "_col": 19
+          "_row": 18,
+          "_col": 20
         },
         {
           "text": "き損（破損した）",
@@ -1890,7 +1890,7 @@
           "font_color": "000000",
           "font_size": 10.9,
           "_row": 18,
-          "_col": 19
+          "_col": 20
         },
         {
           "text": "(いずれかの□にレ印を",
@@ -1907,7 +1907,7 @@
           "font_color": "000000",
           "font_size": 9.8,
           "_row": 10,
-          "_col": 3
+          "_col": 2
         },
         {
           "text": "つけてください。)",
@@ -1923,8 +1923,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 10,
-          "_col": 3
+          "_row": 11,
+          "_col": 2
         },
         {
           "text": "調",
@@ -1940,8 +1940,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
-          "_col": 25
+          "_row": 39,
+          "_col": 27
         },
         {
           "text": "査",
@@ -1957,8 +1957,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
-          "_col": 26
+          "_row": 39,
+          "_col": 29
         },
         {
           "text": "入",
@@ -1974,8 +1974,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
-          "_col": 27
+          "_row": 39,
+          "_col": 30
         },
         {
           "text": "力",
@@ -1991,8 +1991,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
-          "_col": 29
+          "_row": 39,
+          "_col": 32
         },
         {
           "text": "校",
@@ -2008,8 +2008,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
-          "_col": 30
+          "_row": 39,
+          "_col": 33
         },
         {
           "text": "合",
@@ -2025,8 +2025,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 37,
-          "_col": 32
+          "_row": 39,
+          "_col": 35
         },
         {
           "text": "印",
@@ -2042,8 +2042,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 31,
-          "_col": 24
+          "_row": 32,
+          "_col": 26
         },
         {
           "text": "登",
@@ -2059,8 +2059,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 30,
-          "_col": 27
+          "_row": 31,
+          "_col": 29
         },
         {
           "text": "記",
@@ -2076,8 +2076,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 30,
-          "_col": 28
+          "_row": 31,
+          "_col": 30
         },
         {
           "text": "所",
@@ -2093,8 +2093,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 30,
-          "_col": 28
+          "_row": 31,
+          "_col": 31
         },
         {
           "text": "に",
@@ -2110,8 +2110,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 30,
-          "_col": 29
+          "_row": 31,
+          "_col": 32
         },
         {
           "text": "提",
@@ -2127,8 +2127,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 30,
-          "_col": 30
+          "_row": 31,
+          "_col": 33
         },
         {
           "text": "出",
@@ -2144,8 +2144,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 31,
-          "_col": 27
+          "_row": 32,
+          "_col": 29
         },
         {
           "text": "し",
@@ -2161,8 +2161,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 31,
-          "_col": 28
+          "_row": 32,
+          "_col": 30
         },
         {
           "text": "た",
@@ -2178,8 +2178,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 31,
-          "_col": 28
+          "_row": 32,
+          "_col": 31
         },
         {
           "text": "印",
@@ -2195,8 +2195,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 31,
-          "_col": 29
+          "_row": 32,
+          "_col": 32
         },
         {
           "text": "鑑",
@@ -2212,8 +2212,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 31,
-          "_col": 30
+          "_row": 32,
+          "_col": 33
         },
         {
           "text": "住",
@@ -2229,7 +2229,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 29,
+          "_row": 31,
           "_col": 5
         },
         {
@@ -2246,7 +2246,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 29,
+          "_row": 31,
           "_col": 6
         },
         {
@@ -2263,7 +2263,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 30,
+          "_row": 32,
           "_col": 5
         },
         {
@@ -2280,7 +2280,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 30,
+          "_row": 32,
           "_col": 6
         },
         {
@@ -2297,7 +2297,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 20,
+          "_row": 21,
           "_col": 10
         },
         {
@@ -2314,7 +2314,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 20,
+          "_row": 21,
           "_col": 12
         },
         {
@@ -2331,7 +2331,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 22,
+          "_row": 23,
           "_col": 10
         },
         {
@@ -2348,8 +2348,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 22,
-          "_col": 11
+          "_row": 23,
+          "_col": 12
         },
         {
           "text": "フリガナ",
@@ -2365,8 +2365,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 6.5,
-          "_row": 21,
-          "_col": 10
+          "_row": 22,
+          "_col": 11
         },
         {
           "text": "印鑑提出者本人",
@@ -2382,8 +2382,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 19,
-          "_col": 18
+          "_row": 20,
+          "_col": 20
         },
         {
           "text": "代理人",
@@ -2399,8 +2399,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 19,
-          "_col": 25
+          "_row": 20,
+          "_col": 27
         },
         {
           "text": "※",
@@ -2416,8 +2416,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 12.0,
-          "_row": 17,
-          "_col": 9
+          "_row": 18,
+          "_col": 10
         },
         {
           "text": "カードのみを廃止する場合に、",
@@ -2433,8 +2433,8 @@
           "fontname": "b'YSRYBY+\\x82l\\x82r\\x82o\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 8.8,
-          "_row": 17,
-          "_col": 10
+          "_row": 18,
+          "_col": 11
         },
         {
           "text": "□にレ印をつけてください。",
@@ -2451,7 +2451,7 @@
           "font_color": "000000",
           "font_size": 8.8,
           "_row": 18,
-          "_col": 10
+          "_col": 11
         },
         {
           "text": "※",
@@ -2468,7 +2468,7 @@
           "font_color": "000000",
           "font_size": 10.9,
           "_row": 4,
-          "_col": 3
+          "_col": 2
         },
         {
           "text": "太枠の中に書いてください。",
@@ -2501,7 +2501,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 10.9,
-          "_row": 31,
+          "_row": 33,
           "_col": 4
         },
         {
@@ -2518,8 +2518,8 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 32,
-          "_col": 3
+          "_row": 34,
+          "_col": 2
         },
         {
           "text": "登記所に提出した印鑑を押印してください。この押印ができない場合は、市区町村に登録済み",
@@ -2535,7 +2535,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 32,
+          "_row": 34,
           "_col": 6
         },
         {
@@ -2552,7 +2552,7 @@
           "fontname": "b'GGOEWJ+\\x82l\\x82r\\x96\\xbe\\x92\\xa9'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 33,
+          "_row": 34,
           "_col": 5
         },
         {
@@ -2569,8 +2569,8 @@
           "fontname": "b'YHBWWM+\\x82l\\x82r\\x82o\\x83S\\x83V\\x83b\\x83N'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 33,
-          "_col": 31
+          "_row": 34,
+          "_col": 34
         },
         {
           "text": "記申請書に添付した印鑑証明書を援用する場合（登記の申請と同時に印鑑を届け出た場合に限る。）",
@@ -2586,7 +2586,7 @@
           "fontname": "b'YHBWWM+\\x82l\\x82r\\x82o\\x83S\\x83V\\x83b\\x83N'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 34,
+          "_row": 35,
           "_col": 5
         },
         {
@@ -2603,17 +2603,11 @@
           "fontname": "b'YHBWWM+\\x82l\\x82r\\x82o\\x83S\\x83V\\x83b\\x83N'",
           "font_color": "000000",
           "font_size": 9.8,
-          "_row": 34,
+          "_row": 36,
           "_col": 5
         }
       ],
       "table_bboxes": [
-        [
-          29.28,
-          29.06407999999999,
-          552.7679999999999,
-          822.7922000000001
-        ],
         [
           47.00470588235295,
           122.24000000000001,
@@ -2628,10 +2622,6 @@
         ]
       ],
       "table_col_x_positions": [
-        [
-          29.28,
-          552.7679999999999
-        ],
         [
           47.00470588235295,
           112.56,
@@ -2655,11 +2645,6 @@
         ]
       ],
       "table_row_y_positions": [
-        [
-          29.06407999999999,
-          46.799999999999955,
-          822.7922000000001
-        ],
         [
           122.24000000000001,
           157.37999999999994,
@@ -2695,24 +2680,6 @@
         ]
       ],
       "table_cells": [
-        [
-          [
-            {
-              "x0": 29.28,
-              "top": 29.06407999999999,
-              "x1": 552.7679999999999,
-              "bottom": 46.799999999999955
-            }
-          ],
-          [
-            {
-              "x0": 29.28,
-              "top": 46.799999999999955,
-              "x1": 552.7679999999999,
-              "bottom": 822.7922000000001
-            }
-          ]
-        ],
         [
           [
             {
@@ -3324,14 +3291,6 @@
       "table_data": [
         [
           [
-            ""
-          ],
-          [
-            "印 鑑 ・ 印 鑑 カ ー ド 廃 止 届 書 ※ 太枠の中に書いてください。 （地方）法務局 支局・出張所 年 月 日 届出 印鑑の廃止届出 商号・名称 印鑑カードの 廃止届出 本店・主たる事務所 印鑑及び印鑑カー ドの廃止届出 代表取締役・取締役・代表社員・代表理事・理事・支配人 (いずれかの□にレ印を 資 格 印 ( ) つけてください。) 鑑 氏 名 提 出 （注１） 者 生年月日 大・昭・平・西暦 年 月 日生 登 記 所 に 提 出 し た 印 鑑 の 押 印 欄 印鑑カード番号 カード廃止の理由 亡失（なくなった） その他 ※カードのみを廃止する場合に、 汚損（著しく汚れた) □にレ印をつけてください。 き損（破損した） 申 請 人（注２） 印鑑提出者本人 代理人 住 所 （ 印 鑑 は 鮮 明 に 押 フリガナ 印 し て く だ さ い 。 ） 氏 名 委 任 状 私は、（住所） （氏名） を代理人と定め、 印鑑の廃止届出、 印鑑カードの廃止届出、 印鑑及び印鑑カード の廃止届出、 添付書面の原本還付請求及び受領の権限を委任します。 年 月 日 住 所 登 記 所 に 提 氏 名 印 出 し た 印 鑑 市区町村長作成の印鑑証明書は、登記申請書に添付のものを援用する。（注１） （注１） 登記所に提出した印鑑を押印してください。この押印ができない場合は、市区町村に登録済み の印鑑を押印し、作成後３か月以内の市区町村長の証明した印鑑証明書を添付してください。登 記申請書に添付した印鑑証明書を援用する場合（登記の申請と同時に印鑑を届け出た場合に限る。） は、□にレ印をつけてください。 （注２） 代理人が届け出るときは、代理人の住所・氏名を記載してください。この場合、委任状に所要 事項を記載し（該当する□にはレ印をつける）、登記所に提出した印鑑を押印してください。 この押印ができない場合は、市区町村に登録済みの印鑑を押印し、作成後３か月以内の市区町 村長の証明した印鑑証明書を添付してください。 （注３） 印鑑カードの交付を受けている場 印鑑処理番号 受 付 調 査 入 力 校 合 合は、返納してください。この場合 には、(注１)の押印及び(注２)の委 任状は不要です。 （乙号・10)"
-          ]
-        ],
-        [
-          [
             "印鑑の廃止届出 印鑑カードの 廃止届出 印鑑及び印鑑カー ドの廃止届出 (いずれかの□にレ印を つけてください。) （注１）",
             "商号・名称",
             null,
@@ -3696,14 +3655,6 @@
       "table_data_raw": [
         [
           [
-            ""
-          ],
-          [
-            "印 鑑 ・ 印 鑑 カ ー ド 廃 止 届 書\n※ 太枠の中に書いてください。\n（地方）法務局 支局・出張所 年 月 日 届出\n印鑑の廃止届出 商号・名称\n印鑑カードの\n廃止届出\n本店・主たる事務所\n印鑑及び印鑑カー\nドの廃止届出\n代表取締役・取締役・代表社員・代表理事・理事・支配人\n(いずれかの□にレ印を 資 格\n印 ( )\nつけてください。)\n鑑\n氏 名\n提\n出\n（注１） 者 生年月日 大・昭・平・西暦 年 月 日生\n登 記 所 に 提 出 し た\n印 鑑 の 押 印 欄 印鑑カード番号\nカード廃止の理由 亡失（なくなった） その他\n※カードのみを廃止する場合に、 汚損（著しく汚れた)\n□にレ印をつけてください。 き損（破損した）\n申 請 人（注２） 印鑑提出者本人 代理人\n住 所\n（ 印 鑑 は 鮮 明 に 押 フリガナ\n印 し て く だ さ い 。 ）\n氏 名\n委 任 状\n私は、（住所）\n（氏名）\nを代理人と定め、 印鑑の廃止届出、 印鑑カードの廃止届出、 印鑑及び印鑑カード\nの廃止届出、 添付書面の原本還付請求及び受領の権限を委任します。\n年 月 日\n住 所\n登 記 所 に 提\n氏 名\n印\n出 し た 印 鑑\n市区町村長作成の印鑑証明書は、登記申請書に添付のものを援用する。（注１）\n（注１） 登記所に提出した印鑑を押印してください。この押印ができない場合は、市区町村に登録済み\nの印鑑を押印し、作成後３か月以内の市区町村長の証明した印鑑証明書を添付してください。登\n記申請書に添付した印鑑証明書を援用する場合（登記の申請と同時に印鑑を届け出た場合に限る。）\nは、□にレ印をつけてください。\n（注２） 代理人が届け出るときは、代理人の住所・氏名を記載してください。この場合、委任状に所要\n事項を記載し（該当する□にはレ印をつける）、登記所に提出した印鑑を押印してください。\nこの押印ができない場合は、市区町村に登録済みの印鑑を押印し、作成後３か月以内の市区町\n村長の証明した印鑑証明書を添付してください。\n（注３） 印鑑カードの交付を受けている場 印鑑処理番号 受 付 調 査 入 力 校 合\n合は、返納してください。この場合\nには、(注１)の押印及び(注２)の委\n任状は不要です。\n（乙号・10)"
-          ]
-        ],
-        [
-          [
             "印鑑の廃止届出\n印鑑カードの\n廃止届出\n印鑑及び印鑑カー\nドの廃止届出\n(いずれかの□にレ印を\nつけてください。)\n（注１）",
             "商号・名称",
             null,
@@ -4065,45 +4016,306 @@
           ]
         ]
       ],
-      "rects": [],
+      "rects": [
+        {
+          "x0": 534.0,
+          "top": 452.88,
+          "x1": 535.08,
+          "bottom": 461.28,
+          "_row": 23,
+          "_end_row": 24,
+          "_col": 36,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 534.0,
+          "top": 477.7202,
+          "x1": 535.08,
+          "bottom": 805.9202,
+          "_row": 24,
+          "_end_row": 43,
+          "_col": 36,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 157.56,
+          "top": 156.83999999999992,
+          "x1": 534.6,
+          "bottom": 157.91999999999996,
+          "_row": 7,
+          "_end_row": 8,
+          "_col": 10,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 157.56,
+          "top": 192.3599999999999,
+          "x1": 534.6,
+          "bottom": 193.43999999999994,
+          "_row": 9,
+          "_end_row": 10,
+          "_col": 10,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 175.08,
+          "top": 226.31999999999994,
+          "x1": 534.6,
+          "bottom": 227.39999999999998,
+          "_row": 11,
+          "_end_row": 12,
+          "_col": 11,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 175.08,
+          "top": 264.7199999999999,
+          "x1": 534.6,
+          "bottom": 265.79999999999995,
+          "_row": 13,
+          "_end_row": 14,
+          "_col": 11,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 157.56,
+          "top": 300.2399999999999,
+          "x1": 534.6,
+          "bottom": 301.31999999999994,
+          "_row": 15,
+          "_end_row": 16,
+          "_col": 10,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 157.56,
+          "top": 379.67999999999995,
+          "x1": 534.6,
+          "bottom": 381.71999999999997,
+          "_row": 19,
+          "_end_row": 20,
+          "_col": 10,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 157.56,
+          "top": 400.68,
+          "x1": 534.6,
+          "bottom": 401.76,
+          "_row": 20,
+          "_end_row": 21,
+          "_col": 10,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 157.56,
+          "top": 433.8,
+          "x1": 534.6,
+          "bottom": 434.88,
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 10,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 220.08,
+          "top": 444.59999999999997,
+          "x1": 534.6,
+          "bottom": 444.71999999999997,
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 14,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 265.08,
+          "top": 752.2802,
+          "x1": 535.0799999999999,
+          "bottom": 753.3602,
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 17,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 265.08,
+          "top": 770.0402,
+          "x1": 535.0799999999999,
+          "bottom": 771.1202,
+          "_row": 40,
+          "_end_row": 41,
+          "_col": 17,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 47.52,
+          "top": 804.8402,
+          "x1": 535.08,
+          "bottom": 805.9202,
+          "_row": 42,
+          "_end_row": 43,
+          "_col": 2,
+          "_end_col": 37,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 43.44,
+          "top": 807.0002,
+          "x1": 112.56,
+          "bottom": 820.3202,
+          "_row": 42,
+          "_end_row": 43,
+          "_col": 2,
+          "_end_col": 7,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 147.72,
+          "top": 60.0,
+          "x1": 459.96000000000004,
+          "bottom": 82.79999999999995,
+          "_row": 2,
+          "_end_row": 4,
+          "_col": 9,
+          "_end_col": 32,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 56.16,
+          "top": 85.31999999999994,
+          "x1": 225.0,
+          "bottom": 97.67999999999995,
+          "_row": 4,
+          "_end_row": 5,
+          "_col": 2,
+          "_end_col": 15,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        },
+        {
+          "x0": 28.980000000000004,
+          "top": 28.97999999999996,
+          "x1": 553.0799999999999,
+          "bottom": 823.1402,
+          "_row": 1,
+          "_end_row": 43,
+          "_col": 1,
+          "_end_col": 38,
+          "_borders": {
+            "top": true,
+            "bottom": true,
+            "left": true,
+            "right": true
+          }
+        }
+      ],
+      "_content_min_x": 28.44,
+      "_content_min_y": 28.43999999999994,
+      "_content_grid_w": 14.179459459459459,
+      "_content_grid_h": 18.934290476190476,
       "table_border_rects": [
         {
-          "_row": 1,
-          "_end_row": 2,
-          "_col": 1,
-          "_end_col": 34,
-          "_pdf_x0": 29.28,
-          "_pdf_top": 29.06407999999999,
-          "_pdf_x1": 552.7679999999999,
-          "_pdf_bottom": 46.799999999999955,
-          "_borders": {
-            "top": true,
-            "bottom": true,
-            "left": true,
-            "right": true
-          }
-        },
-        {
-          "_row": 2,
-          "_end_row": 41,
-          "_col": 1,
-          "_end_col": 34,
-          "_pdf_x0": 29.28,
-          "_pdf_top": 46.799999999999955,
-          "_pdf_x1": 552.7679999999999,
-          "_pdf_bottom": 822.7922000000001,
-          "_borders": {
-            "top": true,
-            "bottom": true,
-            "left": true,
-            "right": true
-          }
-        },
-        {
-          "_row": 6,
+          "_row": 5,
           "_end_row": 14,
           "_col": 2,
-          "_end_col": 9,
+          "_end_col": 10,
           "_pdf_x0": 47.00470588235295,
           "_pdf_top": 122.24000000000001,
           "_pdf_x1": 157.79999999999995,
@@ -4116,10 +4328,10 @@
           }
         },
         {
-          "_row": 6,
+          "_row": 5,
           "_end_row": 7,
-          "_col": 9,
-          "_end_col": 14,
+          "_col": 10,
+          "_end_col": 15,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 122.24000000000001,
           "_pdf_x1": 235.37142857142857,
@@ -4132,10 +4344,10 @@
           }
         },
         {
-          "_row": 6,
+          "_row": 5,
           "_end_row": 7,
-          "_col": 14,
-          "_end_col": 32,
+          "_col": 15,
+          "_end_col": 36,
           "_pdf_x0": 235.37142857142857,
           "_pdf_top": 122.24000000000001,
           "_pdf_x1": 529.5795918367348,
@@ -4150,8 +4362,8 @@
         {
           "_row": 7,
           "_end_row": 8,
-          "_col": 9,
-          "_end_col": 14,
+          "_col": 10,
+          "_end_col": 15,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 157.37999999999994,
           "_pdf_x1": 235.37142857142857,
@@ -4166,8 +4378,8 @@
         {
           "_row": 7,
           "_end_row": 9,
-          "_col": 14,
-          "_end_col": 32,
+          "_col": 15,
+          "_end_col": 36,
           "_pdf_x0": 235.37142857142857,
           "_pdf_top": 157.37999999999994,
           "_pdf_x1": 529.5795918367348,
@@ -4182,8 +4394,8 @@
         {
           "_row": 8,
           "_end_row": 9,
-          "_col": 9,
-          "_end_col": 14,
+          "_col": 10,
+          "_end_col": 15,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 170.15999999999997,
           "_pdf_x1": 235.37142857142857,
@@ -4198,8 +4410,8 @@
         {
           "_row": 9,
           "_end_row": 10,
-          "_col": 9,
-          "_end_col": 14,
+          "_col": 10,
+          "_end_col": 15,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 181.55999999999995,
           "_pdf_x1": 235.37142857142857,
@@ -4214,8 +4426,8 @@
         {
           "_row": 9,
           "_end_row": 10,
-          "_col": 9,
-          "_end_col": 10,
+          "_col": 10,
+          "_end_col": 11,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 193.07999999999993,
           "_pdf_x1": 174.77333333333337,
@@ -4230,8 +4442,8 @@
         {
           "_row": 9,
           "_end_row": 10,
-          "_col": 10,
-          "_end_col": 14,
+          "_col": 11,
+          "_end_col": 15,
           "_pdf_x0": 174.77333333333337,
           "_pdf_top": 193.07999999999993,
           "_pdf_x1": 235.37142857142857,
@@ -4246,8 +4458,8 @@
         {
           "_row": 9,
           "_end_row": 11,
-          "_col": 14,
-          "_end_col": 32,
+          "_col": 15,
+          "_end_col": 36,
           "_pdf_x0": 235.37142857142857,
           "_pdf_top": 193.07999999999993,
           "_pdf_x1": 529.5795918367348,
@@ -4262,8 +4474,8 @@
         {
           "_row": 10,
           "_end_row": 14,
-          "_col": 9,
-          "_end_col": 10,
+          "_col": 10,
+          "_end_col": 11,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 205.44,
           "_pdf_x1": 174.77333333333337,
@@ -4278,8 +4490,8 @@
         {
           "_row": 10,
           "_end_row": 11,
-          "_col": 10,
-          "_end_col": 14,
+          "_col": 11,
+          "_end_col": 15,
           "_pdf_x0": 174.77333333333337,
           "_pdf_top": 205.44,
           "_pdf_x1": 235.37142857142857,
@@ -4292,10 +4504,10 @@
           }
         },
         {
-          "_row": 10,
-          "_end_row": 11,
-          "_col": 10,
-          "_end_col": 14,
+          "_row": 11,
+          "_end_row": 12,
+          "_col": 11,
+          "_end_col": 15,
           "_pdf_x0": 174.77333333333337,
           "_pdf_top": 219.60000000000002,
           "_pdf_x1": 235.37142857142857,
@@ -4310,8 +4522,8 @@
         {
           "_row": 11,
           "_end_row": 12,
-          "_col": 10,
-          "_end_col": 14,
+          "_col": 11,
+          "_end_col": 15,
           "_pdf_x0": 174.77333333333337,
           "_pdf_top": 226.85999999999996,
           "_pdf_x1": 235.37142857142857,
@@ -4326,8 +4538,8 @@
         {
           "_row": 11,
           "_end_row": 13,
-          "_col": 14,
-          "_end_col": 32,
+          "_col": 15,
+          "_end_col": 36,
           "_pdf_x0": 235.37142857142857,
           "_pdf_top": 226.85999999999996,
           "_pdf_x1": 529.5795918367348,
@@ -4342,8 +4554,8 @@
         {
           "_row": 11,
           "_end_row": 12,
-          "_col": 10,
-          "_end_col": 14,
+          "_col": 11,
+          "_end_col": 15,
           "_pdf_x0": 174.77333333333337,
           "_pdf_top": 235.91999999999996,
           "_pdf_x1": 235.37142857142857,
@@ -4358,8 +4570,8 @@
         {
           "_row": 12,
           "_end_row": 13,
-          "_col": 10,
-          "_end_col": 14,
+          "_col": 11,
+          "_end_col": 15,
           "_pdf_x0": 174.77333333333337,
           "_pdf_top": 252.12,
           "_pdf_x1": 235.37142857142857,
@@ -4374,8 +4586,8 @@
         {
           "_row": 13,
           "_end_row": 15,
-          "_col": 10,
-          "_end_col": 14,
+          "_col": 11,
+          "_end_col": 15,
           "_pdf_x0": 174.77333333333337,
           "_pdf_top": 265.25999999999993,
           "_pdf_x1": 235.37142857142857,
@@ -4390,8 +4602,8 @@
         {
           "_row": 13,
           "_end_row": 15,
-          "_col": 14,
-          "_end_col": 32,
+          "_col": 15,
+          "_end_col": 36,
           "_pdf_x0": 235.37142857142857,
           "_pdf_top": 265.25999999999993,
           "_pdf_x1": 529.5795918367348,
@@ -4406,8 +4618,8 @@
         {
           "_row": 14,
           "_end_row": 15,
-          "_col": 9,
-          "_end_col": 10,
+          "_col": 10,
+          "_end_col": 11,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 283.79999999999995,
           "_pdf_x1": 174.77333333333337,
@@ -4423,7 +4635,7 @@
           "_row": 14,
           "_end_row": 16,
           "_col": 2,
-          "_end_col": 9,
+          "_end_col": 10,
           "_pdf_x0": 47.00470588235295,
           "_pdf_top": 291.9,
           "_pdf_x1": 157.79999999999995,
@@ -4437,9 +4649,9 @@
         },
         {
           "_row": 15,
-          "_end_row": 17,
-          "_col": 9,
-          "_end_col": 32,
+          "_end_row": 18,
+          "_col": 10,
+          "_end_col": 36,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 300.9599999999999,
           "_pdf_x1": 529.5795918367348,
@@ -4455,7 +4667,7 @@
           "_row": 16,
           "_end_row": 21,
           "_col": 2,
-          "_end_col": 9,
+          "_end_col": 10,
           "_pdf_x0": 47.00470588235295,
           "_pdf_top": 327.42,
           "_pdf_x1": 157.79999999999995,
@@ -4468,10 +4680,10 @@
           }
         },
         {
-          "_row": 17,
+          "_row": 18,
           "_end_row": 20,
-          "_col": 9,
-          "_end_col": 32,
+          "_col": 10,
+          "_end_col": 36,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 356.9831578947368,
           "_pdf_x1": 529.5795918367348,
@@ -4486,8 +4698,8 @@
         {
           "_row": 20,
           "_end_row": 21,
-          "_col": 9,
-          "_end_col": 13,
+          "_col": 10,
+          "_end_col": 14,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 401.40000000000003,
           "_pdf_x1": 220.41000000000003,
@@ -4501,9 +4713,9 @@
         },
         {
           "_row": 20,
-          "_end_row": 21,
-          "_col": 13,
-          "_end_col": 32,
+          "_end_row": 22,
+          "_col": 14,
+          "_end_col": 36,
           "_pdf_x0": 220.41000000000003,
           "_pdf_top": 401.40000000000003,
           "_pdf_x1": 529.5795918367348,
@@ -4516,10 +4728,10 @@
           }
         },
         {
-          "_row": 20,
-          "_end_row": 21,
-          "_col": 9,
-          "_end_col": 13,
+          "_row": 21,
+          "_end_row": 22,
+          "_col": 10,
+          "_end_col": 14,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 410.28,
           "_pdf_x1": 220.41000000000003,
@@ -4533,9 +4745,9 @@
         },
         {
           "_row": 21,
-          "_end_row": 23,
+          "_end_row": 24,
           "_col": 2,
-          "_end_col": 9,
+          "_end_col": 10,
           "_pdf_x0": 47.00470588235295,
           "_pdf_top": 425.84,
           "_pdf_x1": 157.79999999999995,
@@ -4550,8 +4762,8 @@
         {
           "_row": 21,
           "_end_row": 22,
-          "_col": 9,
-          "_end_col": 13,
+          "_col": 10,
+          "_end_col": 14,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 425.84,
           "_pdf_x1": 220.41000000000003,
@@ -4564,10 +4776,10 @@
           }
         },
         {
-          "_row": 21,
-          "_end_row": 22,
-          "_col": 9,
-          "_end_col": 13,
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 10,
+          "_end_col": 14,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 434.34000000000003,
           "_pdf_x1": 220.41000000000003,
@@ -4580,10 +4792,10 @@
           }
         },
         {
-          "_row": 21,
-          "_end_row": 22,
-          "_col": 13,
-          "_end_col": 32,
+          "_row": 22,
+          "_end_row": 23,
+          "_col": 14,
+          "_end_col": 36,
           "_pdf_x0": 220.41000000000003,
           "_pdf_top": 434.34000000000003,
           "_pdf_x1": 529.5795918367348,
@@ -4597,9 +4809,9 @@
         },
         {
           "_row": 22,
-          "_end_row": 23,
-          "_col": 9,
-          "_end_col": 13,
+          "_end_row": 24,
+          "_col": 10,
+          "_end_col": 14,
           "_pdf_x0": 157.79999999999995,
           "_pdf_top": 444.65999999999997,
           "_pdf_x1": 220.41000000000003,
@@ -4613,9 +4825,9 @@
         },
         {
           "_row": 22,
-          "_end_row": 23,
-          "_col": 13,
-          "_end_col": 32,
+          "_end_row": 24,
+          "_col": 14,
+          "_end_col": 36,
           "_pdf_x0": 220.41000000000003,
           "_pdf_top": 444.65999999999997,
           "_pdf_x1": 529.5795918367348,
@@ -4628,10 +4840,10 @@
           }
         },
         {
-          "_row": 23,
-          "_end_row": 40,
+          "_row": 24,
+          "_end_row": 42,
           "_col": 2,
-          "_end_col": 32,
+          "_end_col": 36,
           "_pdf_x0": 47.00470588235295,
           "_pdf_top": 476.6700333333334,
           "_pdf_x1": 529.5795918367348,
@@ -4644,10 +4856,10 @@
           }
         },
         {
-          "_row": 37,
-          "_end_row": 38,
-          "_col": 16,
-          "_end_col": 17,
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 17,
+          "_end_col": 18,
           "_pdf_x0": 264.80999999999995,
           "_pdf_top": 753.7701999999999,
           "_pdf_x1": 272.16,
@@ -4660,10 +4872,10 @@
           }
         },
         {
-          "_row": 37,
-          "_end_row": 38,
-          "_col": 16,
-          "_end_col": 21,
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 18,
+          "_end_col": 23,
           "_pdf_x0": 272.16,
           "_pdf_top": 753.7701999999999,
           "_pdf_x1": 344.88,
@@ -4676,10 +4888,10 @@
           }
         },
         {
-          "_row": 37,
-          "_end_row": 38,
-          "_col": 21,
-          "_end_col": 22,
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 23,
+          "_end_col": 24,
           "_pdf_x0": 344.88,
           "_pdf_top": 753.7701999999999,
           "_pdf_x1": 357.36,
@@ -4692,10 +4904,10 @@
           }
         },
         {
-          "_row": 37,
-          "_end_row": 38,
-          "_col": 22,
-          "_end_col": 24,
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 24,
+          "_end_col": 27,
           "_pdf_x0": 357.36,
           "_pdf_top": 753.7701999999999,
           "_pdf_x1": 401.58000000000004,
@@ -4708,10 +4920,10 @@
           }
         },
         {
-          "_row": 37,
-          "_end_row": 38,
-          "_col": 24,
-          "_end_col": 27,
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 27,
+          "_end_col": 30,
           "_pdf_x0": 401.58000000000004,
           "_pdf_top": 753.7701999999999,
           "_pdf_x1": 443.5679999999999,
@@ -4724,10 +4936,10 @@
           }
         },
         {
-          "_row": 37,
-          "_end_row": 38,
-          "_col": 27,
-          "_end_col": 30,
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 30,
+          "_end_col": 33,
           "_pdf_x0": 443.5679999999999,
           "_pdf_top": 753.7701999999999,
           "_pdf_x1": 489.45,
@@ -4740,10 +4952,10 @@
           }
         },
         {
-          "_row": 37,
-          "_end_row": 38,
-          "_col": 30,
-          "_end_col": 32,
+          "_row": 39,
+          "_end_row": 40,
+          "_col": 33,
+          "_end_col": 36,
           "_pdf_x0": 489.45,
           "_pdf_top": 753.7701999999999,
           "_pdf_x1": 529.5795918367348,
@@ -4756,10 +4968,10 @@
           }
         },
         {
-          "_row": 38,
-          "_end_row": 40,
-          "_col": 16,
-          "_end_col": 22,
+          "_row": 40,
+          "_end_row": 42,
+          "_col": 17,
+          "_end_col": 24,
           "_pdf_x0": 264.80999999999995,
           "_pdf_top": 769.1316285714286,
           "_pdf_x1": 357.36,
@@ -4772,10 +4984,10 @@
           }
         },
         {
-          "_row": 38,
-          "_end_row": 40,
-          "_col": 22,
-          "_end_col": 24,
+          "_row": 40,
+          "_end_row": 42,
+          "_col": 24,
+          "_end_col": 27,
           "_pdf_x0": 357.36,
           "_pdf_top": 769.1316285714286,
           "_pdf_x1": 401.58000000000004,
@@ -4788,10 +5000,10 @@
           }
         },
         {
-          "_row": 38,
-          "_end_row": 40,
-          "_col": 24,
-          "_end_col": 27,
+          "_row": 40,
+          "_end_row": 42,
+          "_col": 27,
+          "_end_col": 30,
           "_pdf_x0": 401.58000000000004,
           "_pdf_top": 769.1316285714286,
           "_pdf_x1": 443.5679999999999,
@@ -4804,10 +5016,10 @@
           }
         },
         {
-          "_row": 38,
-          "_end_row": 40,
-          "_col": 27,
-          "_end_col": 30,
+          "_row": 40,
+          "_end_row": 42,
+          "_col": 30,
+          "_end_col": 33,
           "_pdf_x0": 443.5679999999999,
           "_pdf_top": 769.1316285714286,
           "_pdf_x1": 489.45,
@@ -4820,10 +5032,10 @@
           }
         },
         {
-          "_row": 38,
-          "_end_row": 40,
-          "_col": 30,
-          "_end_col": 32,
+          "_row": 40,
+          "_end_row": 42,
+          "_col": 33,
+          "_end_col": 36,
           "_pdf_x0": 489.45,
           "_pdf_top": 769.1316285714286,
           "_pdf_x1": 529.5795918367348,
@@ -4836,8 +5048,8 @@
           }
         },
         {
-          "_row": 40,
-          "_end_row": 41,
+          "_row": 42,
+          "_end_row": 43,
           "_col": 2,
           "_end_col": 6,
           "_pdf_x0": 47.00470588235295,
@@ -4852,10 +5064,10 @@
           }
         },
         {
-          "_row": 25,
-          "_end_row": 26,
+          "_row": 26,
+          "_end_row": 27,
           "_col": 4,
-          "_end_col": 9,
+          "_end_col": 10,
           "_pdf_x0": 80.16,
           "_pdf_top": 512.04,
           "_pdf_x1": 157.79999999999995,
@@ -4868,10 +5080,10 @@
           }
         },
         {
-          "_row": 26,
-          "_end_row": 27,
+          "_row": 27,
+          "_end_row": 28,
           "_col": 6,
-          "_end_col": 9,
+          "_end_col": 10,
           "_pdf_x0": 106.56,
           "_pdf_top": 529.8,
           "_pdf_x1": 157.79999999999995,
@@ -4883,9 +5095,7 @@
             "right": true
           }
         }
-      ],
-      "_row_shift": 0,
-      "_col_shift": 1
+      ]
     }
   ]
 }

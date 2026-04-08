@@ -193,6 +193,25 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
             height = page.height
             page_area = float(width) * float(height)
 
+            # ページ外枠の誤検出を除外:
+            # ページ面積の80%以上を占め、かつセル数が4以下のテーブルは
+            # ページ全体を囲む罫線であり、本物のテーブルではない
+            _valid_table_indices = []
+            for _ti, _tbl in enumerate(tables):
+                _bbox = _tbl.bbox
+                _tbl_area = (_bbox[2] - _bbox[0]) * (_bbox[3] - _bbox[1])
+                _cell_count = sum(1 for c in _tbl.cells if c is not None)
+                if _tbl_area >= 0.80 * page_area and _cell_count <= 4:
+                    continue  # ページ外枠 → 除外
+                _valid_table_indices.append(_ti)
+            tables = [tables[i] for i in _valid_table_indices]
+            table_bboxes = [tables[i].bbox for i in range(len(tables))]
+            table_col_x_positions = [table_col_x_positions[i] for i in _valid_table_indices]
+            table_row_y_positions = [table_row_y_positions[i] for i in _valid_table_indices]
+            table_cells = [table_cells[i] for i in _valid_table_indices]
+            cleaned_tables = [cleaned_tables[i] for i in _valid_table_indices]
+            table_data = [table_data[i] for i in _valid_table_indices]
+
             # 矩形枠の抽出（フォームフィールド・罫線ボックス等）
             # ページ全体を覆う矩形（ページ境界・背景）は除外する
             rects = []

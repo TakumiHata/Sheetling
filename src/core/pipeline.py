@@ -13,9 +13,7 @@ Sheetling パイプライン。
 """
 
 import json
-import math
 import re
-from collections import defaultdict
 from pathlib import Path
 
 from src.parser.pdf_extractor import extract_pdf_data
@@ -73,35 +71,64 @@ def _normalize_font_name(raw_name):
 
 
 
-def _to_monotone(idxs: list, max_val: int) -> list:
-    """重複した整数インデックスを +1 でずらして単調増加にする。"""
-    result = []
-    prev = 0
-    for idx in idxs:
-        idx = max(idx, prev + 1)
-        result.append(min(idx, max_val))
-        prev = result[-1]
-    return result
-
-
 def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
     """
     PDF座標をExcel行・列番号に直接変換し、各要素にインプレースで付与する。
-    A4固定・グリッド固定の前提で floor 除算を使うため、クラスタリング不要。
-    grid_h ≈ 20pt の幅の中でのサブピクセルノイズ（±数pt）は自然に同一セルに収まる。
+    コンテンツ境界をmax_cols/max_rowsで分割し、全列・全行を使い切る。
     """
-    grid_h = page['height'] / max_rows
-    grid_w = page['width']  / max_cols
+    # --- コンテンツ境界の検出 ---
+    page_h = float(page['height'])
+    all_x: list = []
+    all_y: list = []
+    for w in page['words']:
+        t = float(w.get('top', 0))
+        if t < 0 or t > page_h:
+            continue
+        all_x.append(float(w['x0']))
+        if 'x1' in w:
+            all_x.append(float(w['x1']))
+        all_y.append(t)
+        if 'bottom' in w:
+            all_y.append(float(w['bottom']))
+    for r in page['rects']:
+        all_x.extend([float(r['x0']), float(r['x1'])])
+        all_y.extend([float(r['top']), float(r['bottom'])])
+    for cells_2d in page.get('table_cells', []):
+        if not cells_2d:
+            continue
+        for row_cells in cells_2d:
+            for cb in row_cells:
+                if cb is None:
+                    continue
+                all_x.extend([float(cb['x0']), float(cb['x1'])])
+                all_y.extend([float(cb['top']), float(cb['bottom'])])
+
+    if all_x and all_y:
+        min_x, max_x = min(all_x), max(all_x)
+        min_y, max_y = min(all_y), max(all_y)
+    else:
+        min_x, max_x = 0.0, float(page['width'])
+        min_y, max_y = 0.0, page_h
+
+    content_w = max_x - min_x
+    content_h = max_y - min_y
+    grid_w = content_w / max_cols if content_w > 0 else float(page['width']) / max_cols
+    grid_h = content_h / max_rows if content_h > 0 else page_h / max_rows
+
+    # 他の関数から参照できるよう保存
+    page['_content_min_x'] = min_x
+    page['_content_min_y'] = min_y
+    page['_content_grid_w'] = grid_w
+    page['_content_grid_h'] = grid_h
 
     def to_row(y: float) -> int:
-        return max(1, min(max_rows, 1 + int(float(y) / grid_h)))
+        return max(1, min(max_rows, 1 + int((float(y) - min_y) / grid_h)))
 
     def to_col(x: float) -> int:
-        return max(1, min(max_cols, 1 + int(float(x) / grid_w)))
+        return max(1, min(max_cols, 1 + int((float(x) - min_x) / grid_w)))
 
     # words に行・列番号を付与
     # top < 0 または top > height はページ境界外のアーティファクトのためスキップ
-    page_h = float(page['height'])
     for w in page['words']:
         t = float(w.get('top', 0))
         if t < 0 or t > page_h:
@@ -243,101 +270,13 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
     for rect in page['rects']:
         rect['_borders'] = {'top': True, 'bottom': True, 'left': True, 'right': True}
 
-    # ---- PDF 余白分の空き行を除去するため _row を正規化 --------------------------------
-    all_rows = (
-        [w['_row'] for w in page['words'] if '_row' in w]
-        + [r['_row'] for r in page['rects'] if '_row' in r]
-        + [tbr['_row'] for tbr in page['table_border_rects']]
-    )
-    if all_rows:
-        row_shift = min(all_rows) - 1
-        if row_shift > 0:
-            for w in page['words']:
-                if '_row' in w:
-                    w['_row'] -= row_shift
-                    if '_end_row' in w:
-                        w['_end_row'] -= row_shift
-            for r in page['rects']:
-                if '_row' in r:
-                    r['_row'] -= row_shift
-                    r['_end_row'] -= row_shift
-            for tbr in page['table_border_rects']:
-                tbr['_row'] -= row_shift
-                tbr['_end_row'] -= row_shift
-
-    # ---- LLM には渡さない（auto モードでは _auto_generate_layout が使用するため残す）------
     # table_cells / table_data / table_row_y_positions は _table_text_elements_from_2d で使うため
     # auto_layout 側で layout 生成後に削除する
     page.pop('h_edges', None)
     page.pop('v_edges', None)
 
 
-# 旧コードにあった後処理（クラスタリング時代の補正。直接除算後は不要なため削除済み）:
-#   - build_cluster_map + anchor_vals によるクラスタリング
-#   - 同一視覚行ワードの top 正規化（_same_row_groups）
-#   - テーブル列/行が同一グリッドに潰れた場合の後処理ループ
-#   - テーブル底辺直下の空行挿入ロジック
-# 直接除算では grid_h ≈ 20pt の幅の中でのノイズが自然に同一セルに収まるため不要。
-
 logger = get_logger(__name__)
-
-
-# ===========================================================================
-# pre版から移植: LLM協業モード用ユーティリティ関数
-# ===========================================================================
-
-def _merge_table_border_rects(tbrs: list) -> list:
-    """
-    隣接セル間に境界線がない table_border_rects を統合し、結合セルを 1 つの
-    border_rect として表現する。隣接整合性パスの後に呼ぶこと（共有辺の値が一致済み）。
-    """
-    # --- 縦方向マージ ---
-    col_groups: dict = defaultdict(list)
-    for tbr in tbrs:
-        col_groups[(tbr['_col'], tbr['_end_col'])].append(tbr)
-
-    v_merged: list = []
-    for cells in col_groups.values():
-        cells = sorted(cells, key=lambda c: c['_row'])
-        stack = [dict(cells[0])]
-        for cell in cells[1:]:
-            prev = stack[-1]
-            if prev['_end_row'] == cell['_row'] and not prev['_borders']['bottom']:
-                prev['_end_row']           = cell['_end_row']
-                prev['_pdf_bottom']        = cell['_pdf_bottom']
-                prev['_borders']['bottom'] = cell['_borders']['bottom']
-                prev['_borders']['left']   = prev['_borders']['left']  or cell['_borders']['left']
-                prev['_borders']['right']  = prev['_borders']['right'] or cell['_borders']['right']
-                prev['_outer_right']       = prev.get('_outer_right', False) or cell.get('_outer_right', False)
-                prev['_major_right']       = prev.get('_major_right', False) or cell.get('_major_right', False)
-            else:
-                stack.append(dict(cell))
-        v_merged.extend(stack)
-
-    # --- 横方向マージ ---
-    row_groups: dict = defaultdict(list)
-    for tbr in v_merged:
-        row_groups[(tbr['_row'], tbr['_end_row'])].append(tbr)
-
-    h_merged: list = []
-    for cells in row_groups.values():
-        cells = sorted(cells, key=lambda c: c['_col'])
-        stack = [dict(cells[0])]
-        for cell in cells[1:]:
-            prev = stack[-1]
-            if prev['_end_col'] == cell['_col'] and not prev['_borders']['right']:
-                prev['_end_col']           = cell['_end_col']
-                prev['_pdf_x1']            = cell['_pdf_x1']
-                prev['_borders']['right']  = cell['_borders']['right']
-                prev['_borders']['top']    = prev['_borders']['top']    or cell['_borders']['top']
-                prev['_borders']['bottom'] = prev['_borders']['bottom'] or cell['_borders']['bottom']
-                prev['_outer_right']       = cell.get('_outer_right', False)
-                prev['_major_right']       = cell.get('_major_right', False)
-            else:
-                stack.append(dict(cell))
-        h_merged.extend(stack)
-
-    return h_merged
 
 
 def _fix_empty_cell_type_attr(xlsx_path: str) -> None:
@@ -441,7 +380,7 @@ def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) ->
 
     for page_layout in layout:
         page_num = page_layout.get('page_number', 1)
-        row_offset = (page_num - 1) * max_rows + ROW_PADDING
+        row_offset = (page_num - 1) * (max_rows + ROW_PADDING) + ROW_PADDING
 
         for elem in page_layout.get('elements', []):
             etype = elem.get('type')
@@ -661,17 +600,16 @@ def _table_text_elements_from_2d(page: dict, grid_params: dict) -> list:
     max_rows = grid_params['max_rows']
     max_cols = grid_params['max_cols']
 
-    grid_h = float(page['height']) / max_rows
-    grid_w = float(page['width'])  / max_cols
+    min_x = page.get('_content_min_x', 0.0)
+    min_y = page.get('_content_min_y', 0.0)
+    grid_h = page.get('_content_grid_h', float(page['height']) / max_rows)
+    grid_w = page.get('_content_grid_w', float(page['width']) / max_cols)
 
     def to_row(y: float) -> int:
-        return max(1, min(max_rows, 1 + int(float(y) / grid_h)))
+        return max(1, min(max_rows, 1 + int((float(y) - min_y) / grid_h)))
 
     def to_col(x: float) -> int:
-        return max(1, min(max_cols, 1 + int(float(x) / grid_w)))
-
-    row_shift = page.get('_row_shift', 0)
-    col_shift = page.get('_col_shift', 0)
+        return max(1, min(max_cols, 1 + int((float(x) - min_x) / grid_w)))
 
     elements: list = []
     # 同一 word が複数セルの bbox に含まれる場合の重複処理を防止
@@ -735,10 +673,10 @@ def _table_text_elements_from_2d(page: dict, grid_params: dict) -> list:
                     y0 = row_ys[r_idx]
                     y1 = row_ys[min(r_idx + 1, len(row_ys) - 1)]
 
-                # シフト適用済みグリッド座標
-                grid_row = max(1, to_row(y0) - row_shift)
-                grid_col = max(1, to_col(x0) - col_shift)
-                grid_end_col = max(grid_col + 1, min(max_cols, to_col(x1) - col_shift))
+                # グリッド座標（コンテンツ境界ベースで算出済み）
+                grid_row = max(1, to_row(y0))
+                grid_col = max(1, to_col(x0))
+                grid_end_col = max(grid_col + 1, min(max_cols, to_col(x1)))
 
                 # セル内の words を実座標ベースで検索し、word 座標で配置する。
                 # word が見つからない場合のみ 2D テキストのフォールバックを使用する。
@@ -762,7 +700,7 @@ def _table_text_elements_from_2d(page: dict, grid_params: dict) -> list:
                         _used_word_ids.add(id(w))
                     # word 座標ベース配置: _row でグループ化
                     # テキストがセルの border_rect 外にはみ出さないようクリップ
-                    cell_max_row = max(grid_row, to_row(y1) - row_shift - 1)
+                    cell_max_row = max(grid_row, to_row(y1) - 1)
                     cell_word_rows: dict = {}
                     for w in cell_words:
                         wr_clipped = min(w['_row'], cell_max_row)
@@ -793,8 +731,8 @@ def _table_text_elements_from_2d(page: dict, grid_params: dict) -> list:
                                 ).strip()
                                 if not line_text:
                                     continue
-                                hg_col = max(1, to_col(float(hg[0].get('x0', 0))) - col_shift)
-                                hg_end_col = max(hg_col + 1, min(max_cols, to_col(float(hg[-1].get('x1', hg[-1].get('x0', 0)))) - col_shift))
+                                hg_col = max(1, to_col(float(hg[0].get('x0', 0))))
+                                hg_end_col = max(hg_col + 1, min(max_cols, to_col(float(hg[-1].get('x1', hg[-1].get('x0', 0))))))
                                 first_w = hg[0]
                                 te: dict = {
                                     'type': 'text',
@@ -814,7 +752,7 @@ def _table_text_elements_from_2d(page: dict, grid_params: dict) -> list:
                     continue  # word ベース配置完了
 
                 # フォールバック: words が見つからない場合は 2D テキストを分散配置
-                grid_end_row = max(grid_row, to_row(y1) - row_shift - 1)
+                grid_end_row = max(grid_row, to_row(y1) - 1)
                 for line_idx, line in enumerate(lines):
                     line_row = grid_row + line_idx
                     if line_row > grid_end_row:
@@ -828,133 +766,6 @@ def _table_text_elements_from_2d(page: dict, grid_params: dict) -> list:
                     })
 
     return elements
-
-
-def _fill_missing_text(layout_json_str: str, extracted_data: dict, grid_params: dict | None = None) -> str:
-    """
-    LLMが生成したレイアウトJSONに対し、extracted_dataのwordsと照合して
-    欠落しているテキスト要素をプログラム的に補完する。
-
-    Step 1 / Step 1.5 の LLM が見落とした word を確実に補う。
-    既に text 要素が存在する (row, col) には追加しない（上書き禁止）。
-    """
-    try:
-        layout = json.loads(layout_json_str)
-    except (json.JSONDecodeError, ValueError):
-        return layout_json_str  # パース失敗時はそのまま返す
-
-    total_added = 0
-    for page_layout in layout:
-        page_num = page_layout.get('page_number', 1)
-        page_data = next(
-            (p for p in extracted_data['pages'] if p['page_number'] == page_num),
-            None,
-        )
-        if not page_data:
-            continue
-
-        # 既存 text 要素の (row, col) を収集
-        existing: set = set()
-        for elem in page_layout.get('elements', []):
-            if elem.get('type') == 'text' and 'row' in elem and 'col' in elem:
-                existing.add((elem['row'], elem['col']))
-
-        # words を (_row, _col) でグループ化
-        # テーブル内ワードは _auto_generate_layout で 2D 配列から処理済みのためスキップ
-        # ただしテーブル2D配列でNoneセルに該当するワードはテーブル外として扱う
-        _tol_f = 2.0
-        _tbboxes = page_data.get('table_bboxes', [])
-
-        _tcell_bboxes: list = []
-        _td_src = page_data.get('table_data_raw') or page_data.get('table_data', [])
-        for _td, _c2d in zip(_td_src, page_data.get('table_cells', [])):
-            if not _td or not _c2d:
-                continue
-            for _ri, _trow in enumerate(_td):
-                for _ci, _cc in enumerate(_trow):
-                    if _cc is None:
-                        continue
-                    if (_c2d and _ri < len(_c2d)
-                            and _ci < len(_c2d[_ri])
-                            and _c2d[_ri][_ci] is not None):
-                        _cb = _c2d[_ri][_ci]
-                        _tcell_bboxes.append(
-                            (float(_cb['x0']), float(_cb['top']),
-                             float(_cb['x1']), float(_cb['bottom']))
-                        )
-
-        def _in_tbl(w: dict) -> bool:
-            wx = float(w.get('x0', 0))
-            wy = float(w.get('top', 0))
-            in_any = False
-            for _b in _tbboxes:
-                if (_b[0] - _tol_f <= wx <= _b[2] + _tol_f and
-                        _b[1] - _tol_f <= wy <= _b[3] + _tol_f):
-                    in_any = True
-                    break
-            if not in_any:
-                return False
-            for _cb in _tcell_bboxes:
-                if (_cb[0] - _tol_f <= wx <= _cb[2] + _tol_f and
-                        _cb[1] - _tol_f <= wy <= _cb[3] + _tol_f):
-                    return True
-            return False
-
-        groups: dict = {}
-        for w in page_data.get('words', []):
-            if '_row' not in w or '_col' not in w:
-                continue
-            if _in_tbl(w):
-                continue
-            key = (w['_row'], w['_col'])
-            groups.setdefault(key, []).append(w)
-
-        added = []
-        for (row, col), words in sorted(groups.items()):
-            # 水平ギャップで分割して2段表示を検出
-            h_groups = _split_by_horizontal_gap(words)
-            for hg in h_groups:
-                hg_col = hg[0].get('_col', col)
-                if (row, hg_col) in existing:
-                    continue
-                content = _join_word_texts([w.get('text', '') for w in hg])
-                stripped = content.strip()
-                # 空白・純粋な区切り記号（ASCII句読点の1文字）はスキップ
-                # ただし △▼○● 等の図形記号・日本語1文字は意味があるため残す
-                if not stripped or (len(stripped) == 1 and stripped in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'):
-                    continue
-                last_w = hg[-1]
-                if grid_params:
-                    _grid_w = float(page_data['width']) / grid_params['max_cols']
-                    _max_cols = grid_params['max_cols']
-                    hg_end = max(hg_col + 1, min(_max_cols, 1 + int(float(last_w.get('x1', last_w.get('x0', 0))) / _grid_w)))
-                else:
-                    hg_end = hg_col + len(content)
-                elem: dict = {
-                    'type': 'text',
-                    'content': content,
-                    'row': row,
-                    'col': hg_col,
-                    'end_col': hg_end,
-                }
-                first = hg[0]
-                if first.get('font_color') and first['font_color'] != '000000':
-                    elem['font_color'] = first['font_color']
-                if first.get('font_size'):
-                    elem['font_size'] = first['font_size']
-                font_name = _normalize_font_name(first.get('fontname', ''))
-                if font_name:
-                    elem['font_name'] = font_name
-                added.append(elem)
-
-        if added:
-            page_layout['elements'].extend(added)
-            total_added += len(added)
-
-    if total_added:
-        logger.info(f"[fill_missing_text] {total_added} 個の欠落テキスト要素を補完しました")
-
-    return json.dumps(layout, ensure_ascii=False)
 
 
 def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
@@ -982,7 +793,8 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
     for page in extracted_data.get('pages', []):
         elements = []
         seen_border_rects: list = []  # [修正] set → list（近似一致検索のため）
-        grid_w = float(page['width']) / max_cols
+        min_x = page.get('_content_min_x', 0.0)
+        grid_w = page.get('_content_grid_w', float(page['width']) / max_cols)
 
         # table_border_rects → border_rect 要素
         for tbr in page.get('table_border_rects', []):
@@ -1119,7 +931,7 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
         for (row, col), words in sorted(groups.items()):
             # 同一グループ内に複数の視覚行が含まれる場合（_SPLIT_GAP 以内の小さなギャップ）、
             # 行ごとに \n で結合してセル内改行として表現する。
-            _INLINE_LINE_GAP = 1.0  # pt: この値を超えるギャップを行区切りとみなす
+            _INLINE_LINE_GAP = 3.0  # pt: この値を超えるギャップを行区切りとみなす
             # PDF が同一座標に重複ワードを出力する場合（影付きテキスト等）を除去する。
             # (text, top×0.5pt丸め, x0×0.5pt丸め) が同一のワードは重複とみなす。
             _seen_w: set = set()
@@ -1168,7 +980,7 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
                         seen_text.add(_pos)
                         first = _hg[0]
                         last = _hg[-1]
-                        _hg_end_col = max(_hg_col_c + 1, min(max_cols, 1 + int(float(last.get('x1', last.get('x0', 0))) / grid_w)))
+                        _hg_end_col = max(_hg_col_c + 1, min(max_cols, 1 + int((float(last.get('x1', last.get('x0', 0))) - min_x) / grid_w)))
                         _elem: dict = {
                             'type': 'text',
                             'content': _line_content,
@@ -1202,7 +1014,7 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
                 seen_text.add(pos)
                 first = hg[0]
                 last_w = hg[-1]
-                hg_end_col = max(hg_col_c + 1, min(max_cols, 1 + int(float(last_w.get('x1', last_w.get('x0', 0))) / grid_w)))
+                hg_end_col = max(hg_col_c + 1, min(max_cols, 1 + int((float(last_w.get('x1', last_w.get('x0', 0))) - min_x) / grid_w)))
                 elem: dict = {
                     'type': 'text',
                     'content': content,
@@ -1279,16 +1091,13 @@ class SheetlingPipeline:
 
     def auto_layout(self, pdf_path: str, in_base_dir: str = "data/in", grid_size: str = "small") -> dict:
         """
-        [全自動] PDF → Excel 高精度解析パイプライン (Sheetling-pre 方式)。
+        [全自動] PDF → Excel 高精度解析パイプライン。
 
         1. extract_pdf_data() でテキスト・罫線を抽出
-        2. _setup_grid_params() で A4 ポイント基準の方眼密度を動的計算
-        3. _compute_grid_coords() で全要素にグリッド座標を付与
-        4. _merge_table_border_rects() で結合セルを復元 (Pre版ロジック)
-        5. 行シフト補正で上部余白を詰め、コンテンツを上詰めに配置
-        6. _auto_generate_layout() でプログラム的にレイアウト JSON を生成
-        7. _fill_missing_text() で欠落したテキスト要素を最終補完
-        8. _render_layout_to_xlsx() で Excel を直接レンダリング
+        2. _setup_grid_params() で方眼密度を設定
+        3. _compute_grid_coords() でコンテンツ境界ベースのグリッド座標を付与
+        4. _auto_generate_layout() でレイアウト JSON を生成
+        5. _render_layout_to_xlsx() で Excel を直接レンダリング
         """
         logger.info(f"--- [auto] PDF → Excel 高精度自動生成: {Path(pdf_path).name} ---")
         path_obj = Path(pdf_path)
@@ -1314,54 +1123,8 @@ class SheetlingPipeline:
         for page in extracted_data['pages']:
             _compute_grid_coords(page, grid_params['max_rows'], grid_params['max_cols'])
 
-        # ---- [Sheetling-pre 移植ロジック] -----------------------------------------
-        # 結合セルのマージは不要（有効セルベースで生成済み）
-
-        # 行シフト補正（上部余白の除去）
-        for page in extracted_data['pages']:
-            all_rows = (
-                [w['_row'] for w in page['words'] if '_row' in w]
-                + [r['_row'] for r in page['rects'] if '_row' in r]
-                + [tbr['_row'] for tbr in page['table_border_rects']]
-            )
-            row_shift = (min(all_rows) - 1) if all_rows else 0
-            page['_row_shift'] = row_shift  # _table_text_elements_from_2d で使用
-            if row_shift > 0:
-                for w in page['words']:
-                    if '_row' in w:
-                        w['_row'] -= row_shift
-                        if '_end_row' in w: w['_end_row'] -= row_shift
-                for r in page['rects']:
-                    if '_row' in r:
-                        r['_row'] -= row_shift
-                        r['_end_row'] -= row_shift
-                for tbr in page['table_border_rects']:
-                    tbr['_row'] -= row_shift
-                    tbr['_end_row'] -= row_shift
-
-        # 3. 列シフト補正（左余白を1列に統一）
-        # 行シフト補正と同様に、コンテンツ最左列を1にそろえ、
-        # COL_OFFSET=1 で左側ちょうど1列の余白になるようにする。
-        for page in extracted_data['pages']:
-            all_cols = (
-                [w['_col'] for w in page['words'] if '_col' in w]
-                + [r['_col'] for r in page['rects'] if '_col' in r]
-                + [tbr['_col'] for tbr in page['table_border_rects']]
-            )
-            col_shift = (min(all_cols) - 1) if all_cols else 0
-            page['_col_shift'] = col_shift  # _table_text_elements_from_2d で使用
-            if col_shift > 0:
-                for w in page['words']:
-                    if '_col' in w:
-                        w['_col'] -= col_shift
-                for r in page['rects']:
-                    if '_col' in r:
-                        r['_col'] -= col_shift
-                        r['_end_col'] -= col_shift
-                for tbr in page['table_border_rects']:
-                    tbr['_col'] -= col_shift
-                    tbr['_end_col'] -= col_shift
-        # ---------------------------------------------------------------------------
+        # コンテンツ境界ベースのグリッド座標により、行/列シフトは不要
+        # (_compute_grid_coords がコンテンツ範囲を max_rows/max_cols に直接マッピング)
 
         # デバッグ用に中間データを保存
         with open(out_dir / f"{pdf_name}_extracted.json", "w", encoding="utf-8") as f:
@@ -1369,19 +1132,9 @@ class SheetlingPipeline:
         with open(out_dir / grid_params_name, "w", encoding="utf-8") as f:
             json.dump(grid_params, f, ensure_ascii=False)
 
-        # レイアウトJSON生成 & 欠落テキスト補完
+        # レイアウトJSON生成
         layout_json_str = _auto_generate_layout(extracted_data, grid_params)
-        filled_json_str = _fill_missing_text(layout_json_str, extracted_data, grid_params)
-        layout_data = json.loads(filled_json_str)
-
-        # プレビュー生成用にページごとのシフト量を退避
-        _page_shifts = {}
-        for page in extracted_data['pages']:
-            _pn = page.get('page_number', 1)
-            _page_shifts[_pn] = {
-                'row_shift': page.get('_row_shift', 0),
-                'col_shift': page.get('_col_shift', 0),
-            }
+        layout_data = json.loads(layout_json_str)
 
         # table_data / table_row_y_positions / table_cells は layout 生成後不要なため削除
         for page in extracted_data['pages']:
@@ -1389,13 +1142,15 @@ class SheetlingPipeline:
             page.pop('table_data_raw', None)
             page.pop('table_row_y_positions', None)
             page.pop('table_cells', None)
-            page.pop('_row_shift', None)
-            page.pop('_col_shift', None)
+            page.pop('_content_min_x', None)
+            page.pop('_content_min_y', None)
+            page.pop('_content_grid_w', None)
+            page.pop('_content_grid_h', None)
 
         # アーカイブ・correct コマンド用保存
         output_json_path = out_dir / layout_json_name
         with open(output_json_path, "w", encoding="utf-8") as f:
-            f.write(filled_json_str)
+            f.write(layout_json_str)
 
         # 直接 Excel レンダリング (Pre版方式)
         # _1pt / _2pt のみサフィックスを付与。それ以外は従来どおり。
@@ -1438,12 +1193,9 @@ class SheetlingPipeline:
 
             _pdf_img = _pdir / f"{pdf_name}_page{_pn}.png"
             _preview  = _pdir / f"{pdf_name}_excel_page{_pn}.png"
-            _shifts = _page_shifts.get(_pn, {'row_shift': 0, 'col_shift': 0})
             try:
                 _generate_border_preview(_page_layout, grid_params, str(_preview),
-                                         pdf_image_path=str(_pdf_img),
-                                         row_shift=_shifts['row_shift'],
-                                         col_shift=_shifts['col_shift'])
+                                         pdf_image_path=str(_pdf_img))
             except Exception as _e:
                 logger.warning(f"  ページ {_pn}: 罫線プレビュー生成に失敗しました: {_e}")
 
