@@ -217,7 +217,7 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
             rects = []
             for r in page.rects:
                 rect_area = (r['x1'] - r['x0']) * (r['bottom'] - r['top'])
-                if rect_area < 0.85 * page_area:
+                if rect_area < 0.80 * page_area:
                     rects.append({
                         'x0': float(r['x0']),
                         'top': float(r['top']),
