@@ -1408,6 +1408,12 @@ class SheetlingPipeline:
             logger.error(f"❌ Excel 生成に失敗しました: {e}")
             raise
 
+        # 比較用に元PDFを出力先にコピー
+        import shutil
+        pdf_copy_dest = out_dir / path_obj.name
+        shutil.copy(str(path_obj), str(pdf_copy_dest))
+        logger.info(f"📄 元PDF コピー完了: {pdf_copy_dest.name}")
+
         # ---- ビジョンレビュー素材の自動生成 ----------------------------------------
         # correct コマンドで AI 視覚比較できるよう、PDF 画像・罫線プレビュー・
         # VISUAL_REVIEW_PROMPT・corrections テンプレートをまとめて出力する。
