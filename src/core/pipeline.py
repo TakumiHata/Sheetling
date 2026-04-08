@@ -465,10 +465,7 @@ def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) ->
                         )
                     # [修正] フォント名: エイリアス解決済みの値、なければグリッドデフォルト
                     resolved_font_name = elem.get('font_name') or font_name
-                    # [修正] フォントサイズ: PDF 値を優先しつつ、セル高さに収まる上限でクランプ
-                    raw_font_size = elem.get('font_size') or default_font_size
-                    max_font_size = row_height * 0.72  # row_height(pt) の約72%を上限とする
-                    resolved_font_size = min(float(raw_font_size), max_font_size)
+                    resolved_font_size = float(elem.get('font_size') or default_font_size)
                     font_kwargs = {
                         'name': resolved_font_name,
                         'size': resolved_font_size,
