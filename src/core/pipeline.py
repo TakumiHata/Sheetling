@@ -71,6 +71,7 @@ def _normalize_font_name(raw_name):
 
 
 
+
 def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
     """
     PDF座標をExcel行・列番号に直接変換し、各要素にインプレースで付与する。
@@ -272,8 +273,18 @@ def _compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
 
     # table_cells / table_data / table_row_y_positions は _table_text_elements_from_2d で使うため
     # auto_layout 側で layout 生成後に削除する
-    page.pop('h_edges', None)
-    page.pop('v_edges', None)
+
+    # h_edges / v_edges にグリッド座標を付与して保持する。
+    # テーブル bbox によるフィルタは行わない。table_border_rects と重複するエッジは
+    # _auto_generate_layout() の _is_near_duplicate() で自動排除される。
+    for he in page.get('h_edges', []):
+        he['_row'] = to_row(float(he['y']))
+        he['_col'] = to_col(float(he['x0']))
+        he['_end_col'] = to_col(float(he['x1'])) + 1
+    for ve in page.get('v_edges', []):
+        ve['_col'] = to_col(float(ve['x']))
+        ve['_row'] = to_row(float(ve['y0']))
+        ve['_end_row'] = to_row(float(ve['y1'])) + 1
 
 
 logger = get_logger(__name__)
@@ -885,6 +896,46 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
                 'row': r, 'end_row': er,
                 'col': c, 'end_col': ec,
                 'borders': {'top': True, 'bottom': True, 'left': True, 'right': True},
+            })
+
+        # h_edges → 水平罫線の border_rect 要素
+        for he in page.get('h_edges', []):
+            if '_row' not in he:
+                continue
+            r = min(he['_row'], max_rows)
+            c = min(he['_col'], max_cols)
+            ec = min(he['_end_col'], max_cols)
+            if c == ec:
+                continue
+            key = (r, r + 1, c, ec)
+            if _is_near_duplicate(seen_border_rects, *key):
+                continue
+            seen_border_rects.append(key)
+            elements.append({
+                'type': 'border_rect',
+                'row': r, 'end_row': r + 1,
+                'col': c, 'end_col': ec,
+                'borders': {'top': True, 'bottom': False, 'left': False, 'right': False},
+            })
+
+        # v_edges → 垂直罫線の border_rect 要素
+        for ve in page.get('v_edges', []):
+            if '_col' not in ve:
+                continue
+            c = min(ve['_col'], max_cols)
+            r = min(ve['_row'], max_rows)
+            er = min(ve['_end_row'], max_rows)
+            if r == er:
+                continue
+            key = (r, er, c, c + 1)
+            if _is_near_duplicate(seen_border_rects, *key):
+                continue
+            seen_border_rects.append(key)
+            elements.append({
+                'type': 'border_rect',
+                'row': r, 'end_row': er,
+                'col': c, 'end_col': c + 1,
+                'borders': {'top': False, 'bottom': False, 'left': True, 'right': False},
             })
 
         # words → text 要素（_row, _col でグループ化）
