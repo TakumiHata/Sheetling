@@ -47,6 +47,20 @@ _FONT_ALIASES: dict = {
 }
 
 
+def _linewidth_to_border_style(linewidth: float) -> str:
+    """PDF の linewidth (pt) を Excel の罫線スタイルにマッピングする。
+    Access レポートの一般的な罫線太さ:
+      - 0〜1pt   → 'thin'   (細線)
+      - 1〜2pt   → 'medium' (中太線)
+      - 2pt超    → 'thick'  (太線)
+    """
+    if linewidth <= 1.0:
+        return 'thin'
+    if linewidth <= 2.0:
+        return 'medium'
+    return 'thick'
+
+
 def _normalize_font_name(raw_name):
     """PDF フォント名を Excel に渡せる形式に整形する。
     1. bytes / bytes repr 文字列（pdfminer が返す非ASCII名）を除外
@@ -350,8 +364,6 @@ def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) ->
     ws.sheet_format.customHeight = True
     ws.sheet_view.showGridLines = True
 
-    thin = Side(style='thin')
-
     def _set_border_side(row: int, col: int, **sides) -> None:
         if row < 1:
             return
@@ -367,24 +379,26 @@ def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) ->
         except AttributeError:
             pass
 
-    def _draw_border(s_row: int, e_row: int, s_col: int, e_col: int, borders: dict) -> None:
+    def _draw_border(s_row: int, e_row: int, s_col: int, e_col: int,
+                     borders: dict, border_style: str = 'thin') -> None:
         # e_row, e_col は exclusive: 枠は s_row <= r < e_row, s_col <= c < e_col
         has_top    = borders.get('top',    True)
         has_bottom = borders.get('bottom', True)
         has_left   = borders.get('left',   True)
         has_right  = borders.get('right',  True)
+        side = Side(style=border_style)
         if has_top:
             for c in range(s_col, e_col):
-                _set_border_side(s_row, c, top=thin)
+                _set_border_side(s_row, c, top=side)
         if has_bottom:
             for c in range(s_col, e_col):
-                _set_border_side(e_row - 1, c, bottom=thin)
+                _set_border_side(e_row - 1, c, bottom=side)
         if has_left:
             for r in range(s_row, e_row):
-                _set_border_side(r, s_col, left=thin)
+                _set_border_side(r, s_col, left=side)
         if has_right:
             for r in range(s_row, e_row):
-                _set_border_side(r, e_col - 1, right=thin)
+                _set_border_side(r, e_col - 1, right=side)
 
     max_used_row = 0
     max_used_col = 0
@@ -434,7 +448,8 @@ def _render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) ->
                 s_col = elem.get('col', 1) + COL_OFFSET
                 e_col_v = elem.get('end_col', 1) + COL_OFFSET
                 borders = elem.get('borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
-                _draw_border(s_row, e_row_v, s_col, e_col_v, borders)
+                _draw_border(s_row, e_row_v, s_col, e_col_v, borders,
+                             border_style=elem.get('border_style', 'thin'))
                 max_used_row = max(max_used_row, e_row_v)
                 max_used_col = max(max_used_col, e_col_v)
 
@@ -807,10 +822,9 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
     max_rows = grid_params['max_rows']
     max_cols = grid_params['max_cols']
 
-    def _is_near_duplicate(seen: list, r: int, er: int, c: int, ec: int, tol: int = 1) -> bool:
+    def _is_near_duplicate(seen: list, r: int, er: int, c: int, ec: int, tol: int = 0) -> bool:
         """グリッド座標が tol 以内の既登録要素があれば重複とみなす。
-        完全一致チェックだけでは grid 量子化誤差（±1行/列ずれ）による
-        実質同一矩形の二重登録を取りこぼすため、近似一致も除外する。"""
+        tol=0（完全一致）で重複排除し、近接する別々の罫線の過剰除去を防ぐ。"""
         for (sr, ser, sc, sec) in seen:
             if (abs(sr - r) <= tol and abs(ser - er) <= tol and
                     abs(sc - c) <= tol and abs(sec - ec) <= tol):
@@ -856,6 +870,7 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
             ec = min(rect['_end_col'], max_cols)
             if r > er: r, er = er, r
             if c > ec: c, ec = ec, c
+            _bs = _linewidth_to_border_style(rect.get('linewidth', 0.0))
 
             # 横線 (r == er): 水平罫線として描画
             if r == er and c != ec:
@@ -868,6 +883,7 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
                     'row': r, 'end_row': r + 1,
                     'col': c, 'end_col': ec,
                     'borders': {'top': True, 'bottom': False, 'left': False, 'right': False},
+                    'border_style': _bs,
                 })
                 continue
 
@@ -882,6 +898,7 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
                     'row': r, 'end_row': er,
                     'col': c, 'end_col': c + 1,
                     'borders': {'top': False, 'bottom': False, 'left': True, 'right': False},
+                    'border_style': _bs,
                 })
                 continue
 
@@ -896,6 +913,7 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
                 'row': r, 'end_row': er,
                 'col': c, 'end_col': ec,
                 'borders': {'top': True, 'bottom': True, 'left': True, 'right': True},
+                'border_style': _bs,
             })
 
         # h_edges → 水平罫線の border_rect 要素
@@ -911,11 +929,13 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
             if _is_near_duplicate(seen_border_rects, *key):
                 continue
             seen_border_rects.append(key)
+            _bs = _linewidth_to_border_style(he.get('linewidth', 0.0))
             elements.append({
                 'type': 'border_rect',
                 'row': r, 'end_row': r + 1,
                 'col': c, 'end_col': ec,
                 'borders': {'top': True, 'bottom': False, 'left': False, 'right': False},
+                'border_style': _bs,
             })
 
         # v_edges → 垂直罫線の border_rect 要素
@@ -931,11 +951,13 @@ def _auto_generate_layout(extracted_data: dict, grid_params: dict) -> str:
             if _is_near_duplicate(seen_border_rects, *key):
                 continue
             seen_border_rects.append(key)
+            _bs = _linewidth_to_border_style(ve.get('linewidth', 0.0))
             elements.append({
                 'type': 'border_rect',
                 'row': r, 'end_row': er,
                 'col': c, 'end_col': c + 1,
                 'borders': {'top': False, 'bottom': False, 'left': True, 'right': False},
+                'border_style': _bs,
             })
 
         # words → text 要素（_row, _col でグループ化）

@@ -222,7 +222,8 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                         'x0': float(r['x0']),
                         'top': float(r['top']),
                         'x1': float(r['x1']),
-                        'bottom': float(r['bottom'])
+                        'bottom': float(r['bottom']),
+                        'linewidth': float(r.get('linewidth', 0) or 0),
                     })
 
             rects = _remove_containing_rects(rects)
@@ -239,30 +240,33 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                 """0.5pt 単位で丸める。0.1pt では近接重複を取りこぼすため粗めに統一。"""
                 return round(v * 2) / 2
 
-            def _add_h(x0: float, x1: float, y: float) -> None:
+            def _add_h(x0: float, x1: float, y: float, linewidth: float = 0.0) -> None:
                 # [修正] 0.1pt → 0.5pt 単位に変更し、座標誤差による重複エッジを排除する
                 key = (_r05(min(x0, x1)), _r05(max(x0, x1)), _r05(y))
                 if key not in _h_seen:
                     _h_seen.add(key)
-                    h_edges.append({'x0': key[0], 'x1': key[1], 'y': key[2]})
+                    h_edges.append({'x0': key[0], 'x1': key[1], 'y': key[2],
+                                    'linewidth': linewidth})
 
-            def _add_v(x: float, y0: float, y1: float) -> None:
+            def _add_v(x: float, y0: float, y1: float, linewidth: float = 0.0) -> None:
                 # [修正] 同上
                 key = (_r05(x), _r05(min(y0, y1)), _r05(max(y0, y1)))
                 if key not in _v_seen:
                     _v_seen.add(key)
                     v_edges.append({'x': key[0], 'y0': key[1], 'y1': key[2],
-                                    'span': key[2] - key[1]})
+                                    'span': key[2] - key[1],
+                                    'linewidth': linewidth})
 
             for line in page.lines:
                 lx0 = float(line['x0'])
                 lx1 = float(line['x1'])
                 lt  = float(line.get('top',    line.get('y0', 0)))
                 lb  = float(line.get('bottom', line.get('y1', lt)))
+                lw  = float(line.get('linewidth', 0) or 0)
                 if abs(lb - lt) < 2.0 and abs(lx1 - lx0) > 2.0:   # 水平線
-                    _add_h(lx0, lx1, (lt + lb) / 2)
+                    _add_h(lx0, lx1, (lt + lb) / 2, lw)
                 elif abs(lx1 - lx0) < 2.0 and abs(lb - lt) > 2.0:  # 垂直線
-                    _add_v((lx0 + lx1) / 2, lt, lb)
+                    _add_v((lx0 + lx1) / 2, lt, lb, lw)
 
             for r in page.rects:
                 rect_area = (r['x1'] - r['x0']) * (r['bottom'] - r['top'])
@@ -278,10 +282,11 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
                     continue
                 rx0, rx1 = float(r['x0']), float(r['x1'])
                 rt,  rb  = float(r['top']), float(r['bottom'])
-                _add_h(rx0, rx1, rt)  # 上辺
-                _add_h(rx0, rx1, rb)  # 下辺
-                _add_v(rx0, rt, rb)   # 左辺
-                _add_v(rx1, rt, rb)   # 右辺
+                rlw = float(r.get('linewidth', 0) or 0)
+                _add_h(rx0, rx1, rt, rlw)  # 上辺
+                _add_h(rx0, rx1, rb, rlw)  # 下辺
+                _add_v(rx0, rt, rb, rlw)   # 左辺
+                _add_v(rx1, rt, rb, rlw)   # 右辺
 
             _merge_gap = 2.0  # pt: これ以下のギャップは連結する
 
@@ -290,36 +295,40 @@ def extract_pdf_data(pdf_path: str) -> Dict[str, Any]:
             # 微小ギャップ（gap_tol 以内）を橋渡しして1本にまとめ、二重線を防ぐ。
             _by_x: dict = {}
             for _e in v_edges:
-                _by_x.setdefault(_e['x'], []).append((_e['y0'], _e['y1']))
+                _by_x.setdefault(_e['x'], []).append((_e['y0'], _e['y1'], _e.get('linewidth', 0.0)))
             v_edges = []
             for _x, _segs in _by_x.items():
                 _segs_sorted = sorted(_segs)
-                _merged = [list(_segs_sorted[0])]
-                for _y0, _y1 in _segs_sorted[1:]:
+                _merged = [list(_segs_sorted[0])]  # [y0, y1, linewidth]
+                for _y0, _y1, _lw in _segs_sorted[1:]:
                     if _y0 <= _merged[-1][1] + _merge_gap:
                         _merged[-1][1] = max(_merged[-1][1], _y1)
+                        _merged[-1][2] = max(_merged[-1][2], _lw)
                     else:
-                        _merged.append([_y0, _y1])
-                for _y0, _y1 in _merged:
-                    v_edges.append({'x': _x, 'y0': _y0, 'y1': _y1, 'span': _y1 - _y0})
+                        _merged.append([_y0, _y1, _lw])
+                for _y0, _y1, _lw in _merged:
+                    v_edges.append({'x': _x, 'y0': _y0, 'y1': _y1, 'span': _y1 - _y0,
+                                    'linewidth': _lw})
 
             # [修正追加] 同一Y座標の水平エッジを連結してセグメントを統合する。
             # 垂直エッジと同様に、PDF が水平線を短い線分に分割して出力する場合の
             # 30%オーバーラップ閾値通過失敗を防ぐ。
             _by_y: dict = {}
             for _e in h_edges:
-                _by_y.setdefault(_e['y'], []).append((_e['x0'], _e['x1']))
+                _by_y.setdefault(_e['y'], []).append((_e['x0'], _e['x1'], _e.get('linewidth', 0.0)))
             h_edges = []
             for _y, _segs in _by_y.items():
                 _segs_sorted = sorted(_segs)
-                _merged = [list(_segs_sorted[0])]
-                for _x0, _x1 in _segs_sorted[1:]:
+                _merged = [list(_segs_sorted[0])]  # [x0, x1, linewidth]
+                for _x0, _x1, _lw in _segs_sorted[1:]:
                     if _x0 <= _merged[-1][1] + _merge_gap:
                         _merged[-1][1] = max(_merged[-1][1], _x1)
+                        _merged[-1][2] = max(_merged[-1][2], _lw)
                     else:
-                        _merged.append([_x0, _x1])
-                for _x0, _x1 in _merged:
-                    h_edges.append({'x0': _x0, 'x1': _x1, 'y': _y})
+                        _merged.append([_x0, _x1, _lw])
+                for _x0, _x1, _lw in _merged:
+                    h_edges.append({'x0': _x0, 'x1': _x1, 'y': _y,
+                                    'linewidth': _lw})
 
             page_data = {
                 "page_number": page_number,
