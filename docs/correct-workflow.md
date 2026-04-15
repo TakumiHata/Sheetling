@@ -180,7 +180,7 @@ overlap 判定だと外枠など大きなボーダーが巻き添えで削除さ
 
 1. 修正済み `{pdf_name}_{grid_size}_layout.json` を読み込み
 2. `{pdf_name}_{grid_size}_grid_params.json` を読み込み
-3. `_render_layout_to_xlsx()` で Excel を再生成
+3. `render_layout_to_xlsx()`（`src/renderer/excel.py`） で Excel を再生成
 
 レイアウト JSON 全体を再レンダリングするため、修正箇所だけでなく既存のテキスト・罫線もすべて含めた完全な Excel が出力されます。
 
@@ -188,7 +188,7 @@ overlap 判定だと外枠など大きなボーダーが巻き添えで削除さ
 
 ## 罫線プレビュー画像の生成
 
-`_generate_border_preview()` は `auto` 実行時に以下を描画します：
+`generate_border_preview()`（`src/renderer/preview.py`） は `auto` 実行時に以下を描画します：
 
 | 要素 | 描画内容 |
 |------|---------|
