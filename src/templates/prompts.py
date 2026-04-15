@@ -9,19 +9,16 @@ GRID_SIZES = {
     # =========================================================================
     # A4 (595pt × 842pt)
     # =========================================================================
-    # Sheetling "1pt": A4縦 62列×42行 / A4横 85列×32行（列幅1.00表示）
-    # 縦横のグリッド数は A4 ポイント寸法とセル幅から算出後に余白列を加算:
-    #   縦: 595pt÷(595/57)pt ≈ 57列 + 5列 = 62列, 842pt÷(842/42)pt ≈ 42行
-    #   横: 実測値 85列×32行（Excel印刷プレビューで1ページに収まる範囲）
+    # Sheetling "1pt": A4縦 47列×39行 / A4横 70列×25行（列幅1.00表示）
     "1pt": {
         "col_width_mm": "3.48",
         "row_height_mm": "6.44",
         # A4縦
-        "max_cols": 61,  # 67 - 6列（印刷プレビュー実測に合わせて調整）
-        "max_rows": 42,
-        # A4横（縦と同一セルサイズ、枚数が変わる）
-        "max_cols_landscape": 89,  # A4横でコンテンツを広く使うため拡張
-        "max_rows_landscape": 30,  # 30を超えると空白ページが発生するため固定
+        "max_cols": 47,
+        "max_rows": 39,
+        # A4横
+        "max_cols_landscape": 70,
+        "max_rows_landscape": 25,
         "excel_col_width": 1.625,  # (1*8+5)/8: デスクトップExcel(MDW=8)で列幅1.00表示
         "excel_row_height": 18.25,
         "margin_left": 0.43,
@@ -32,19 +29,16 @@ GRID_SIZES = {
         "font_name": "MS Gothic",
         "position_tolerance_cells": "1〜2",
     },
-    # 粗めセル密度（A4縦: 37列×42行 / A4横: 58列×30行、列幅2.00表示）
-    # 縦横のグリッド数は A4 ポイント寸法とセル幅から算出後に余白列を加算:
-    #   縦: 595pt÷(595/34)pt ≈ 34列 + 3列 = 37列, 842pt÷(842/42)pt ≈ 42行
-    #   横: 842pt÷(595/34)pt ≈ 48列 + 10列 = 58列, 595pt÷(842/42)pt ≈ 30行
+    # Sheetling "2pt": A4縦 29列×39行 / A4横 44列×25行（列幅2.00表示）
     "2pt": {
         "col_width_mm": "6.18",
         "row_height_mm": "6.44",
         # A4縦
-        "max_cols": 37,  # 算出値34 + 余白3列
-        "max_rows": 42,
-        # A4横（縦と同一セルサイズ、枚数が変わる）
-        "max_cols_landscape": 58,  # 算出値48 + 余白10列
-        "max_rows_landscape": 30,
+        "max_cols": 29,
+        "max_rows": 39,
+        # A4横
+        "max_cols_landscape": 44,
+        "max_rows_landscape": 25,
         "excel_col_width": 2.625,  # (2*8+5)/8: デスクトップExcel(MDW=8)で列幅2.00表示
         "excel_row_height": 18.25,
         "margin_left": 0.43,
@@ -58,19 +52,16 @@ GRID_SIZES = {
     # =========================================================================
     # A3 (842pt × 1190pt) — セルサイズは A4 と同一、用紙が大きい分だけ列数・行数が増える
     # =========================================================================
-    # A3 1pt: A3縦 92列×61行 / A3横 128列×44行（列幅1.00表示）
-    # セルサイズは A4 "1pt" と同一 (≈9.60pt × 20.05pt):
-    #   縦: 842pt÷9.60pt ≈ 87列 + 5列 = 92列,  1190pt÷20.05pt ≈ 59行 + 2行 = 61行
-    #   横: 1190pt÷9.60pt ≈ 123列 + 5列 = 128列, 842pt÷20.05pt ≈ 42行 + 2行 = 44行
+    # A3 1pt: A3縦 70列×57行 / A3横 104列×39行（列幅1.00表示）
     "1pt_a3": {
         "col_width_mm": "3.48",
         "row_height_mm": "6.44",
         # A3縦
-        "max_cols": 92,  # 算出値87 + 余白5列
-        "max_rows": 61,  # 算出値59 + 余白2行
+        "max_cols": 70,
+        "max_rows": 57,
         # A3横
-        "max_cols_landscape": 128,  # 算出値123 + 余白5列
-        "max_rows_landscape": 44,  # 算出値42 + 余白2行
+        "max_cols_landscape": 104,
+        "max_rows_landscape": 39,
         "excel_col_width": 1.625,
         "excel_row_height": 18.25,
         "margin_left": 0.43,
@@ -81,19 +72,16 @@ GRID_SIZES = {
         "font_name": "MS Gothic",
         "position_tolerance_cells": "1〜2",
     },
-    # A3 2pt: A3縦 57列×61行 / A3横 79列×44行（列幅2.00表示）
-    # セルサイズは A4 "2pt" と同一 (≈16.08pt × 20.05pt):
-    #   縦: 842pt÷16.08pt ≈ 52列 + 5列 = 57列,  1190pt÷20.05pt ≈ 59行 + 2行 = 61行
-    #   横: 1190pt÷16.08pt ≈ 74列 + 5列 = 79列,  842pt÷20.05pt ≈ 42行 + 2行 = 44行
+    # A3 2pt: A3縦 44列×57行 / A3横 65列×39行（列幅2.00表示）
     "2pt_a3": {
         "col_width_mm": "6.18",
         "row_height_mm": "6.44",
         # A3縦
-        "max_cols": 57,  # 算出値52 + 余白5列
-        "max_rows": 61,  # 算出値59 + 余白2行
+        "max_cols": 44,
+        "max_rows": 57,
         # A3横
-        "max_cols_landscape": 79,  # 算出値74 + 余白5列
-        "max_rows_landscape": 44,  # 算出値42 + 余白2行
+        "max_cols_landscape": 65,
+        "max_rows_landscape": 39,
         "excel_col_width": 2.625,
         "excel_row_height": 18.25,
         "margin_left": 0.43,

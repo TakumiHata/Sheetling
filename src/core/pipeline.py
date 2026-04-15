@@ -1206,19 +1206,19 @@ class SheetlingPipeline:
         layout_json_name = f"{pdf_name}_{grid_size}_layout.json"
         grid_params_name = f"{pdf_name}_{grid_size}_grid_params.json"
 
-        # PDF抽出 & グリッド座標付与
+        # PDF抽出
         extracted_data = extract_pdf_data(pdf_path)
+
+        # デバッグ用: PDF抽出の生データを保存（グリッド座標付与前）
+        with open(out_dir / f"{pdf_name}_extracted.json", "w", encoding="utf-8") as f:
+            json.dump(extracted_data, f, indent=2, ensure_ascii=False)
+
+        # グリッド座標付与
         first_page = extracted_data['pages'][0]
         grid_params = _setup_grid_params(first_page, grid_size)
         for page in extracted_data['pages']:
             _compute_grid_coords(page, grid_params['max_rows'], grid_params['max_cols'])
 
-        # コンテンツ境界ベースのグリッド座標により、行/列シフトは不要
-        # (_compute_grid_coords がコンテンツ範囲を max_rows/max_cols に直接マッピング)
-
-        # デバッグ用に中間データを保存
-        with open(out_dir / f"{pdf_name}_extracted.json", "w", encoding="utf-8") as f:
-            json.dump(extracted_data, f, indent=2, ensure_ascii=False)
         with open(out_dir / grid_params_name, "w", encoding="utf-8") as f:
             json.dump(grid_params, f, ensure_ascii=False)
 
