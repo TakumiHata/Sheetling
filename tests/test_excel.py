@@ -36,7 +36,8 @@ class TestRenderLayoutToXlsx:
         render_layout_to_xlsx(layout, _grid_params(), output)
         wb = load_workbook(output)
         ws = wb.active
-        assert ws.cell(row=3, column=5).value == 'Hello'
+        # row=3 + ROW_PADDING(1) = 4, col=5 + COL_OFFSET(1) = 6
+        assert ws.cell(row=4, column=6).value == 'Hello'
 
     def test_border_element(self, tmp_path):
         from openpyxl import load_workbook
@@ -51,7 +52,8 @@ class TestRenderLayoutToXlsx:
         render_layout_to_xlsx(layout, _grid_params(), output)
         wb = load_workbook(output)
         ws = wb.active
-        cell = ws.cell(row=2, column=3)
+        # top-left cell: row=2+1=3, col=3+1=4
+        cell = ws.cell(row=3, column=4)
         assert cell.border.top.style is not None
 
     def test_multi_page(self, tmp_path):
@@ -68,9 +70,9 @@ class TestRenderLayoutToXlsx:
         from openpyxl import load_workbook
         wb = load_workbook(output)
         ws = wb.active
-        assert ws.cell(row=1, column=1).value == 'Page1'
-        # page 2: row = 1 + (2-1)*46 = 47
-        assert ws.cell(row=47, column=1).value == 'Page2'
+        assert ws.cell(row=2, column=2).value == 'Page1'
+        # page 2: row = 1 + (2-1)*(46+1) + 1 = 49
+        assert ws.cell(row=49, column=2).value == 'Page2'
 
     def test_font_color(self, tmp_path):
         from openpyxl import load_workbook
@@ -85,7 +87,7 @@ class TestRenderLayoutToXlsx:
         render_layout_to_xlsx(layout, _grid_params(), output)
         wb = load_workbook(output)
         ws = wb.active
-        cell = ws.cell(row=1, column=1)
+        cell = ws.cell(row=2, column=2)
         assert 'FF0000' in str(cell.font.color.rgb)
 
 
