@@ -1,8 +1,31 @@
 import re
 
+from src.templates.prompts import GRID_SIZES
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+# キャッシュされた _grid_params.json から読み込んだ場合でも、
+# 描画系パラメータ（列幅・行高・フォント・余白）はコード変更を反映するため
+# レンダー時に GRID_SIZES から再解決する。
+_RENDER_ONLY_KEYS = (
+    'excel_col_width', 'excel_row_height',
+    'default_font_size', 'font_name',
+    'margin_left', 'margin_right', 'margin_top', 'margin_bottom',
+)
+
+
+def _refresh_render_params(grid_params: dict) -> dict:
+    grid_size = grid_params.get('grid_size', '1pt')
+    is_a3 = grid_params.get('paper_size') == 8
+    ref_key = f"{grid_size}_a3" if is_a3 else grid_size
+    ref = GRID_SIZES.get(ref_key, GRID_SIZES.get(grid_size, GRID_SIZES["1pt"]))
+    refreshed = dict(grid_params)
+    for key in _RENDER_ONLY_KEYS:
+        if key in ref:
+            refreshed[key] = ref[key]
+    return refreshed
 
 
 def fix_empty_cell_type_attr(xlsx_path: str) -> None:
@@ -131,6 +154,7 @@ def _finalize_workbook(ws, wb, total_pages, max_rows, max_used_row, max_used_col
 def render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) -> None:
     COL_OFFSET = 1
     ROW_PADDING = 1
+    grid_params = _refresh_render_params(grid_params)
     max_rows = grid_params['max_rows']
     default_font_size = grid_params.get('default_font_size', 7)
     font_name = grid_params.get('font_name', 'MS Gothic')
