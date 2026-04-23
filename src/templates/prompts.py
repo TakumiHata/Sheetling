@@ -9,17 +9,17 @@ GRID_SIZES = {
     # =========================================================================
     # A4 (595pt × 842pt)
     # =========================================================================
-    # Sheetling "1pt": A4縦 47列×39行 / A4横 70列×25行（列幅1.00表示）
+    # Sheetling "1pt": A4縦 54列×46行 / A4横 79列×31行（列幅1.00表示）
     "1pt": {
         "col_width_mm": "3.48",
         "row_height_mm": "6.44",
         # A4縦
-        "max_cols": 47,
-        "max_rows": 39,
+        "max_cols": 54,
+        "max_rows": 46,
         # A4横
-        "max_cols_landscape": 70,
-        "max_rows_landscape": 25,
-        "excel_col_width": 1.625,  # (1*8+5)/8: デスクトップExcel(MDW=8)で列幅1.00表示
+        "max_cols_landscape": 79,
+        "max_rows_landscape": 31,
+        "excel_col_width": 1.69,  # 経験的に列幅1.00表示となる値（MDW≈7.0環境）
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
@@ -29,17 +29,17 @@ GRID_SIZES = {
         "font_name": "MS Gothic",
         "position_tolerance_cells": "1〜2",
     },
-    # Sheetling "2pt": A4縦 29列×39行 / A4横 44列×25行（列幅2.00表示）
+    # Sheetling "2pt": A4縦 34列×46行 / A4横 50列×31行（列幅2.00表示）
     "2pt": {
         "col_width_mm": "6.18",
         "row_height_mm": "6.44",
         # A4縦
-        "max_cols": 29,
-        "max_rows": 39,
+        "max_cols": 34,
+        "max_rows": 46,
         # A4横
-        "max_cols_landscape": 44,
-        "max_rows_landscape": 25,
-        "excel_col_width": 2.625,  # (2*8+5)/8: デスクトップExcel(MDW=8)で列幅2.00表示
+        "max_cols_landscape": 50,
+        "max_rows_landscape": 31,
+        "excel_col_width": 2.74,  # 経験的に列幅2.00表示となる値（MDW≈7.0環境）
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
@@ -52,17 +52,18 @@ GRID_SIZES = {
     # =========================================================================
     # A3 (842pt × 1190pt) — セルサイズは A4 と同一、用紙が大きい分だけ列数・行数が増える
     # =========================================================================
-    # A3 1pt: A3縦 70列×57行 / A3横 104列×39行（列幅1.00表示）
+    # A3 1pt: A3縦 102列×65行 / A3横 144列×46行（列幅1.00表示）
+    # ※A3縦は手元PDFがないため A3横 値からアスペクト比 (297/420, 420/297) で予測
     "1pt_a3": {
         "col_width_mm": "3.48",
         "row_height_mm": "6.44",
         # A3縦
-        "max_cols": 70,
-        "max_rows": 57,
+        "max_cols": 102,
+        "max_rows": 65,
         # A3横
-        "max_cols_landscape": 104,
-        "max_rows_landscape": 39,
-        "excel_col_width": 1.625,
+        "max_cols_landscape": 144,
+        "max_rows_landscape": 46,
+        "excel_col_width": 1.69,
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
@@ -72,17 +73,18 @@ GRID_SIZES = {
         "font_name": "MS Gothic",
         "position_tolerance_cells": "1〜2",
     },
-    # A3 2pt: A3縦 44列×57行 / A3横 65列×39行（列幅2.00表示）
+    # A3 2pt: A3縦 52列×65行 / A3横 73列×46行（列幅2.00表示）
+    # ※A3縦は手元PDFがないため A3横 値からアスペクト比 (297/420, 420/297) で予測
     "2pt_a3": {
         "col_width_mm": "6.18",
         "row_height_mm": "6.44",
         # A3縦
-        "max_cols": 44,
-        "max_rows": 57,
+        "max_cols": 52,
+        "max_rows": 65,
         # A3横
-        "max_cols_landscape": 65,
-        "max_rows_landscape": 39,
-        "excel_col_width": 2.625,
+        "max_cols_landscape": 73,
+        "max_rows_landscape": 46,
+        "excel_col_width": 2.74,
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,

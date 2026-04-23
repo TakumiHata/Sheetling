@@ -156,24 +156,24 @@ class TestSetupGridParams:
         params = setup_grid_params(page, '1pt')
         assert params['orientation'] == 'portrait'
         assert params['paper_size'] == 9
-        assert params['max_cols'] == 47
-        assert params['max_rows'] == 39
+        assert params['max_cols'] == 54
+        assert params['max_rows'] == 46
 
     def test_a4_landscape(self):
         page = {'width': 842, 'height': 595}
         params = setup_grid_params(page, '1pt')
         assert params['orientation'] == 'landscape'
-        assert params['max_cols'] == 70
-        assert params['max_rows'] == 25
+        assert params['max_cols'] == 79
+        assert params['max_rows'] == 31
 
     def test_a3_detection(self):
         page = {'width': 842, 'height': 1190}
         params = setup_grid_params(page, '1pt')
         assert params['paper_size'] == 8
-        assert params['max_cols'] == 70
+        assert params['max_cols'] == 102
 
     def test_2pt_grid(self):
         page = {'width': 595, 'height': 842}
         params = setup_grid_params(page, '2pt')
-        assert params['max_cols'] == 29
-        assert params['excel_col_width'] == 2.625
+        assert params['max_cols'] == 34
+        assert params['excel_col_width'] == 2.74
