@@ -1,9 +1,18 @@
 import pdfplumber
 from typing import Dict, Any, Optional
 
+from src.core.constants import (
+    EDGE_MERGE_GAP_TOL,
+    LINE_HV_MIN_LENGTH,
+    MAX_EDGE_RECT_AREA_RATIO,
+    MAX_RECT_AREA_RATIO,
+    MAX_TABLE_AREA_RATIO,
+    RECT_CONTAINMENT_TOL,
+)
+
 
 def _remove_containing_rects(rects: list) -> list:
-    tol = 1.0
+    tol = RECT_CONTAINMENT_TOL
     to_remove = set()
     for i, a in enumerate(rects):
         if i in to_remove:
@@ -178,7 +187,7 @@ def _filter_page_boundary_tables(tables, table_bboxes, table_col_x_positions,
         bbox = tbl.bbox
         tbl_area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
         cell_count = sum(1 for c in tbl.cells if c is not None)
-        if tbl_area >= 0.80 * page_area and cell_count <= 4:
+        if tbl_area >= MAX_TABLE_AREA_RATIO * page_area and cell_count <= 4:
             continue
         valid_indices.append(ti)
     return (
@@ -196,7 +205,7 @@ def _extract_rects(page, page_area: float) -> list:
     rects = []
     for r in page.rects:
         rect_area = (r['x1'] - r['x0']) * (r['bottom'] - r['top'])
-        if rect_area < 0.80 * page_area:
+        if rect_area < MAX_RECT_AREA_RATIO * page_area:
             rects.append({
                 'x0': float(r['x0']),
                 'top': float(r['top']),
@@ -235,18 +244,18 @@ def _collect_raw_edges(page, page_area: float):
         lt = float(line.get('top', line.get('y0', 0)))
         lb = float(line.get('bottom', line.get('y1', lt)))
         lw = float(line.get('linewidth', 0) or 0)
-        if abs(lb - lt) < 2.0 and abs(lx1 - lx0) > 2.0:
+        if abs(lb - lt) < LINE_HV_MIN_LENGTH and abs(lx1 - lx0) > LINE_HV_MIN_LENGTH:
             add_h(lx0, lx1, (lt + lb) / 2, lw)
-        elif abs(lx1 - lx0) < 2.0 and abs(lb - lt) > 2.0:
+        elif abs(lx1 - lx0) < LINE_HV_MIN_LENGTH and abs(lb - lt) > LINE_HV_MIN_LENGTH:
             add_v((lx0 + lx1) / 2, lt, lb, lw)
 
     for r in page.rects:
         rect_area = (r['x1'] - r['x0']) * (r['bottom'] - r['top'])
-        if rect_area >= 0.85 * page_area:
+        if rect_area >= MAX_EDGE_RECT_AREA_RATIO * page_area:
             continue
         rw = float(r['x1']) - float(r['x0'])
         rh = float(r['bottom']) - float(r['top'])
-        is_line_like = rh < 2.0 or rw < 2.0
+        is_line_like = rh < LINE_HV_MIN_LENGTH or rw < LINE_HV_MIN_LENGTH
         has_stroke = r.get('stroking_color') is not None
         if not has_stroke and not is_line_like:
             continue
@@ -262,7 +271,7 @@ def _collect_raw_edges(page, page_area: float):
 
 
 def _merge_edge_segments(edges: list, axis_key: str, start_key: str, end_key: str) -> list:
-    gap_tol = 2.0
+    gap_tol = EDGE_MERGE_GAP_TOL
     by_axis: dict = {}
     for e in edges:
         by_axis.setdefault(e[axis_key], []).append(

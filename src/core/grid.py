@@ -1,3 +1,8 @@
+from src.core.constants import (
+    LINE_RECT_MERGE_TOL,
+    RECT_IN_TABLE_TOL,
+    THIN_LINE_THICKNESS,
+)
 from src.templates.prompts import GRID_SIZES
 from src.utils.logger import get_logger
 
@@ -47,20 +52,17 @@ def _assign_word_grid_coords(page: dict, page_h: float, to_row, to_col) -> None:
 
 
 def _merge_thin_lines_to_rects(page: dict) -> None:
-    _LINE_THICKNESS = 3.0
-    _MERGE_TOL = 5.0
-
     h_lines = []
     v_lines = []
     for idx, r in enumerate(page['rects']):
         w = abs(r['x1'] - r['x0'])
         h = abs(r['bottom'] - r['top'])
-        if w < _LINE_THICKNESS and h >= _LINE_THICKNESS:
+        if w < THIN_LINE_THICKNESS and h >= THIN_LINE_THICKNESS:
             v_lines.append((idx, (r['x0'] + r['x1']) / 2, r['top'], r['bottom']))
-        elif h < _LINE_THICKNESS and w >= _LINE_THICKNESS:
+        elif h < THIN_LINE_THICKNESS and w >= THIN_LINE_THICKNESS:
             h_lines.append((idx, r['x0'], r['x1'], (r['top'] + r['bottom']) / 2))
 
-    used_indices, merged_rects = _find_line_rectangles(h_lines, v_lines, _MERGE_TOL)
+    used_indices, merged_rects = _find_line_rectangles(h_lines, v_lines, LINE_RECT_MERGE_TOL)
 
     remaining = [page['rects'][i] for i in range(len(page['rects']))
                  if i not in used_indices]
@@ -119,10 +121,10 @@ def _assign_rect_grid_coords(page: dict, to_row, to_col, max_rows, max_cols) -> 
         r['_col']     = to_col(r['x0'])
         r['_end_col'] = to_col(r['x1']) + 1
 
-    tol = 3.0
     table_bboxes = page.get('table_bboxes', [])
 
     def is_inside_table(r: dict) -> bool:
+        tol = RECT_IN_TABLE_TOL
         for bbox in table_bboxes:
             if (r['x0'] >= bbox[0] - tol and r['x1'] <= bbox[2] + tol and
                     r['top'] >= bbox[1] - tol and r['bottom'] <= bbox[3] + tol):

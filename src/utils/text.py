@@ -1,3 +1,6 @@
+from src.core.constants import HORIZONTAL_GAP_FACTOR
+
+
 def has_japanese(text: str) -> bool:
     return any(
         '\u3040' <= c <= '\u30ff'
@@ -14,7 +17,7 @@ def join_word_texts(texts: list) -> str:
     return ' '.join(t for t in texts if t.strip())
 
 
-def split_by_horizontal_gap(words: list, gap_factor: float = 2.0) -> list:
+def split_by_horizontal_gap(words: list, gap_factor: float = HORIZONTAL_GAP_FACTOR) -> list:
     if len(words) <= 1:
         return [words]
     sw = sorted(words, key=lambda w: float(w.get('x0', 0)))

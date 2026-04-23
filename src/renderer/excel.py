@@ -1,5 +1,6 @@
 import re
 
+from src.core.constants import COL_OFFSET, ROW_PADDING
 from src.templates.prompts import GRID_SIZES
 from src.utils.logger import get_logger
 
@@ -132,7 +133,6 @@ def _finalize_workbook(ws, wb, total_pages, max_rows, max_used_row, max_used_col
     from openpyxl.worksheet.pagebreak import Break
     from openpyxl.utils import get_column_letter
 
-    ROW_PADDING = 1
     for pn in range(1, total_pages):
         ws.row_breaks.append(Break(id=pn * (max_rows + ROW_PADDING)))
 
@@ -152,8 +152,6 @@ def _finalize_workbook(ws, wb, total_pages, max_rows, max_used_row, max_used_col
 
 
 def render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) -> None:
-    COL_OFFSET = 1
-    ROW_PADDING = 1
     grid_params = _refresh_render_params(grid_params)
     max_rows = grid_params['max_rows']
     default_font_size = grid_params.get('default_font_size', 7)

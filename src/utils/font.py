@@ -1,10 +1,12 @@
 import re
 
+from src.core.constants import BORDER_MEDIUM_MAX_LW, BORDER_THIN_MAX_LW
+
 
 def linewidth_to_border_style(linewidth: float) -> str:
-    if linewidth <= 1.0:
+    if linewidth <= BORDER_THIN_MAX_LW:
         return 'thin'
-    if linewidth <= 2.0:
+    if linewidth <= BORDER_MEDIUM_MAX_LW:
         return 'medium'
     return 'thick'
 
