@@ -26,12 +26,19 @@ def fix_empty_cell_type_attr(xlsx_path: str) -> None:
 
 def _create_workbook(grid_params: dict):
     from openpyxl import Workbook
+    from openpyxl.utils import get_column_letter
     wb = Workbook()
     ws = wb.active
-    ws.sheet_format.defaultColWidth = grid_params.get('excel_col_width', 1.45)
+    col_width = grid_params.get('excel_col_width', 1.45)
+    ws.sheet_format.defaultColWidth = col_width
     ws.sheet_format.defaultRowHeight = grid_params.get('excel_row_height', 11.34)
     ws.sheet_format.customHeight = True
     ws.sheet_view.showGridLines = True
+    # defaultColWidth だけでは Excel が独自換算で狭く表示するため、
+    # 印刷範囲をカバーする全列に明示的な width を設定する。
+    max_cols = grid_params.get('max_cols', 50)
+    for col_idx in range(1, max_cols + 2):  # +1 for COL_OFFSET (左1列空け)
+        ws.column_dimensions[get_column_letter(col_idx)].width = col_width
     return wb, ws
 
 
