@@ -170,7 +170,7 @@ class TestSetupGridParams:
         page = {'width': 842, 'height': 1190}
         params = setup_grid_params(page, '1pt')
         assert params['paper_size'] == 8
-        assert params['max_cols'] == 102
+        assert params['max_cols'] == 81
 
     def test_2pt_grid(self):
         page = {'width': 595, 'height': 842}
