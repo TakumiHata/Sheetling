@@ -175,7 +175,9 @@ def render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) -> 
                 max_used_col = max(max_used_col, c)
             elif etype == 'border_rect':
                 er, ec = _place_border_element(ws, elem, row_offset, COL_OFFSET)
-                max_used_row = max(max_used_row, er)
-                max_used_col = max(max_used_col, ec)
+                # er/ec は排他的境界(最終セル+1)。print_area には実際に
+                # 書き込まれた最終セル位置 (er-1, ec-1) を使う。
+                max_used_row = max(max_used_row, er - 1)
+                max_used_col = max(max_used_col, ec - 1)
 
     _finalize_workbook(ws, wb, len(layout), max_rows, max_used_row, max_used_col, grid_params, output_path)
