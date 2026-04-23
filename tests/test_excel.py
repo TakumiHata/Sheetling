@@ -10,7 +10,7 @@ def _grid_params(**overrides):
         'max_rows': 45, 'max_cols': 53,
         'excel_col_width': 1.74, 'excel_row_height': 18.25,
         'paper_size': 9, 'orientation': 'portrait',
-        'default_font_size': 7, 'font_name': 'MS Gothic',
+        'default_font_size': 7, 'font_name': 'MSゴシック',
         'margin_left': 0.43, 'margin_right': 0.43,
         'margin_top': 0.41, 'margin_bottom': 0.41,
     }

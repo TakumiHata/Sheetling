@@ -14,23 +14,25 @@ class TestNormalizeFontName:
     def test_bytes_repr_string_returns_none(self):
         assert normalize_font_name("b'\\x80\\x81'") is None
 
-    def test_subset_prefix_removed(self):
-        assert normalize_font_name('ABCDEF+MS-Gothic') == 'MS Gothic'
+    def test_gothic_variants_return_gothic(self):
+        assert normalize_font_name('ABCDEF+MS-Gothic') == 'MSゴシック'
+        assert normalize_font_name('MS-Gothic') == 'MSゴシック'
+        assert normalize_font_name('MSGothic') == 'MSゴシック'
+        assert normalize_font_name('MSPGothic') == 'MSゴシック'
+        assert normalize_font_name('MeiryoUI') == 'MSゴシック'
+        assert normalize_font_name('YuGothic') == 'MSゴシック'
 
-    def test_hyphen_to_space(self):
-        assert normalize_font_name('MS-Gothic') == 'MS Gothic'
+    def test_mincho_variants_return_mincho(self):
+        assert normalize_font_name('BCDEFG+MSMincho') == 'MS明朝'
+        assert normalize_font_name('MS-Mincho') == 'MS明朝'
+        assert normalize_font_name('MSPMincho') == 'MS明朝'
+        assert normalize_font_name('YuMincho') == 'MS明朝'
 
-    def test_alias_resolution(self):
-        assert normalize_font_name('MSGothic') == 'MS Gothic'
-        assert normalize_font_name('MSPGothic') == 'MS PGothic'
-        assert normalize_font_name('MeiryoUI') == 'Meiryo UI'
-        assert normalize_font_name('YuGothic') == 'Yu Gothic'
+    def test_japanese_mincho_name(self):
+        assert normalize_font_name('小塚明朝') == 'MS明朝'
 
-    def test_unknown_font_passthrough(self):
-        assert normalize_font_name('Arial') == 'Arial'
-
-    def test_subset_plus_alias(self):
-        assert normalize_font_name('BCDEFG+MSMincho') == 'MS Mincho'
+    def test_unknown_font_defaults_to_gothic(self):
+        assert normalize_font_name('Arial') == 'MSゴシック'
 
 
 class TestLinewidthToBorderStyle:
