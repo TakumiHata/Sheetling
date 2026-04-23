@@ -31,8 +31,8 @@ class TestNormalizeFontName:
     def test_japanese_mincho_name(self):
         assert normalize_font_name('小塚明朝') == 'MS 明朝'
 
-    def test_unknown_font_defaults_to_gothic(self):
-        assert normalize_font_name('Arial') == 'MS ゴシック'
+    def test_unknown_font_defaults_to_mincho(self):
+        assert normalize_font_name('Arial') == 'MS 明朝'
 
 
 class TestLinewidthToBorderStyle:

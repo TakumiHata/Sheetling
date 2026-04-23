@@ -19,6 +19,6 @@ def normalize_font_name(raw_name):
     if isinstance(raw_name, str) and raw_name.startswith("b'"):
         return None
     name = re.sub(r'^[A-Z]{6}\+', '', raw_name)
-    if 'Mincho' in name or '明朝' in name:
-        return 'MS 明朝'
-    return 'MS ゴシック'
+    if 'Gothic' in name or 'ゴシック' in name or 'Meiryo' in name:
+        return 'MS ゴシック'
+    return 'MS 明朝'
