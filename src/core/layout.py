@@ -183,15 +183,40 @@ def _resolve_cell_bbox(cells_2d, r_idx, c_idx, trow, num_cols, col_xs, row_ys):
             row_ys[min(r_idx + 1, len(row_ys) - 1)])
 
 
-def _is_near_duplicate(seen: list, r: int, er: int, c: int, ec: int, tol: int = 0) -> bool:
-    for (sr, ser, sc, sec) in seen:
-        if (abs(sr - r) <= tol and abs(ser - er) <= tol and
-                abs(sc - c) <= tol and abs(sec - ec) <= tol):
-            return True
-    return False
+def _edges_of_side(r: int, er: int, c: int, ec: int, side: str) -> set:
+    if side == 'top':
+        return {('H', r, cc) for cc in range(c, ec)}
+    if side == 'bottom':
+        return {('H', er, cc) for cc in range(c, ec)}
+    if side == 'left':
+        return {('V', rr, c) for rr in range(r, er)}
+    if side == 'right':
+        return {('V', rr, ec) for rr in range(r, er)}
+    return set()
 
 
-def _collect_table_border_elements(page, max_rows, max_cols, seen) -> list:
+def _filter_sides_by_seen(r: int, er: int, c: int, ec: int,
+                          borders: dict, seen_edges: set) -> dict | None:
+    """Drop sides whose cell-edges are already all in seen_edges.
+
+    Returns a new borders dict with redundant sides set to False, or None
+    if all requested sides are fully redundant. seen_edges is updated
+    in-place with any newly-covered edges.
+    """
+    new_sides = {'top': False, 'bottom': False, 'left': False, 'right': False}
+    any_new = False
+    for side in ('top', 'bottom', 'left', 'right'):
+        if not borders.get(side):
+            continue
+        edges = _edges_of_side(r, er, c, ec, side)
+        if edges and (edges - seen_edges):
+            new_sides[side] = True
+            seen_edges.update(edges)
+            any_new = True
+    return new_sides if any_new else None
+
+
+def _collect_table_border_elements(page, max_rows, max_cols, seen_edges: set) -> list:
     elements = []
     for tbr in page.get('table_border_rects', []):
         r  = min(tbr['_row'],     max_rows)
@@ -202,18 +227,28 @@ def _collect_table_border_elements(page, max_rows, max_cols, seen) -> list:
         if c > ec: c, ec = ec, c
         if r == er and c == ec:
             continue
-        if _is_near_duplicate(seen, r, er, c, ec):
+        borders = tbr.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
+        sides = _filter_sides_by_seen(r, er, c, ec, borders, seen_edges)
+        if sides is None:
             continue
-        seen.append((r, er, c, ec))
         elements.append({
             'type': 'border_rect',
             'row': r, 'end_row': er, 'col': c, 'end_col': ec,
-            'borders': tbr.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True}),
+            'borders': sides,
         })
     return elements
 
 
-def _collect_rect_border_elements(page, max_rows, max_cols, seen) -> list:
+def _emit_rect_line(r: int, er: int, c: int, ec: int, borders: dict,
+                    bs: str, seen_edges: set) -> dict | None:
+    sides = _filter_sides_by_seen(r, er, c, ec, borders, seen_edges)
+    if sides is None:
+        return None
+    return {'type': 'border_rect', 'row': r, 'end_row': er, 'col': c, 'end_col': ec,
+            'borders': sides, 'border_style': bs}
+
+
+def _collect_rect_border_elements(page, max_rows, max_cols, seen_edges: set) -> list:
     elements = []
     for rect in page.get('rects', []):
         if '_row' not in rect:
@@ -227,35 +262,25 @@ def _collect_rect_border_elements(page, max_rows, max_cols, seen) -> list:
         bs = linewidth_to_border_style(rect.get('linewidth', 0.0))
 
         if r == er and c != ec:
-            key = (r, r + 1, c, ec)
-            if not _is_near_duplicate(seen, *key):
-                seen.append(key)
-                elements.append({'type': 'border_rect', 'row': r, 'end_row': r + 1,
-                                 'col': c, 'end_col': ec,
-                                 'borders': {'top': True, 'bottom': False, 'left': False, 'right': False},
-                                 'border_style': bs})
-            continue
-        if c == ec and r != er:
-            key = (r, er, c, c + 1)
-            if not _is_near_duplicate(seen, *key):
-                seen.append(key)
-                elements.append({'type': 'border_rect', 'row': r, 'end_row': er,
-                                 'col': c, 'end_col': c + 1,
-                                 'borders': {'top': False, 'bottom': False, 'left': True, 'right': False},
-                                 'border_style': bs})
-            continue
-        if r == er and c == ec:
-            continue
-        if not _is_near_duplicate(seen, r, er, c, ec):
-            seen.append((r, er, c, ec))
-            elements.append({'type': 'border_rect', 'row': r, 'end_row': er,
-                             'col': c, 'end_col': ec,
-                             'borders': {'top': True, 'bottom': True, 'left': True, 'right': True},
-                             'border_style': bs})
+            el = _emit_rect_line(r, r + 1, c, ec,
+                                 {'top': True, 'bottom': False, 'left': False, 'right': False},
+                                 bs, seen_edges)
+        elif c == ec and r != er:
+            el = _emit_rect_line(r, er, c, c + 1,
+                                 {'top': False, 'bottom': False, 'left': True, 'right': False},
+                                 bs, seen_edges)
+        elif r == er and c == ec:
+            el = None
+        else:
+            el = _emit_rect_line(r, er, c, ec,
+                                 {'top': True, 'bottom': True, 'left': True, 'right': True},
+                                 bs, seen_edges)
+        if el is not None:
+            elements.append(el)
     return elements
 
 
-def _collect_edge_border_elements(page, max_rows, max_cols, seen) -> list:
+def _collect_edge_border_elements(page, max_rows, max_cols, seen_edges: set) -> list:
     elements = []
     for he in page.get('h_edges', []):
         if '_row' not in he:
@@ -265,15 +290,12 @@ def _collect_edge_border_elements(page, max_rows, max_cols, seen) -> list:
         ec = min(he['_end_col'], max_cols)
         if c == ec:
             continue
-        key = (r, r + 1, c, ec)
-        if _is_near_duplicate(seen, *key):
-            continue
-        seen.append(key)
         bs = linewidth_to_border_style(he.get('linewidth', 0.0))
-        elements.append({'type': 'border_rect', 'row': r, 'end_row': r + 1,
-                         'col': c, 'end_col': ec,
-                         'borders': {'top': True, 'bottom': False, 'left': False, 'right': False},
-                         'border_style': bs})
+        el = _emit_rect_line(r, r + 1, c, ec,
+                             {'top': True, 'bottom': False, 'left': False, 'right': False},
+                             bs, seen_edges)
+        if el is not None:
+            elements.append(el)
 
     for ve in page.get('v_edges', []):
         if '_col' not in ve:
@@ -283,15 +305,12 @@ def _collect_edge_border_elements(page, max_rows, max_cols, seen) -> list:
         er = min(ve['_end_row'], max_rows)
         if r == er:
             continue
-        key = (r, er, c, c + 1)
-        if _is_near_duplicate(seen, *key):
-            continue
-        seen.append(key)
         bs = linewidth_to_border_style(ve.get('linewidth', 0.0))
-        elements.append({'type': 'border_rect', 'row': r, 'end_row': er,
-                         'col': c, 'end_col': c + 1,
-                         'borders': {'top': False, 'bottom': False, 'left': True, 'right': False},
-                         'border_style': bs})
+        el = _emit_rect_line(r, er, c, c + 1,
+                             {'top': False, 'bottom': False, 'left': True, 'right': False},
+                             bs, seen_edges)
+        if el is not None:
+            elements.append(el)
     return elements
 
 
@@ -420,14 +439,14 @@ def generate_layout(extracted_data: dict, grid_params: dict) -> str:
 
     layout = []
     for page in extracted_data.get('pages', []):
-        seen_border_rects: list = []
+        seen_edges: set = set()
         min_x = page.get('_content_min_x', 0.0)
         grid_w = page.get('_content_grid_w', float(page['width']) / max_cols)
 
         elements = []
-        elements.extend(_collect_table_border_elements(page, max_rows, max_cols, seen_border_rects))
-        elements.extend(_collect_rect_border_elements(page, max_rows, max_cols, seen_border_rects))
-        elements.extend(_collect_edge_border_elements(page, max_rows, max_cols, seen_border_rects))
+        elements.extend(_collect_table_border_elements(page, max_rows, max_cols, seen_edges))
+        elements.extend(_collect_rect_border_elements(page, max_rows, max_cols, seen_edges))
+        elements.extend(_collect_edge_border_elements(page, max_rows, max_cols, seen_edges))
 
         text_elements = _collect_text_elements(page, max_rows, max_cols, min_x, grid_w)
         seen_text = {(e['row'], e['col']) for e in text_elements}
