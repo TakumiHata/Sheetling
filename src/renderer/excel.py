@@ -60,7 +60,7 @@ def _create_workbook(grid_params: dict):
     # defaultColWidth だけでは Excel が独自換算で狭く表示するため、
     # 印刷範囲をカバーする全列に明示的な width を設定する。
     max_cols = grid_params.get('max_cols', 50)
-    for col_idx in range(1, max_cols + 2):  # +1 for COL_OFFSET (左1列空け)
+    for col_idx in range(1, max_cols + 1):
         ws.column_dimensions[get_column_letter(col_idx)].width = col_width
     return wb, ws
 
@@ -132,9 +132,8 @@ def _finalize_workbook(ws, wb, total_pages, max_rows, max_used_row, max_used_col
     from openpyxl.worksheet.pagebreak import Break
     from openpyxl.utils import get_column_letter
 
-    ROW_PADDING = 1
     for pn in range(1, total_pages):
-        ws.row_breaks.append(Break(id=pn * (max_rows + ROW_PADDING)))
+        ws.row_breaks.append(Break(id=pn * max_rows))
 
     ws.page_setup.paperSize = grid_params.get('paper_size', 9)
     ws.page_setup.orientation = grid_params.get('orientation', 'portrait')
@@ -152,8 +151,6 @@ def _finalize_workbook(ws, wb, total_pages, max_rows, max_used_row, max_used_col
 
 
 def render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) -> None:
-    COL_OFFSET = 1
-    ROW_PADDING = 1
     grid_params = _refresh_render_params(grid_params)
     max_rows = grid_params['max_rows']
     default_font_size = grid_params.get('default_font_size', 7)
@@ -165,16 +162,16 @@ def render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) -> 
 
     for page_layout in layout:
         page_num = page_layout.get('page_number', 1)
-        row_offset = (page_num - 1) * (max_rows + ROW_PADDING) + ROW_PADDING
+        row_offset = (page_num - 1) * max_rows
 
         for elem in page_layout.get('elements', []):
             etype = elem.get('type')
             if etype == 'text':
-                r, c = _place_text_element(ws, elem, row_offset, COL_OFFSET, default_font_size, font_name)
+                r, c = _place_text_element(ws, elem, row_offset, 0, default_font_size, font_name)
                 max_used_row = max(max_used_row, r)
                 max_used_col = max(max_used_col, c)
             elif etype == 'border_rect':
-                er, ec = _place_border_element(ws, elem, row_offset, COL_OFFSET)
+                er, ec = _place_border_element(ws, elem, row_offset, 0)
                 # er/ec は排他的境界(最終セル+1)。print_area には実際に
                 # 書き込まれた最終セル位置 (er-1, ec-1) を使う。
                 max_used_row = max(max_used_row, er - 1)
