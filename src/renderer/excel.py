@@ -155,7 +155,7 @@ def render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) -> 
     grid_params = _refresh_render_params(grid_params)
     max_rows = grid_params['max_rows']
     default_font_size = grid_params.get('default_font_size', 7)
-    font_name = grid_params.get('font_name', 'MSゴシック')
+    font_name = grid_params.get('font_name', 'MS 明朝')
 
     wb, ws = _create_workbook(grid_params)
     max_used_row = 0

@@ -20,5 +20,5 @@ def normalize_font_name(raw_name):
         return None
     name = re.sub(r'^[A-Z]{6}\+', '', raw_name)
     if 'Mincho' in name or '明朝' in name:
-        return 'MS明朝'
-    return 'MSゴシック'
+        return 'MS 明朝'
+    return 'MS ゴシック'

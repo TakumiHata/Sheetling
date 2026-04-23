@@ -32,7 +32,7 @@ GRID_SIZES = {
         "margin_top": 0.41,
         "margin_bottom": 0.41,
         "default_font_size": 7,
-        "font_name": "MSゴシック",
+        "font_name": "MS 明朝",
         "position_tolerance_cells": "1〜2",
     },
     # Sheetling "2pt": 印刷総 A4縦 34列×46行 / A4横 50列×31行（列幅2.00表示）
@@ -52,7 +52,7 @@ GRID_SIZES = {
         "margin_top": 0.41,
         "margin_bottom": 0.41,
         "default_font_size": 6,
-        "font_name": "MSゴシック",
+        "font_name": "MS 明朝",
         "position_tolerance_cells": "1",  # 4mm/セルと粗いため厳しく
     },
     # =========================================================================
@@ -76,7 +76,7 @@ GRID_SIZES = {
         "margin_top": 0.41,
         "margin_bottom": 0.41,
         "default_font_size": 7,
-        "font_name": "MSゴシック",
+        "font_name": "MS 明朝",
         "position_tolerance_cells": "1〜2",
     },
     # A3 2pt: 印刷総 A3縦 52列×65行 / A3横 73列×46行（列幅2.00表示）
@@ -97,7 +97,7 @@ GRID_SIZES = {
         "margin_top": 0.41,
         "margin_bottom": 0.41,
         "default_font_size": 6,
-        "font_name": "MSゴシック",
+        "font_name": "MS 明朝",
         "position_tolerance_cells": "1",
     },
 }
