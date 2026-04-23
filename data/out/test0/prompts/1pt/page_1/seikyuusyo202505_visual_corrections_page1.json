@@ -1,46 +1,5 @@
 {
-    "corrections": [
-        {
-            "action": "add_border",
-            "page": 1,
-            "row": 24,
-            "end_row": 41,
-            "col": 4,
-            "end_col": 60,
-            "borders": {
-                "top": true,
-                "bottom": true,
-                "left": true,
-                "right": true
-            }
-        },
-        {
-            "action": "add_border",
-            "page": 1,
-            "row": 26,
-            "end_row": 26,
-            "col": 7,
-            "end_col": 14,
-            "borders": {
-                "top": true,
-                "bottom": true,
-                "left": true,
-                "right": true
-            }
-        },
-        {
-            "action": "add_border",
-            "page": 1,
-            "row": 27,
-            "end_row": 27,
-            "col": 10,
-            "end_col": 14,
-            "borders": {
-                "top": true,
-                "bottom": true,
-                "left": true,
-                "right": true
-            }
-        }
-    ]
+  "corrections": [
+    {"action": "remove_edges", "page": 1, "ids": [35]}
+  ]
 }

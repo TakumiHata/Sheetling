@@ -12,11 +12,12 @@ import json
 import shutil
 from pathlib import Path
 
+from src.core.edges import enumerate_runs_with_ids
 from src.core.grid import compute_grid_coords, setup_grid_params
 from src.core.layout import generate_layout
 from src.parser.pdf_extractor import extract_pdf_data
 from src.renderer.excel import render_layout_to_xlsx
-from src.renderer.preview import generate_border_preview
+from src.renderer.preview import generate_border_preview, generate_diff_overlay
 from src.templates.prompts import VISUAL_REVIEW_PROMPT
 from src.utils.logger import get_logger
 
@@ -73,7 +74,30 @@ def _generate_review_materials(layout_data, grid_params, pdf_name, prompts_dir, 
         except Exception as e:
             logger.warning(f"  ページ {pn}: 罫線プレビュー生成に失敗しました: {e}")
 
+        runs_with_ids = enumerate_runs_with_ids(page_layout.get('elements', []))
+        _write_edges_json(runs_with_ids, pdf_name, pn, pdir)
+        _write_diff_overlay(pdf_img, runs_with_ids, grid_params,
+                            pdf_name, pn, pdir, content_bounds.get(pn, {}))
         _write_prompt_and_corrections(page_layout, grid_params, pdf_name, pn, pdir)
+
+
+def _write_edges_json(runs_with_ids: list, pdf_name: str, pn: int, pdir) -> None:
+    edges_path = pdir / f"{pdf_name}_edges_page{pn}.json"
+    edges_path.write_text(
+        json.dumps({"edges": runs_with_ids}, ensure_ascii=False, indent=2),
+        encoding="utf-8")
+
+
+def _write_diff_overlay(pdf_img, runs_with_ids, grid_params,
+                         pdf_name, pn, pdir, content_bounds):
+    if not pdf_img.exists():
+        return
+    diff_path = pdir / f"{pdf_name}_diff_page{pn}.png"
+    try:
+        generate_diff_overlay(str(pdf_img), runs_with_ids, grid_params,
+                              str(diff_path), content_bounds=content_bounds)
+    except Exception as e:
+        logger.warning(f"  ページ {pn}: 差分オーバーレイ画像の生成に失敗しました: {e}")
 
 
 def _write_prompt_and_corrections(page_layout, grid_params, pdf_name, pn, pdir):
@@ -134,9 +158,10 @@ class AutoLayoutService:
         logger.info(
             f"  [review 素材] prompts/{grid_size}/page_N/ に出力しました\n"
             f"  次のステップ:\n"
-            f"    1. PDF 画像と罫線プレビューを AI に渡し比較させる\n"
+            f"    1. {{pdf_name}}_diff_page{{N}}.png と {{pdf_name}}_edges_page{{N}}.json と\n"
+            f"       {{pdf_name}}_visual_review_page{{N}}.txt(プロンプト) を AI に渡す\n"
             f"    2. AI の出力 JSON を visual_corrections_page{{N}}.json に保存\n"
-            f"    3. python -m src.main correct --pdf {pdf_name} --grid-size {grid_size}"
+            f"    3. python -m src.main correct --pdf {pdf_name}"
         )
         return {"xlsx_path": str(xlsx_path), "layout_json": str(output_json_path),
                 "grid_params": grid_params}

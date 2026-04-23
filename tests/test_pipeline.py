@@ -120,6 +120,44 @@ class TestApplyCorrections:
         assert hello['row'] == 4
         assert hello['col'] == 6
 
+    def test_add_edge_h(self, setup_pipeline):
+        pipeline, tmp_path = setup_pipeline
+        corrections = json.dumps({'corrections': [
+            {'action': 'add_edge', 'page': 1, 'type': 'H',
+             'row': 8, 'col_start': 2, 'col_end': 9}
+        ]})
+        pipeline.apply_corrections('test', corrections,
+                                   specific_out_dir=str(tmp_path),
+                                   layout_json_name='test_1pt_layout.json')
+        layout = json.loads((tmp_path / 'test_1pt_layout.json').read_text())
+        # 元の rect は flatten/再集約で4辺のランに分解 → 4要素 + 新H 1要素 = 5
+        borders = [e for e in layout[0]['elements'] if e['type'] == 'border_rect']
+        h_at_row8 = [b for b in borders
+                     if b['row'] == 8 and b['end_row'] == 8
+                     and b['col'] == 2 and b['end_col'] == 9]
+        assert len(h_at_row8) == 1
+
+    def test_remove_edges_by_id(self, setup_pipeline):
+        pipeline, tmp_path = setup_pipeline
+        # 元の rect の上辺 (H, row=2) を ID 1 として削除
+        from src.core.edges import enumerate_runs_with_ids
+        layout = json.loads((tmp_path / 'test_1pt_layout.json').read_text())
+        runs = enumerate_runs_with_ids(layout[0]['elements'])
+        top_id = next(r['id'] for r in runs if r['type'] == 'H' and r['row'] == 2)
+
+        corrections = json.dumps({'corrections': [
+            {'action': 'remove_edges', 'page': 1, 'ids': [top_id]}
+        ]})
+        pipeline.apply_corrections('test', corrections,
+                                   specific_out_dir=str(tmp_path),
+                                   layout_json_name='test_1pt_layout.json')
+        layout = json.loads((tmp_path / 'test_1pt_layout.json').read_text())
+        borders = [e for e in layout[0]['elements'] if e['type'] == 'border_rect']
+        # 上辺 (H,2,*) が消えていること
+        assert not any(b.get('borders', {}).get('top') and b['row'] == 2 for b in borders)
+        # 下辺 (H, 5, *) は残っている
+        assert any(b.get('borders', {}).get('top') and b['row'] == 5 for b in borders)
+
     def test_invalid_json_raises(self, setup_pipeline):
         pipeline, tmp_path = setup_pipeline
         with pytest.raises(ValueError):
