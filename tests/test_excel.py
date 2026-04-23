@@ -8,7 +8,7 @@ from src.renderer.excel import render_layout_to_xlsx, fix_empty_cell_type_attr
 def _grid_params(**overrides):
     defaults = {
         'max_rows': 46, 'max_cols': 54,
-        'excel_col_width': 1.69, 'excel_row_height': 18.25,
+        'excel_col_width': 1.74, 'excel_row_height': 18.25,
         'paper_size': 9, 'orientation': 'portrait',
         'default_font_size': 7, 'font_name': 'MS Gothic',
         'margin_left': 0.43, 'margin_right': 0.43,
