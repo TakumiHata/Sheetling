@@ -7,7 +7,7 @@ from src.renderer.excel import render_layout_to_xlsx, fix_empty_cell_type_attr
 
 def _grid_params(**overrides):
     defaults = {
-        'max_rows': 46, 'max_cols': 54,
+        'max_rows': 45, 'max_cols': 53,
         'excel_col_width': 1.74, 'excel_row_height': 18.25,
         'paper_size': 9, 'orientation': 'portrait',
         'default_font_size': 7, 'font_name': 'MS Gothic',
@@ -71,8 +71,8 @@ class TestRenderLayoutToXlsx:
         wb = load_workbook(output)
         ws = wb.active
         assert ws.cell(row=2, column=2).value == 'Page1'
-        # page 2: row = 1 + (2-1)*(46+1) + 1 = 49
-        assert ws.cell(row=49, column=2).value == 'Page2'
+        # page 2: row = 1 + (2-1)*(45+1) + 1 = 48
+        assert ws.cell(row=48, column=2).value == 'Page2'
 
     def test_font_color(self, tmp_path):
         from openpyxl import load_workbook
