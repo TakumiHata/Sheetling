@@ -103,7 +103,7 @@ PDF座標 (x=130, y=180) の場合:
 
 ## GRID_SIZES 定数
 
-`src/templates/prompts.py` で定義。用紙サイズ × グリッド密度の組み合わせ：
+`src/core/grid_config.py` で定義。用紙サイズ × グリッド密度の組み合わせ：
 
 ### 定数一覧
 

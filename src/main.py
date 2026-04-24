@@ -33,7 +33,7 @@ def _run_auto(args, pipeline):
 
 
 def _find_correction_out_dirs(args):
-    from src.templates.prompts import GRID_SIZES
+    from src.core.grid_config import GRID_SIZES
     output_base_dir = Path("data/out")
     in_base_dir = Path("data/in")
 
@@ -63,7 +63,7 @@ def _find_correction_out_dirs(args):
 
 
 def _detect_layout_pairs(out_dir):
-    from src.templates.prompts import GRID_SIZES
+    from src.core.grid_config import GRID_SIZES
     all_grid_sizes = list(GRID_SIZES.keys())
     pairs = []
     for lf in out_dir.glob("*_layout.json"):

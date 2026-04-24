@@ -1,7 +1,7 @@
 import re
 
 from src.core.constants import COL_OFFSET, ROW_PADDING
-from src.templates.prompts import GRID_SIZES
+from src.core.grid_config import GRID_SIZES
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

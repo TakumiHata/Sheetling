@@ -3,7 +3,7 @@ from src.core.constants import (
     RECT_IN_TABLE_TOL,
     THIN_LINE_THICKNESS,
 )
-from src.templates.prompts import GRID_SIZES
+from src.core.grid_config import GRID_SIZES
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

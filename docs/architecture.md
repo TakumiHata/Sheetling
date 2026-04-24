@@ -44,6 +44,8 @@ src/
 ├── core/
 │   ├── pipeline.py        # パイプラインオーケストレーション（SheetlingPipeline クラス）
 │   ├── grid.py            # グリッド座標計算・コンテンツ境界検出・用紙サイズ検出
+│   ├── grid_config.py     # GRID_SIZES 定数（A4/A3 × 1pt/2pt のセル寸法・Excel設定）
+│   ├── constants.py       # 共有の数値定数（tolerance・閾値など）
 │   └── layout.py          # レイアウトJSON生成（罫線要素・テキスト要素の収集）
 ├── parser/
 │   └── pdf_extractor.py   # PDF データ抽出（pdfplumber ラッパー）
@@ -51,7 +53,7 @@ src/
 │   ├── excel.py           # Excel 描画（openpyxl による .xlsx 生成）
 │   └── preview.py         # 罫線プレビュー画像生成（Pillow）
 ├── templates/
-│   └── prompts.py         # グリッドサイズ定数・視覚的検証プロンプト
+│   └── prompts.py         # 視覚的検証プロンプト
 └── utils/
     ├── logger.py          # ロガー設定
     ├── font.py            # フォント名正規化・罫線スタイルマッピング
@@ -177,11 +179,16 @@ pdfplumber の `extract_text()` でテキスト有無を判定し、結果CSVを
 | `apply_corrections(...)` | 修正指示 JSON を layout JSON に適用 |
 | `rerender_after_corrections(...)` | 修正済み layout JSON から Excel を再生成 |
 
-### `src/templates/prompts.py`
+### `src/core/grid_config.py`
 
 | 定数 | 役割 |
 |------|------|
 | `GRID_SIZES` | グリッドサイズ別の定数定義（A4/A3 × 1pt/2pt） |
+
+### `src/templates/prompts.py`
+
+| 定数 | 役割 |
+|------|------|
 | `VISUAL_REVIEW_PROMPT` | ビジョン LLM 用の検証プロンプトテンプレート |
 
 ---
