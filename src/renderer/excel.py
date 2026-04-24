@@ -29,6 +29,47 @@ def _refresh_render_params(grid_params: dict) -> dict:
     return refreshed
 
 
+# 行高候補: デフォルト 18.25 で収まらない場合は 17→16→15→14→13 と段階的に縮小。
+_ROW_HEIGHT_FALLBACKS = (17.0, 16.0, 15.0, 14.0, 13.0)
+
+
+def _max_content_row(layout: list) -> int:
+    """ページ内で使用されている最大行インデックス（ページ相対、1-based）を返す。"""
+    peak = 0
+    for page in layout:
+        for elem in page.get('elements', []):
+            row = int(elem.get('row', 0))
+            end_row = int(elem.get('end_row', row + 1)) - 1  # end_row は排他的
+            peak = max(peak, row, end_row)
+    return peak
+
+
+def _printable_height_pt(grid_params: dict) -> float:
+    """用紙向き・余白から印刷可能高さ（pt）を算出。paper_size: 9=A4, 8=A3。"""
+    paper_size = grid_params.get('paper_size', 9)
+    orientation = grid_params.get('orientation', 'portrait')
+    if paper_size == 8:
+        paper_h = 1190.0 if orientation == 'portrait' else 842.0
+    else:
+        paper_h = 842.0 if orientation == 'portrait' else 595.0
+    margin_in = float(grid_params.get('margin_top', 0.41)) + float(grid_params.get('margin_bottom', 0.41))
+    return paper_h - margin_in * 72.0
+
+
+def _fit_row_height(layout: list, grid_params: dict) -> float:
+    """ページ収まり判定: 最大使用行 × 行高 が印刷可能高さに収まる最大の行高を返す。"""
+    default = float(grid_params.get('excel_row_height', 18.25))
+    peak = _max_content_row(layout)
+    total_rows = peak + ROW_PADDING
+    if total_rows <= 0:
+        return default
+    printable = _printable_height_pt(grid_params)
+    for rh in (default,) + _ROW_HEIGHT_FALLBACKS:
+        if total_rows * rh <= printable:
+            return rh
+    return _ROW_HEIGHT_FALLBACKS[-1]
+
+
 def fix_empty_cell_type_attr(xlsx_path: str) -> None:
     """
     openpyxl 3.1.x が空セルに付与する t="n" 属性を除去する。
@@ -153,6 +194,12 @@ def _finalize_workbook(ws, wb, total_pages, max_rows, max_used_row, max_used_col
 
 def render_layout_to_xlsx(layout: list, grid_params: dict, output_path: str) -> None:
     grid_params = _refresh_render_params(grid_params)
+    fitted = _fit_row_height(layout, grid_params)
+    if fitted != grid_params.get('excel_row_height'):
+        logger.info(
+            f"[render_layout] 行高を {grid_params.get('excel_row_height')} → {fitted} に縮小（ページ収まり調整）"
+        )
+    grid_params['excel_row_height'] = fitted
     max_rows = grid_params['max_rows']
     default_font_size = grid_params.get('default_font_size', 7)
     font_name = grid_params.get('font_name', 'MS 明朝')

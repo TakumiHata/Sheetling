@@ -2,7 +2,9 @@ import os
 import tempfile
 import json
 import pytest
-from src.renderer.excel import render_layout_to_xlsx, fix_empty_cell_type_attr
+from src.renderer.excel import (
+    render_layout_to_xlsx, fix_empty_cell_type_attr, _fit_row_height,
+)
 
 
 def _grid_params(**overrides):
@@ -89,6 +91,41 @@ class TestRenderLayoutToXlsx:
         ws = wb.active
         cell = ws.cell(row=2, column=2)
         assert 'FF0000' in str(cell.font.color.rgb)
+
+
+class TestFitRowHeight:
+    def test_sparse_keeps_default(self):
+        # A4縦, 印刷可能 ~783pt: row=20 + padding → 21 * 18.25 = 383pt → 余裕で収まる
+        layout = [{'page_number': 1, 'elements': [
+            {'type': 'text', 'content': 'x', 'row': 20, 'col': 1}
+        ]}]
+        assert _fit_row_height(layout, _grid_params()) == 18.25
+
+    def test_dense_shrinks(self):
+        # A4縦 max_rows=45 をフルに使う → 46 * 18.25 = 839pt > 783pt → 17 に縮小
+        # 46 * 17 = 782pt ≤ 783pt → 17 が選ばれる
+        layout = [{'page_number': 1, 'elements': [
+            {'type': 'text', 'content': 'bottom', 'row': 45, 'col': 1}
+        ]}]
+        assert _fit_row_height(layout, _grid_params()) == 17.0
+
+    def test_border_end_row_exclusive(self):
+        # end_row は排他的境界 → 実占有行は end_row - 1
+        layout = [{'page_number': 1, 'elements': [
+            {'type': 'border_rect', 'row': 1, 'end_row': 46, 'col': 1, 'end_col': 2}
+        ]}]
+        assert _fit_row_height(layout, _grid_params()) == 17.0
+
+    def test_empty_layout(self):
+        assert _fit_row_height([{'page_number': 1, 'elements': []}], _grid_params()) == 18.25
+
+    def test_multi_page_uses_peak(self):
+        # 複数ページのうち最大値で判定
+        layout = [
+            {'page_number': 1, 'elements': [{'type': 'text', 'content': 'a', 'row': 10, 'col': 1}]},
+            {'page_number': 2, 'elements': [{'type': 'text', 'content': 'b', 'row': 45, 'col': 1}]},
+        ]
+        assert _fit_row_height(layout, _grid_params()) == 17.0
 
 
 class TestFixEmptyCellTypeAttr:
