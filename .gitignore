@@ -8,3 +8,6 @@ __pycache__/
 
 # MCP configuration (contains tokens)
 .mcp.json
+
+# Claude Code local settings
+.claude/settings.local.json
