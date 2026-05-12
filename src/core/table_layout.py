@@ -13,6 +13,14 @@ from src.core.text_layout import (
 from src.utils.text import join_word_texts, split_by_horizontal_gap
 
 
+def _nearest_font_size(page_words, y0, tol=20.0):
+    """cell_words が空のとき、y0 に最も近い word からフォントサイズを取得する。"""
+    for w in page_words:
+        if abs(float(w.get('top', 0)) - y0) < tol and w.get('font_size'):
+            return w['font_size']
+    return None
+
+
 def _find_words_in_bbox(page_words, used_ids, x0, y0, x1, y1) -> list:
     tol = WORD_IN_BBOX_TOL
     found = []
@@ -82,15 +90,19 @@ def _process_table_cell(page_words, used_word_ids, cells_2d, r_idx, c_idx, trow,
 
     elements = []
     grid_end_row = max(grid_row, to_row(y1) - 1)
+    font_size = _nearest_font_size(page_words, y0)
     for line_idx, line in enumerate(lines):
         line_row = grid_row + line_idx
         if line_row > grid_end_row:
             break
-        elements.append({
+        elem = {
             'type': 'text', 'content': line,
             'row': min(max_rows, line_row),
             'col': grid_col, 'end_col': grid_end_col,
-        })
+        }
+        if font_size:
+            elem['font_size'] = font_size
+        elements.append(elem)
     return elements
 
 

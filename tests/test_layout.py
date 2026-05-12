@@ -48,6 +48,12 @@ class TestMakeTextElement:
         assert elem['is_vertical'] is True
         assert elem['end_row'] == 10
 
+    def test_vertical_end_row_clamped_to_max_rows(self):
+        # max_rows=20 で _end_row=50 が正しくクランプされること
+        words = [{'text': '縦', 'is_vertical': True, '_end_row': 50}]
+        elem = _make_text_element(words, 3, 5, 8, 20, is_vertical=True)
+        assert elem['end_row'] == 20
+
     def test_row_clamped_to_max(self):
         words = [{'text': 'Test'}]
         elem = _make_text_element(words, row=100, col=1, end_col=5, max_rows=39)

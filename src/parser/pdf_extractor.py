@@ -13,28 +13,36 @@ from src.core.constants import (
 
 def _remove_containing_rects(rects: list) -> list:
     tol = RECT_CONTAINMENT_TOL
-    to_remove = set()
-    for i, a in enumerate(rects):
-        if i in to_remove:
-            continue
-        for j, b in enumerate(rects):
-            if i == j or j in to_remove:
-                continue
-            a_contains_b = (
-                a['x0'] - tol <= b['x0'] and
-                a['x1'] + tol >= b['x1'] and
-                a['top'] - tol <= b['top'] and
-                a['bottom'] + tol >= b['bottom']
-            )
+    # 面積の小さい順に処理し、大きい rect が小さい rect を包含していれば大きい方を除去する。
+    # 同面積の重複は is_same で除外しない（両方保持）。
+    indexed = sorted(
+        enumerate(rects),
+        key=lambda iv: (iv[1]['x1'] - iv[1]['x0']) * (iv[1]['bottom'] - iv[1]['top'])
+    )
+    to_remove: set = set()
+    kept: list = []
+    for i, a in indexed:
+        contains_any = False
+        for b in kept:
             is_same = (
                 abs(a['x0'] - b['x0']) < tol and
                 abs(a['x1'] - b['x1']) < tol and
                 abs(a['top'] - b['top']) < tol and
                 abs(a['bottom'] - b['bottom']) < tol
             )
+            a_contains_b = (
+                a['x0'] - tol <= b['x0'] and
+                a['x1'] + tol >= b['x1'] and
+                a['top'] - tol <= b['top'] and
+                a['bottom'] + tol >= b['bottom']
+            )
             if a_contains_b and not is_same:
-                to_remove.add(i)
+                contains_any = True
                 break
+        if contains_any:
+            to_remove.add(i)
+        else:
+            kept.append(a)
     return [r for i, r in enumerate(rects) if i not in to_remove]
 
 
@@ -192,7 +200,7 @@ def _filter_page_boundary_tables(tables, table_bboxes, table_col_x_positions,
         valid_indices.append(ti)
     return (
         [tables[i] for i in valid_indices],
-        [tables[i].bbox for i in range(len([tables[i] for i in valid_indices]))],
+        [tables[i].bbox for i in valid_indices],
         [table_col_x_positions[i] for i in valid_indices],
         [table_row_y_positions[i] for i in valid_indices],
         [table_cells[i] for i in valid_indices],

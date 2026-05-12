@@ -25,8 +25,9 @@ def _make_text_element(word_group: list, row: int, col: int, end_col: int,
     first = word_group[0]
     if first.get('font_color') and first['font_color'] != '000000':
         elem['font_color'] = first['font_color']
-    if first.get('font_size'):
-        elem['font_size'] = first['font_size']
+    sizes = [w['font_size'] for w in word_group if w.get('font_size')]
+    if sizes:
+        elem['font_size'] = max(set(sizes), key=sizes.count)
     fn = normalize_font_name(first.get('fontname', ''))
     if fn:
         elem['font_name'] = fn
@@ -170,7 +171,7 @@ def _process_single_line_group(words, row_c, col_c, max_rows, max_cols,
             continue
         hg_end_col = _calc_end_col(hg, min_x, grid_w, hg_col_c, max_cols)
         is_vert = bool(hg[0].get('is_vertical'))
-        elem = _make_text_element(hg, row_c, hg_col_c, hg_end_col, max_cols, is_vertical=is_vert)
+        elem = _make_text_element(hg, row_c, hg_col_c, hg_end_col, max_rows, is_vertical=is_vert)
         if elem:
             seen_text.add(pos)
             elements.append(elem)

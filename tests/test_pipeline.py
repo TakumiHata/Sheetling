@@ -2,8 +2,8 @@ import json
 import os
 import pytest
 from pathlib import Path
-from src.core.pipeline import (
-    SheetlingPipeline,
+from src.core.pipeline import SheetlingPipeline
+from src.core.auto_layout_service import (
     _collect_content_bounds,
     _cleanup_extracted_data,
 )
@@ -119,6 +119,20 @@ class TestApplyCorrections:
         hello = [e for e in layout[0]['elements'] if e.get('content') == 'Hello'][0]
         assert hello['row'] == 4
         assert hello['col'] == 6
+
+    def test_fix_text_with_content(self, setup_pipeline):
+        pipeline, tmp_path = setup_pipeline
+        corrections = json.dumps({'corrections': [
+            {'action': 'fix_text', 'page': 1, 'row': 3, 'col': 5,
+             'new_row': 3, 'new_col': 5, 'new_content': 'Fixed'}
+        ]})
+        pipeline.apply_corrections('test', corrections,
+                                   specific_out_dir=str(tmp_path),
+                                   layout_json_name='test_1pt_layout.json')
+        layout = json.loads((tmp_path / 'test_1pt_layout.json').read_text())
+        texts = [e for e in layout[0]['elements'] if e.get('type') == 'text']
+        assert any(t['content'] == 'Fixed' for t in texts)
+        assert not any(t['content'] == 'Hello' for t in texts)
 
     def test_add_edge_h(self, setup_pipeline):
         pipeline, tmp_path = setup_pipeline

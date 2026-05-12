@@ -87,17 +87,13 @@ def _find_line_rectangles(h_lines, v_lines, merge_tol):
                 continue
             vl = _find_vertical_edge(v_lines, used_indices, min(hx0_t, hx0_b), hy_t, hy_b, merge_tol)
             vr = _find_vertical_edge(v_lines, used_indices, max(hx1_t, hx1_b), hy_t, hy_b, merge_tol)
-            if vl is not None or vr is not None:
+            if vl is not None and vr is not None:
                 used_indices.add(h_lines[hi_top][0])
                 used_indices.add(h_lines[hi_bot][0])
-                x0 = min(hx0_t, hx0_b)
-                x1 = max(hx1_t, hx1_b)
-                if vl is not None:
-                    used_indices.add(v_lines[vl][0])
-                    x0 = min(x0, v_lines[vl][1])
-                if vr is not None:
-                    used_indices.add(v_lines[vr][0])
-                    x1 = max(x1, v_lines[vr][1])
+                used_indices.add(v_lines[vl][0])
+                used_indices.add(v_lines[vr][0])
+                x0 = min(hx0_t, hx0_b, v_lines[vl][1])
+                x1 = max(hx1_t, hx1_b, v_lines[vr][1])
                 merged_rects.append({'x0': x0, 'top': hy_t, 'x1': x1, 'bottom': hy_b})
                 break
     return used_indices, merged_rects
@@ -146,7 +142,7 @@ def _build_table_border_rects(page: dict, to_row, to_col, max_rows, max_cols) ->
                 if cb is None:
                     continue
                 r  = max(1, to_row(float(cb['top'])))
-                er = max(r + 1, min(max_rows, to_row(float(cb['bottom']))))
+                er = min(max_rows, max(r + 1, to_row(float(cb['bottom']))))
                 c  = max(1, to_col(float(cb['x0'])))
                 ec = max(c + 1, min(max_cols, to_col(float(cb['x1']))))
                 table_border_rects.append({
@@ -201,7 +197,7 @@ def setup_grid_params(first_page: dict, grid_size: str) -> dict:
     page_w = float(first_page['width'])
     page_h = float(first_page['height'])
     max_dim_pt = max(page_w, page_h)
-    is_a3 = max_dim_pt > 1000
+    is_a3 = max_dim_pt > 1122  # B4長辺≈1031pt、A3長辺≈1190pt の中間値
     is_landscape = page_w > page_h
 
     ref_key = f"{grid_size}_a3" if is_a3 else grid_size

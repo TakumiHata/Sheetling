@@ -36,6 +36,8 @@ def _apply_fix_text(elements: list, c: dict, ctx: dict) -> int:
         if elem.get("type") == "text" and elem["row"] == c["row"] and elem["col"] == c["col"]:
             elem["row"] = c["new_row"]
             elem["col"] = c["new_col"]
+            if "new_content" in c:
+                elem["content"] = c["new_content"]
             return 1
     return 0
 

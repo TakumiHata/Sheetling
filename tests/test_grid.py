@@ -105,6 +105,17 @@ class TestMergeThinLinesToRects:
         _merge_thin_lines_to_rects(page)
         assert len(page['rects']) == 1
 
+    def test_three_lines_not_merged(self):
+        # 垂直辺が1本しかない場合は矩形に統合しない
+        page = _make_page(rects=[
+            {'x0': 100, 'x1': 300, 'top': 99, 'bottom': 101},   # top h-line
+            {'x0': 100, 'x1': 300, 'top': 399, 'bottom': 401},  # bottom h-line
+            {'x0': 99, 'x1': 101, 'top': 100, 'bottom': 400},   # left v-line only
+        ])
+        original_count = len(page['rects'])
+        _merge_thin_lines_to_rects(page)
+        assert len(page['rects']) == original_count
+
 
 class TestFindVerticalEdge:
     def test_finds_matching(self):
@@ -156,21 +167,21 @@ class TestSetupGridParams:
         params = setup_grid_params(page, '1pt')
         assert params['orientation'] == 'portrait'
         assert params['paper_size'] == 9
-        assert params['max_cols'] == 53
+        assert params['max_cols'] == 59
         assert params['max_rows'] == 45
 
     def test_a4_landscape(self):
         page = {'width': 842, 'height': 595}
         params = setup_grid_params(page, '1pt')
         assert params['orientation'] == 'landscape'
-        assert params['max_cols'] == 78
-        assert params['max_rows'] == 30
+        assert params['max_cols'] == 86
+        assert params['max_rows'] == 31
 
     def test_a3_detection(self):
         page = {'width': 842, 'height': 1190}
         params = setup_grid_params(page, '1pt')
         assert params['paper_size'] == 8
-        assert params['max_cols'] == 80
+        assert params['max_cols'] == 88
 
     def test_2pt_grid(self):
         page = {'width': 595, 'height': 842}
