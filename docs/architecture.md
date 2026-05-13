@@ -271,4 +271,17 @@ tests/
 └── test_pipeline.py        # core/pipeline.py のユニットテスト
 ```
 
-各モジュールの公開関数・ヘルパー関数を個別にテストしています。テストは Docker コンテナ内で `pytest` を使って実行します。
+各モジュールの公開関数・ヘルパー関数を個別にテストしています。
+
+```bash
+python -m pytest tests/ -v
+```
+
+---
+
+## 関連ドキュメント
+
+- [グリッドシステム](grid-system.md) — コンテンツ境界ベースのグリッド計算・座標変換の詳細
+- [テーブル検出とテキスト配置](table-detection.md) — pdfplumber パラメータ・word 優先フォールバック戦略
+- [correct ワークフロー](correct-workflow.md) — corrections JSON 仕様・安全機構の詳細
+- [チューニングガイド](tuning-guide.md) — GRID_SIZES 調整・トラブルシューティング

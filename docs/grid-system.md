@@ -165,3 +165,11 @@ page['_content_grid_h'] = grid_h
 ```
 
 これらは後段の `generate_border_preview()`（`src/renderer/preview.py`） で PDF 画像上の正しい位置に罫線を描画するために使用されます。
+
+---
+
+## 関連ドキュメント
+
+- [アーキテクチャ](architecture.md) — パイプライン全体のデータフロー・主要関数リファレンス
+- [テーブル検出とテキスト配置](table-detection.md) — テーブル罫線の生成・重複排除の詳細
+- [チューニングガイド](tuning-guide.md) — GRID_SIZES 調整・max_cols / max_rows のチューニング手順
