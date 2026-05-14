@@ -64,12 +64,16 @@ def _collect_table_border_elements(page, max_rows, max_cols, seen_edges: set) ->
 
 
 def _emit_rect_line(r: int, er: int, c: int, ec: int, borders: dict,
-                    bs: str, seen_edges: set) -> dict | None:
+                    bs: str, seen_edges: set, fill_color: str | None = None) -> dict | None:
     sides = _filter_sides_by_seen(r, er, c, ec, borders, seen_edges)
-    if sides is None:
+    if sides is None and not fill_color:
         return None
-    return {'type': 'border_rect', 'row': r, 'end_row': er, 'col': c, 'end_col': ec,
-            'borders': sides, 'border_style': bs}
+    elem = {'type': 'border_rect', 'row': r, 'end_row': er, 'col': c, 'end_col': ec,
+            'borders': sides or {'top': False, 'bottom': False, 'left': False, 'right': False},
+            'border_style': bs}
+    if fill_color:
+        elem['fill_color'] = fill_color
+    return elem
 
 
 def _collect_rect_border_elements(page, max_rows, max_cols, seen_edges: set) -> list:
@@ -84,21 +88,21 @@ def _collect_rect_border_elements(page, max_rows, max_cols, seen_edges: set) -> 
         if r > er: r, er = er, r
         if c > ec: c, ec = ec, c
         bs = linewidth_to_border_style(rect.get('linewidth', 0.0))
+        fill_color = rect.get('fill_color')
 
         if r == er and c != ec:
             el = _emit_rect_line(r, r + 1, c, ec,
                                  {'top': True, 'bottom': False, 'left': False, 'right': False},
-                                 bs, seen_edges)
+                                 bs, seen_edges, fill_color)
         elif c == ec and r != er:
             el = _emit_rect_line(r, er, c, c + 1,
                                  {'top': False, 'bottom': False, 'left': True, 'right': False},
-                                 bs, seen_edges)
+                                 bs, seen_edges, fill_color)
         elif r == er and c == ec:
             el = None
         else:
-            el = _emit_rect_line(r, er, c, ec,
-                                 {'top': True, 'bottom': True, 'left': True, 'right': True},
-                                 bs, seen_edges)
+            borders = rect.get('_borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
+            el = _emit_rect_line(r, er, c, ec, borders, bs, seen_edges, fill_color)
         if el is not None:
             elements.append(el)
     return elements

@@ -92,7 +92,7 @@ def _place_text_element(ws, elem, row_offset, col_offset, default_font_size, fon
 
 
 def _place_border_element(ws, elem, row_offset, col_offset):
-    from openpyxl.styles import Border, Side
+    from openpyxl.styles import Border, PatternFill, Side
     s_row = elem.get('row', 1) + row_offset
     e_row = elem.get('end_row', 1) + row_offset
     s_col = elem.get('col', 1) + col_offset
@@ -100,6 +100,18 @@ def _place_border_element(ws, elem, row_offset, col_offset):
     borders = elem.get('borders', {'top': True, 'bottom': True, 'left': True, 'right': True})
     border_style = elem.get('border_style', 'thin')
     side = Side(style=border_style)
+
+    fill_color = elem.get('fill_color')
+    if fill_color:
+        fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type='solid')
+        for r in range(s_row, e_row):
+            if r < 1:
+                continue
+            for c in range(s_col, e_col):
+                try:
+                    ws.cell(row=r, column=c).fill = fill
+                except AttributeError:
+                    pass
 
     def set_side(row, col, **sides):
         if row < 1:

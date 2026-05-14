@@ -127,9 +127,18 @@ def _assign_rect_grid_coords(page: dict, to_row, to_col, max_rows, max_cols) -> 
                 return True
         return False
 
-    page['rects'] = [r for r in page['rects'] if not is_inside_table(r)]
-    for rect in page['rects']:
-        rect['_borders'] = {'top': True, 'bottom': True, 'left': True, 'right': True}
+    filtered = []
+    for r in page['rects']:
+        inside = is_inside_table(r)
+        if inside and not r.get('fill_color'):
+            continue
+        r['_borders'] = (
+            {'top': False, 'bottom': False, 'left': False, 'right': False}
+            if inside else
+            {'top': True, 'bottom': True, 'left': True, 'right': True}
+        )
+        filtered.append(r)
+    page['rects'] = filtered
 
 
 def _build_table_border_rects(page: dict, to_row, to_col, max_rows, max_cols) -> None:
