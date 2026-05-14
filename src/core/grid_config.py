@@ -16,16 +16,16 @@ GRID_SIZES = {
     # =========================================================================
     # A4 (595pt × 842pt)
     # =========================================================================
-    # Sheetling "1pt": 印刷総 A4縦 60列×46行 / A4横 87列×32行（列幅1.00表示）
+    # Sheetling "1pt": 印刷総 A4縦 59列×45行 / A4横 86列×31行（列幅1.00表示）
     "1pt": {
         "col_width_mm": "3.48",
         "row_height_mm": "6.44",
-        # A4縦 (印刷総 60×46 → コンテンツ 59×45)
-        "max_cols": 59,
-        "max_rows": 45,
-        # A4横 (印刷総 87×32 → コンテンツ 86×31)
-        "max_cols_landscape": 86,
-        "max_rows_landscape": 31,
+        # A4縦 (印刷総 59×45 → コンテンツ 58×44)
+        "max_cols": 58,
+        "max_rows": 44,
+        # A4横 (印刷総 86×31 → コンテンツ 85×30)
+        "max_cols_landscape": 85,
+        "max_rows_landscape": 30,
         "excel_col_width": 1.74,  # W = 表示値 + 0.74 (2pt と同じオフセット則; 1.69 では離散ステップを越えず 0.94 のまま)
         "excel_row_height": 18.25,
         "margin_left": 0.43,
@@ -36,15 +36,15 @@ GRID_SIZES = {
         "font_name": "MS 明朝",
         "position_tolerance_cells": "1〜2",
     },
-    # Sheetling "2pt": 印刷総 A4縦 34列×46行 / A4横 50列×31行（列幅2.00表示）
+    # Sheetling "2pt": 印刷総 A4縦 36列×45行 / A4横 53列×31行（列幅2.00表示）
     "2pt": {
         "col_width_mm": "6.18",
         "row_height_mm": "6.44",
-        # A4縦 (印刷総 34×46 → コンテンツ 33×45)
-        "max_cols": 33,
-        "max_rows": 45,
-        # A4横 (印刷総 50×31 → コンテンツ 49×30)
-        "max_cols_landscape": 49,
+        # A4縦 (印刷総 36×45 → コンテンツ 35×44)
+        "max_cols": 35,
+        "max_rows": 44,
+        # A4横 (印刷総 53×31 → コンテンツ 52×30)
+        "max_cols_landscape": 52,
         "max_rows_landscape": 30,
         "excel_col_width": 2.74,  # 経験的に列幅2.00表示となる値（MDW≈7.0環境）
         "excel_row_height": 18.25,
