@@ -11,3 +11,9 @@ __pycache__/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Cache
+.pytest_cache/
+
+# Windows metadata
+*:Zone.Identifier
