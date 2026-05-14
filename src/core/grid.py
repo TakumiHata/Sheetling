@@ -142,9 +142,9 @@ def _build_table_border_rects(page: dict, to_row, to_col, max_rows, max_cols) ->
                 if cb is None:
                     continue
                 r  = max(1, to_row(float(cb['top'])))
-                er = min(max_rows, max(r + 1, to_row(float(cb['bottom']))))
+                er = max(r + 1, min(max_rows, to_row(float(cb['bottom'])) + 1))
                 c  = max(1, to_col(float(cb['x0'])))
-                ec = max(c + 1, min(max_cols, to_col(float(cb['x1']))))
+                ec = max(c + 1, min(max_cols, to_col(float(cb['x1'])) + 1))
                 table_border_rects.append({
                     '_row': r, '_end_row': er,
                     '_col': c, '_end_col': ec,

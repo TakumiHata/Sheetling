@@ -43,7 +43,7 @@ def _split_into_visual_lines(words: list, gap: float = VISUAL_LINE_GAP) -> list:
     sw = sorted(words, key=lambda w: float(w.get('top', 0)))
     vis_lines: list = [[sw[0]]]
     for w in sw[1:]:
-        prev_b = float(vis_lines[-1][-1].get('bottom', vis_lines[-1][-1]['top']))
+        prev_b = max(float(w.get('bottom', w.get('top', 0))) for w in vis_lines[-1])
         this_t = float(w.get('top', 0))
         if this_t - prev_b > gap:
             vis_lines.append([w])
