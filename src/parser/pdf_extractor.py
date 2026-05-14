@@ -15,7 +15,6 @@ def _remove_containing_rects(rects: list) -> list:
     tol = RECT_CONTAINMENT_TOL
     # 面積の小さい順に処理し、大きい rect が小さい rect を包含していれば大きい方を除去する。
     # 同面積の重複は is_same で除外しない（両方保持）。
-    # 塗りつぶし色を持つ rect は背景色として必要なため除去しない。
     indexed = sorted(
         enumerate(rects),
         key=lambda iv: (iv[1]['x1'] - iv[1]['x0']) * (iv[1]['bottom'] - iv[1]['top'])
@@ -40,7 +39,7 @@ def _remove_containing_rects(rects: list) -> list:
             if a_contains_b and not is_same:
                 contains_any = True
                 break
-        if contains_any and not a.get('fill_color'):
+        if contains_any:
             to_remove.add(i)
         else:
             kept.append(a)
@@ -222,10 +221,6 @@ def _extract_rects(page, page_area: float) -> list:
                 'bottom': float(r['bottom']),
                 'linewidth': float(r.get('linewidth', 0) or 0),
             }
-            raw_fill = r.get('non_stroking_color')
-            hex_fill = _to_hex_color(raw_fill)
-            if hex_fill and hex_fill.upper() != 'FFFFFF':
-                entry['fill_color'] = hex_fill
             rects.append(entry)
     return _remove_containing_rects(rects)
 

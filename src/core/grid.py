@@ -130,7 +130,7 @@ def _assign_rect_grid_coords(page: dict, to_row, to_col, max_rows, max_cols) -> 
     filtered = []
     for r in page['rects']:
         inside = is_inside_table(r)
-        if inside and not r.get('fill_color'):
+        if inside:
             continue
         r['_borders'] = (
             {'top': False, 'bottom': False, 'left': False, 'right': False}
