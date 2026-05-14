@@ -160,7 +160,7 @@ pdfplumber の `extract_text()` でテキスト有無を判定し、結果CSVを
 
 | 関数 | 役割 |
 |------|------|
-| `normalize_font_name(raw_name)` | PDF フォント名を Excel 用に正規化（サブセット除去・エイリアス解決） |
+| `normalize_font_name(raw_name)` | PDF フォント名のサブセットプレフィックス（`ABCDEF+`）を除去して返す |
 | `linewidth_to_border_style(linewidth)` | PDF の linewidth を Excel 罫線スタイル（thin/medium/thick）に変換 |
 
 ### `src/utils/text.py`

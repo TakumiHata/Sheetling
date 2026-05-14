@@ -14,25 +14,21 @@ class TestNormalizeFontName:
     def test_bytes_repr_string_returns_none(self):
         assert normalize_font_name("b'\\x80\\x81'") is None
 
-    def test_gothic_variants_return_gothic(self):
-        assert normalize_font_name('ABCDEF+MS-Gothic') == 'MS ゴシック'
-        assert normalize_font_name('MS-Gothic') == 'MS ゴシック'
-        assert normalize_font_name('MSGothic') == 'MS ゴシック'
-        assert normalize_font_name('MSPGothic') == 'MS ゴシック'
-        assert normalize_font_name('MeiryoUI') == 'MS ゴシック'
-        assert normalize_font_name('YuGothic') == 'MS ゴシック'
+    def test_subset_prefix_stripped(self):
+        assert normalize_font_name('ABCDEF+MS-Gothic') == 'MS-Gothic'
+        assert normalize_font_name('BCDEFG+MSMincho') == 'MSMincho'
 
-    def test_mincho_variants_return_mincho(self):
-        assert normalize_font_name('BCDEFG+MSMincho') == 'MS 明朝'
-        assert normalize_font_name('MS-Mincho') == 'MS 明朝'
-        assert normalize_font_name('MSPMincho') == 'MS 明朝'
-        assert normalize_font_name('YuMincho') == 'MS 明朝'
-
-    def test_japanese_mincho_name(self):
-        assert normalize_font_name('小塚明朝') == 'MS 明朝'
-
-    def test_unknown_font_defaults_to_mincho(self):
-        assert normalize_font_name('Arial') == 'MS 明朝'
+    def test_no_prefix_returned_as_is(self):
+        assert normalize_font_name('MS-Gothic') == 'MS-Gothic'
+        assert normalize_font_name('MSGothic') == 'MSGothic'
+        assert normalize_font_name('MSPGothic') == 'MSPGothic'
+        assert normalize_font_name('MeiryoUI') == 'MeiryoUI'
+        assert normalize_font_name('YuGothic') == 'YuGothic'
+        assert normalize_font_name('MS-Mincho') == 'MS-Mincho'
+        assert normalize_font_name('MSPMincho') == 'MSPMincho'
+        assert normalize_font_name('YuMincho') == 'YuMincho'
+        assert normalize_font_name('小塚明朝') == '小塚明朝'
+        assert normalize_font_name('Arial') == 'Arial'
 
 
 class TestLinewidthToBorderStyle:
