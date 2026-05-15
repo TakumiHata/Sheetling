@@ -187,4 +187,4 @@ class TestSetupGridParams:
         page = {'width': 595, 'height': 842}
         params = setup_grid_params(page, '2pt')
         assert params['max_cols'] == 35
-        assert params['excel_col_width'] == 2.74
+        assert params['excel_col_width'] == 2.65

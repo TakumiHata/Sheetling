@@ -177,12 +177,13 @@ def _assign_edge_grid_coords(page: dict, to_row, to_col) -> None:
 
 def compute_grid_coords(page: dict, max_rows: int, max_cols: int) -> None:
     page_h = float(page['height'])
-    min_x, max_x, min_y, max_y = _detect_content_bounds(page, page_h)
+    min_x, min_y = 0.0, 0.0
+    max_x, max_y = float(page['width']), page_h
 
     content_w = max_x - min_x
     content_h = max_y - min_y
-    grid_w = content_w / max_cols if content_w > 0 else float(page['width']) / max_cols
-    grid_h = content_h / max_rows if content_h > 0 else page_h / max_rows
+    grid_w = content_w / max_cols
+    grid_h = content_h / max_rows
 
     page['_content_min_x'] = min_x
     page['_content_min_y'] = min_y

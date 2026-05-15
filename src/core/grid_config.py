@@ -26,7 +26,7 @@ GRID_SIZES = {
         # A4横 (印刷総 86×31 → コンテンツ 85×30)
         "max_cols_landscape": 85,
         "max_rows_landscape": 30,
-        "excel_col_width": 1.74,  # W = 表示値 + 0.74 (2pt と同じオフセット則; 1.69 では離散ステップを越えず 0.94 のまま)
+        "excel_col_width": 1.65,  # W = 表示値 + 0.65 (実測: 1.74→1.09表示のためオフセット0.65に修正)
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
@@ -46,7 +46,7 @@ GRID_SIZES = {
         # A4横 (印刷総 53×31 → コンテンツ 52×30)
         "max_cols_landscape": 52,
         "max_rows_landscape": 30,
-        "excel_col_width": 2.74,  # 経験的に列幅2.00表示となる値（MDW≈7.0環境）
+        "excel_col_width": 2.65,  # W = 表示値 + 0.65 (実測: 2.74→2.09表示のためオフセット0.65に修正)
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
@@ -71,7 +71,7 @@ GRID_SIZES = {
         # A3横 (印刷総 126×46 → コンテンツ 125×45)
         "max_cols_landscape": 125,
         "max_rows_landscape": 45,
-        "excel_col_width": 1.74,
+        "excel_col_width": 1.65,
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
@@ -93,7 +93,7 @@ GRID_SIZES = {
         # A3横 (印刷総 73×46 → コンテンツ 72×45)
         "max_cols_landscape": 72,
         "max_rows_landscape": 45,
-        "excel_col_width": 2.74,
+        "excel_col_width": 2.65,
         "excel_row_height": 18.25,
         "margin_left": 0.43,
         "margin_right": 0.43,
