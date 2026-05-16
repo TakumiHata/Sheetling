@@ -1,11 +1,13 @@
 {
   "name": "Sheetling",
-  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "forwardPorts": [8000],
-  "postCreateCommand": "pip install -r requirements.txt && (gh auth setup-git || true)",
+"postCreateCommand": "gh auth setup-git || true",
   "remoteUser": "vscode",
   "mounts": ["source=gh-config,target=/home/vscode/.config/gh,type=volume"],
 }
