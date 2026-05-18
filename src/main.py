@@ -77,12 +77,26 @@ def _detect_layout_pairs(out_dir):
     return pairs
 
 
+def _collect_phase_files(prompts_dir):
+    """phase1/phase2 ファイルを優先して収集し、なければ旧 visual_corrections にフォールバック。"""
+    phase1 = sorted(prompts_dir.glob("page_*/*_phase1_corrections_page*.json"))
+    phase2 = sorted(prompts_dir.glob("page_*/*_phase2_corrections_page*.json"))
+    if phase1 or phase2:
+        return phase1 + phase2
+    # フラット配置（page_* サブディレクトリなし）
+    phase1 = sorted(prompts_dir.glob("*_phase1_corrections_page*.json"))
+    phase2 = sorted(prompts_dir.glob("*_phase2_corrections_page*.json"))
+    if phase1 or phase2:
+        return phase1 + phase2
+    # 旧フォーマットへのフォールバック
+    legacy = sorted(prompts_dir.glob("page_*/*_visual_corrections_page*.json"))
+    return legacy or sorted(prompts_dir.glob("*_visual_corrections_page*.json"))
+
+
 def _apply_corrections_for_pair(pipeline, out_dir, pdf_name, grid_size):
     layout_json_name = f"{pdf_name}_{grid_size}_layout.json"
     prompts_dir = out_dir / "prompts" / grid_size
-    page_files = sorted(prompts_dir.glob("page_*/*_visual_corrections_page*.json"))
-    if not page_files:
-        page_files = sorted(prompts_dir.glob("*_visual_corrections_page*.json"))
+    page_files = _collect_phase_files(prompts_dir)
 
     if not page_files:
         logger.warning(f"⚠️ {pdf_name} ({grid_size}): 修正ファイルが見つかりません: {prompts_dir}")

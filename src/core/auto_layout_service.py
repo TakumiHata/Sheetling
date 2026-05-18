@@ -18,7 +18,7 @@ from src.core.layout import generate_layout
 from src.parser.pdf_extractor import extract_pdf_data
 from src.renderer.excel import render_layout_to_xlsx
 from src.renderer.preview import generate_border_preview, generate_diff_overlay
-from src.templates.prompts import VISUAL_REVIEW_PROMPT
+from src.templates.prompts import VISUAL_PHASE1_PROMPT, VISUAL_PHASE2_PROMPT
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -81,10 +81,27 @@ def _generate_review_materials(layout_data, grid_params, pdf_name, prompts_dir, 
         _write_prompt_and_corrections(page_layout, grid_params, pdf_name, pn, pdir)
 
 
+def _to_inclusive_runs(runs_with_ids: list) -> list:
+    """LLM 向けに exclusive 境界を inclusive 境界へ変換する。
+
+    内部モデルは col_end/row_end が exclusive（最終セル+1）だが、
+    LLM が出力する際は inclusive（最終セルの番号そのもの）の方が誤りが少ない。
+    """
+    result = []
+    for run in runs_with_ids:
+        r = dict(run)
+        if r['type'] == 'H':
+            r['col_end'] = r['col_end'] - 1
+        else:
+            r['row_end'] = r['row_end'] - 1
+        result.append(r)
+    return result
+
+
 def _write_edges_json(runs_with_ids: list, pdf_name: str, pn: int, pdir) -> None:
     edges_path = pdir / f"{pdf_name}_edges_page{pn}.json"
     edges_path.write_text(
-        json.dumps({"edges": runs_with_ids}, ensure_ascii=False, indent=2),
+        json.dumps({"edges": _to_inclusive_runs(runs_with_ids)}, ensure_ascii=False, indent=2),
         encoding="utf-8")
 
 
@@ -108,12 +125,16 @@ def _write_prompt_and_corrections(page_layout, grid_params, pdf_name, pn, pdir):
     end_cols = [e.get('end_col', e.get('col', 1)) for e in elems if e.get('type') == 'border_rect']
     gp['content_max_row'] = max(end_rows) if end_rows else grid_params['max_rows']
     gp['content_max_col'] = max(end_cols) if end_cols else grid_params['max_cols']
-    prompt_text = VISUAL_REVIEW_PROMPT.format(page_number=pn, **gp)
-    (pdir / f"{pdf_name}_visual_review_page{pn}.txt").write_text(prompt_text, encoding="utf-8")
 
-    corr_path = pdir / f"{pdf_name}_visual_corrections_page{pn}.json"
-    if not corr_path.exists():
-        corr_path.write_text('{"corrections": []}', encoding="utf-8")
+    (pdir / f"{pdf_name}_phase1_prompt_page{pn}.txt").write_text(
+        VISUAL_PHASE1_PROMPT.format(page_number=pn, **gp), encoding="utf-8")
+    (pdir / f"{pdf_name}_phase2_prompt_page{pn}.txt").write_text(
+        VISUAL_PHASE2_PROMPT.format(page_number=pn, **gp), encoding="utf-8")
+
+    for phase in ("phase1", "phase2"):
+        corr_path = pdir / f"{pdf_name}_{phase}_corrections_page{pn}.json"
+        if not corr_path.exists():
+            corr_path.write_text('{"corrections": []}', encoding="utf-8")
 
 
 def _resolve_out_dir(output_base_dir: Path, pdf_path: str, in_base_dir: str) -> Path:

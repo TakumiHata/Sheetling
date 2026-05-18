@@ -25,13 +25,14 @@ generate_layout()               ← src/core/layout.py
     ▼
     ├─→ render_layout_to_xlsx()     ← src/renderer/excel.py    → Excel ファイル (.xlsx)
     ├─→ generate_border_preview()   ← src/renderer/preview.py  → 罫線プレビュー画像 (.png)
-    └─→ VISUAL_REVIEW_PROMPT        ← src/templates/prompts.py → 視覚的検証プロンプト (.txt)
+    ├─→ generate_diff_overlay()     ← src/renderer/preview.py  → 差分オーバーレイ画像 (.png)
+    └─→ VISUAL_PHASE1/2_PROMPT      ← src/templates/prompts.py → フェーズ1/2プロンプト (.txt)
               │
-              ▼  （任意）ビジョンLLM による修正指示
+              ▼  （任意）ビジョンLLM による修正指示（2フェーズ）
               │
-        apply_corrections()         ← src/core/pipeline.py  → layout JSON を更新
+        apply_corrections()         ← src/core/correction_service.py → layout JSON を更新
               │
-        rerender_after_corrections() ← src/core/pipeline.py  → Excel 再生成
+        rerender_after_corrections() ← src/core/correction_service.py → Excel 再生成
 ```
 
 ---
@@ -42,7 +43,10 @@ generate_layout()               ← src/core/layout.py
 src/
 ├── main.py                # CLI エントリポイント（auto / correct / check）
 ├── core/
-│   ├── pipeline.py        # パイプラインオーケストレーション（SheetlingPipeline クラス）
+│   ├── pipeline.py        # パイプラインファサード（SheetlingPipeline クラス）
+│   ├── auto_layout_service.py  # auto パイプライン実装・検証素材生成
+│   ├── correction_service.py   # correct パイプライン実装・修正指示適用
+│   ├── edges.py           # エッジ単位罫線モデル（分解・集約・修正適用）
 │   ├── grid.py            # グリッド座標計算・コンテンツ境界検出・用紙サイズ検出
 │   ├── grid_config.py     # GRID_SIZES 定数（A4/A3 × 1pt/2pt のセル寸法・Excel設定）
 │   ├── constants.py       # 共有の数値定数（tolerance・閾値など）
@@ -51,9 +55,9 @@ src/
 │   └── pdf_extractor.py   # PDF データ抽出（pdfplumber ラッパー）
 ├── renderer/
 │   ├── excel.py           # Excel 描画（openpyxl による .xlsx 生成）
-│   └── preview.py         # 罫線プレビュー画像生成（Pillow）
+│   └── preview.py         # 罫線プレビュー・差分オーバーレイ画像生成（Pillow）
 ├── templates/
-│   └── prompts.py         # 視覚的検証プロンプト
+│   └── prompts.py         # フェーズ1/2の視覚的検証プロンプト
 └── utils/
     ├── logger.py          # ロガー設定
     ├── font.py            # フォント名正規化・罫線スタイルマッピング
@@ -70,10 +74,11 @@ src/
 
 ### `correct` コマンド（`src/main.py`）
 
-修正ファイル（`*_visual_corrections*.json`）から対象の (pdf_name, grid_size) ペアを自動検出し、以下を順に実行します：
+修正ファイル（`*_phase1_corrections*.json` / `*_phase2_corrections*.json`、旧フォーマットにもフォールバック）から対象の (pdf_name, grid_size) ペアを自動検出し、以下を順に実行します：
 
-1. `pipeline.apply_corrections()` — 修正指示を layout JSON に適用
-2. `pipeline.rerender_after_corrections()` — Excel を再生成
+1. phase1・phase2 の corrections をマージ
+2. `pipeline.apply_corrections()` — 修正指示を layout JSON に適用
+3. `pipeline.rerender_after_corrections()` — Excel を再生成
 
 ### `check` コマンド（`src/main.py`）
 
@@ -96,7 +101,8 @@ pdfplumber の `extract_text()` でテキスト有無を判定し、結果CSVを
 | 7 | 元 PDF を出力先にコピー | `shutil.copy()` |
 | 8 | PDF ページ画像生成 | pdfplumber `page.to_image()` |
 | 9 | 罫線プレビュー画像生成 | `generate_border_preview()` ← `renderer/preview.py` |
-| 10 | 検証プロンプト・空テンプレート出力 | `VISUAL_REVIEW_PROMPT` ← `templates/prompts.py` |
+| 10 | 差分オーバーレイ画像生成 | `generate_diff_overlay()` ← `renderer/preview.py` |
+| 11 | フェーズ1/2プロンプト・空 JSON 出力 | `VISUAL_PHASE1/2_PROMPT` ← `templates/prompts.py` |
 
 ---
 
@@ -151,10 +157,13 @@ pdfplumber の `extract_text()` でテキスト有無を判定し、結果CSVを
 | 関数 | 役割 |
 |------|------|
 | `generate_border_preview(page_layout, grid_params, ...)` | 罫線プレビュー PNG を生成 |
+| `generate_diff_overlay(pdf_image_path, runs_with_ids, ...)` | PDF原本に現プレビュー罫線を半透明赤で重ねた差分画像を生成 |
 | `_draw_grid_lines(draw, ...)` | グリッド背景線を描画 |
 | `_draw_borders(draw, ...)` | border_rect 要素を黒線で描画 |
 | `_draw_greyout(draw, ...)` | コンテンツ範囲外をグレーアウト |
 | `_draw_labels(draw, ...)` | 座標ラベル（赤、5間隔）を描画 |
+| `_draw_run_overlay(draw, ...)` | ID付きランを色付き線で描画（差分オーバーレイ用） |
+| `_draw_run_id_labels(draw, ...)` | 各ランに ID ラベルを描画 |
 
 ### `src/utils/font.py`
 
@@ -185,11 +194,30 @@ pdfplumber の `extract_text()` でテキスト有無を判定し、結果CSVを
 |------|------|
 | `GRID_SIZES` | グリッドサイズ別の定数定義（A4/A3 × 1pt/2pt） |
 
+### `src/core/edges.py`
+
+| 関数 | 役割 |
+|------|------|
+| `decompose_to_cell_edges(elements)` | border_rect 要素群をセル境界の集合に分解 |
+| `group_into_runs(cell_edges, styles)` | 連続するセル境界を最大長のランに集約 |
+| `runs_to_border_rects(runs)` | ランを border_rect 要素に変換（H: top のみ、V: left のみ） |
+| `enumerate_runs_with_ids(elements)` | layout の border_rect 群を ID 付きランリストに変換（内部 exclusive 座標） |
+| `apply_edge_corrections(elements, removed_ids, added_runs, id_map)` | エッジ単位の修正を elements に in-place 適用 |
+
+### `src/core/correction_service.py`
+
+| 関数 / クラス | 役割 |
+|------|------|
+| `CorrectionService` | corrections JSON の適用とリレンダーを担当するクラス |
+| `CorrectionService.apply(...)` | corrections JSON を読み込んで layout JSON に適用 |
+| `CorrectionService.rerender(...)` | 修正済み layout JSON から Excel を再生成 |
+
 ### `src/templates/prompts.py`
 
 | 定数 | 役割 |
 |------|------|
-| `VISUAL_REVIEW_PROMPT` | ビジョン LLM 用の検証プロンプトテンプレート |
+| `VISUAL_PHASE1_PROMPT` | フェーズ1用プロンプト（余分な罫線の削除 ID を判定） |
+| `VISUAL_PHASE2_PROMPT` | フェーズ2用プロンプト（不足している罫線を inclusive 座標で追加） |
 
 ---
 

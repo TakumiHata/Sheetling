@@ -84,20 +84,22 @@ def _apply_add_edge(elements: list, c: dict, ctx: dict) -> int:
 
 
 def _normalize_add_edge_payload(c: dict) -> dict | None:
+    # LLM は inclusive 座標（col_end = 最終セル番号）で出力する。
+    # 内部モデルは exclusive（最終セル+1）なので +1 して変換する。
     t = c.get("type", "").upper()
     if t == "H":
         cs = c.get("col_start", c.get("col"))
         ce = c.get("col_end", c.get("end_col"))
-        if cs is None or ce is None or cs >= ce:
+        if cs is None or ce is None or cs > ce:
             return None
-        return {"type": "H", "row": c["row"], "col_start": int(cs), "col_end": int(ce),
+        return {"type": "H", "row": c["row"], "col_start": int(cs), "col_end": int(ce) + 1,
                 "border_style": c.get("border_style", "thin")}
     if t == "V":
         rs = c.get("row_start", c.get("row"))
         re_ = c.get("row_end", c.get("end_row"))
-        if rs is None or re_ is None or rs >= re_:
+        if rs is None or re_ is None or rs > re_:
             return None
-        return {"type": "V", "col": c["col"], "row_start": int(rs), "row_end": int(re_),
+        return {"type": "V", "col": c["col"], "row_start": int(rs), "row_end": int(re_) + 1,
                 "border_style": c.get("border_style", "thin")}
     return None
 
