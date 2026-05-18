@@ -4,6 +4,7 @@ seen_edges でセル境界単位の dedup を行い、同じ境界に罫線が
 重複して発行されるのを防ぐ（例: table と rect が同一セルを共有する場合）。
 """
 
+from src.core.constants import EDGE_MIN_H_SPAN, EDGE_MIN_V_SPAN
 from src.utils.font import linewidth_to_border_style
 
 
@@ -86,10 +87,14 @@ def _collect_rect_border_elements(page, max_rows, max_cols, seen_edges: set) -> 
         bs = linewidth_to_border_style(rect.get('linewidth', 0.0))
 
         if r == er and c != ec:
+            if ec - c < EDGE_MIN_H_SPAN:
+                continue
             el = _emit_rect_line(r, r + 1, c, ec,
                                  {'top': True, 'bottom': False, 'left': False, 'right': False},
                                  bs, seen_edges)
         elif c == ec and r != er:
+            if er - r < EDGE_MIN_V_SPAN:
+                continue
             el = _emit_rect_line(r, er, c, c + 1,
                                  {'top': False, 'bottom': False, 'left': True, 'right': False},
                                  bs, seen_edges)
@@ -111,7 +116,7 @@ def _collect_edge_border_elements(page, max_rows, max_cols, seen_edges: set) -> 
         r = min(he['_row'], max_rows)
         c = min(he['_col'], max_cols)
         ec = min(he['_end_col'], max_cols)
-        if c == ec:
+        if ec - c < EDGE_MIN_H_SPAN:
             continue
         bs = linewidth_to_border_style(he.get('linewidth', 0.0))
         el = _emit_rect_line(r, r + 1, c, ec,
@@ -126,7 +131,7 @@ def _collect_edge_border_elements(page, max_rows, max_cols, seen_edges: set) -> 
         c = min(ve['_col'], max_cols)
         r = min(ve['_row'], max_rows)
         er = min(ve['_end_row'], max_rows)
-        if r == er:
+        if er - r < EDGE_MIN_V_SPAN:
             continue
         bs = linewidth_to_border_style(ve.get('linewidth', 0.0))
         el = _emit_rect_line(r, er, c, c + 1,

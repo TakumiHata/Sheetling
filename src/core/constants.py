@@ -32,3 +32,8 @@ HORIZONTAL_GAP_FACTOR = 2.0   # text: 水平ギャップの font_size 倍率
 MAX_TABLE_AREA_RATIO = 0.80
 MAX_RECT_AREA_RATIO = 0.80
 MAX_EDGE_RECT_AREA_RATIO = 0.85
+
+# グリッドセル単位の最小スパンフィルタ（装飾線・抽出ノイズ除去）
+# テーブル由来の borders には適用しない（テーブル検出が保証済みのため）
+EDGE_MIN_H_SPAN = 2   # H 線: この値未満のセル幅は除外
+EDGE_MIN_V_SPAN = 2   # V 線: この値未満のセル高は除外

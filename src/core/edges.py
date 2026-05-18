@@ -147,6 +147,35 @@ def runs_to_border_rects(runs: list) -> list:
     return elements
 
 
+def filter_short_runs(elements: list, min_h_span: int, min_v_span: int) -> None:
+    """短いスパンのランを layout 要素から除去する（in-place）。
+
+    border_rect を一度セル境界に分解→ランに集約した後、
+    スパンが閾値未満のランを除外して再構築する。
+    rects / h_edges / v_edges の区別なく全ソースに適用される。
+
+    Args:
+        elements: layout のページ要素リスト
+        min_h_span: H ランの最小列スパン（これ未満は除去）
+        min_v_span: V ランの最小行スパン（これ未満は除去）
+    """
+    cell_edges, styles = decompose_to_cell_edges(elements)
+    runs = group_into_runs(cell_edges, styles)
+    # ランの境界は exclusive（col_end/row_end = 最終セル+1）なので
+    # inclusive セル数 N = exclusive span - 1。
+    # min_h_span=2 で「inclusive 2セル以上を保持」→ exclusive span > 2 が条件。
+    filtered = [
+        r for r in runs
+        if (r['type'] == 'H' and r['col_end'] - r['col_start'] > min_h_span)
+        or (r['type'] == 'V' and r['row_end'] - r['row_start'] > min_v_span)
+    ]
+    new_rects = runs_to_border_rects(filtered)
+    non_border = [e for e in elements if e.get('type') != 'border_rect']
+    elements.clear()
+    elements.extend(non_border)
+    elements.extend(new_rects)
+
+
 def enumerate_runs_with_ids(elements: list) -> list:
     """layout の border_rect 群を ID 付きランリストに変換する。
 

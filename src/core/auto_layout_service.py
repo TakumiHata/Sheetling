@@ -12,7 +12,7 @@ import json
 import shutil
 from pathlib import Path
 
-from src.core.edges import enumerate_runs_with_ids
+from src.core.edges import enumerate_runs_with_ids, filter_short_runs
 from src.core.grid import compute_grid_coords, setup_grid_params
 from src.core.layout import generate_layout
 from src.parser.pdf_extractor import extract_pdf_data
@@ -204,14 +204,17 @@ class AutoLayoutService:
         with open(out_dir / f"{pdf_name}_{grid_size}_grid_params.json", "w", encoding="utf-8") as f:
             json.dump(grid_params, f, ensure_ascii=False)
 
+        from src.core.constants import EDGE_MIN_H_SPAN, EDGE_MIN_V_SPAN
         layout_json_str = generate_layout(extracted_data, grid_params)
         layout_data = json.loads(layout_json_str)
+        for page in layout_data:
+            filter_short_runs(page['elements'], EDGE_MIN_H_SPAN, EDGE_MIN_V_SPAN)
         content_bounds = _collect_content_bounds(extracted_data, grid_params)
         _cleanup_extracted_data(extracted_data)
 
         output_json_path = out_dir / f"{pdf_name}_{grid_size}_layout.json"
         with open(output_json_path, "w", encoding="utf-8") as f:
-            f.write(layout_json_str)
+            json.dump(layout_data, f, ensure_ascii=False)
 
         return grid_params, layout_data, content_bounds, output_json_path
 

@@ -27,7 +27,12 @@ class TestMakeTextElement:
         elem = _make_text_element(words, row=1, col=1, end_col=5, max_rows=39)
         assert elem['font_color'] == 'FF0000'
         assert elem['font_size'] == 12
-        assert elem['font_name'] == 'MS ゴシック'
+        assert elem['font_name'] == 'MSGothic'
+
+    def test_with_font_subset_prefix(self):
+        words = [{'text': 'Test', 'fontname': 'ABCDEF+MSGothic'}]
+        elem = _make_text_element(words, row=1, col=1, end_col=5, max_rows=39)
+        assert elem['font_name'] == 'MSGothic'
 
     def test_black_font_color_excluded(self):
         words = [{'text': 'Test', 'font_color': '000000'}]

@@ -136,15 +136,15 @@ class TestApplyCorrections:
 
     def test_add_edge_h(self, setup_pipeline):
         pipeline, tmp_path = setup_pipeline
+        # col_end=8 は inclusive（最終セル番号）→ 内部では +1 して exclusive=9 に変換
         corrections = json.dumps({'corrections': [
             {'action': 'add_edge', 'page': 1, 'type': 'H',
-             'row': 8, 'col_start': 2, 'col_end': 9}
+             'row': 8, 'col_start': 2, 'col_end': 8}
         ]})
         pipeline.apply_corrections('test', corrections,
                                    specific_out_dir=str(tmp_path),
                                    layout_json_name='test_1pt_layout.json')
         layout = json.loads((tmp_path / 'test_1pt_layout.json').read_text())
-        # 元の rect は flatten/再集約で4辺のランに分解 → 4要素 + 新H 1要素 = 5
         borders = [e for e in layout[0]['elements'] if e['type'] == 'border_rect']
         h_at_row8 = [b for b in borders
                      if b['row'] == 8 and b['end_row'] == 8
