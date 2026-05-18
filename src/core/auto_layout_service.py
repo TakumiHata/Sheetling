@@ -165,7 +165,11 @@ class AutoLayoutService:
         grid_params, layout_data, content_bounds, output_json_path = \
             self._extract_and_build_layout(pdf_path, pdf_name, out_dir, grid_size)
 
-        xlsx_path = self._render_excel(layout_data, grid_params, out_dir, pdf_name, grid_size)
+        try:
+            xlsx_path = self._render_excel(layout_data, grid_params, out_dir, pdf_name, grid_size)
+        except Exception as e:
+            logger.warning(f"⚠️ Excel 生成に失敗しました（review素材の生成は続行します）: {e}")
+            xlsx_path = None
 
         shutil.copy(str(path_obj), str(out_dir / path_obj.name))
         logger.info(f"📄 元PDF コピー完了: {path_obj.name}")
@@ -179,12 +183,13 @@ class AutoLayoutService:
         logger.info(
             f"  [review 素材] prompts/{grid_size}/page_N/ に出力しました\n"
             f"  次のステップ:\n"
-            f"    1. {{pdf_name}}_diff_page{{N}}.png と {{pdf_name}}_edges_page{{N}}.json と\n"
-            f"       {{pdf_name}}_visual_review_page{{N}}.txt(プロンプト) を AI に渡す\n"
-            f"    2. AI の出力 JSON を visual_corrections_page{{N}}.json に保存\n"
+            f"    1. {{pdf_name}}_diff_page{{N}}.png と {{pdf_name}}_edges_page{{N}}.json を\n"
+            f"       phase1/phase2 プロンプト (.txt) と一緒に AI に渡す\n"
+            f"    2. AI の出力 JSON を phase1/phase2_corrections_page{{N}}.json に保存\n"
             f"    3. python -m src.main correct --pdf {pdf_name}"
         )
-        return {"xlsx_path": str(xlsx_path), "layout_json": str(output_json_path),
+        return {"xlsx_path": str(xlsx_path) if xlsx_path else None,
+                "layout_json": str(output_json_path),
                 "grid_params": grid_params}
 
     def _extract_and_build_layout(self, pdf_path, pdf_name, out_dir, grid_size):
