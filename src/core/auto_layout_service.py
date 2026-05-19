@@ -5,7 +5,6 @@
   2. グリッド座標計算 (grid)
   3. レイアウト JSON 生成 (layout) + 短スパンエッジフィルタ
   4. Excel 描画 (renderer.excel)
-  5. 目視確認用プレビュー画像生成
 """
 
 import json
@@ -18,7 +17,6 @@ from src.core.grid import compute_grid_coords, setup_grid_params
 from src.core.layout import generate_layout
 from src.parser.pdf_extractor import extract_pdf_data
 from src.renderer.excel import render_layout_to_xlsx
-from src.renderer.preview import generate_border_preview
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -47,35 +45,6 @@ def _cleanup_extracted_data(extracted_data: dict) -> None:
             page.pop(key, None)
 
 
-def _generate_pdf_page_images(pdf_path: str, pdf_name: str, previews_dir: Path) -> None:
-    import pdfplumber as _pdfplumber
-    with _pdfplumber.open(pdf_path) as pdf:
-        for pg in pdf.pages:
-            pn = pg.page_number
-            pdir = previews_dir / f"page_{pn}"
-            pdir.mkdir(parents=True, exist_ok=True)
-            img = pg.to_image(resolution=144)
-            img.save(str(pdir / f"{pdf_name}_page{pn}.png"))
-    logger.info(f"  PDF ページ画像を生成しました: {previews_dir}/page_N/")
-
-
-def _generate_previews(layout_data, grid_params, pdf_name, previews_dir, content_bounds):
-    """目視確認用プレビュー画像（PDF原本 + 罫線プレビュー）を生成する。"""
-    for page_layout in layout_data:
-        pn = page_layout.get('page_number', 1)
-        pdir = previews_dir / f"page_{pn}"
-        pdir.mkdir(parents=True, exist_ok=True)
-
-        pdf_img = pdir / f"{pdf_name}_page{pn}.png"
-        preview = pdir / f"{pdf_name}_excel_page{pn}.png"
-        try:
-            generate_border_preview(page_layout, grid_params, str(preview),
-                                    pdf_image_path=str(pdf_img),
-                                    content_bounds=content_bounds.get(pn, {}))
-        except Exception as e:
-            logger.warning(f"  ページ {pn}: 罫線プレビュー生成に失敗しました: {e}")
-
-
 def _resolve_out_dir(output_base_dir: Path, pdf_path: str, in_base_dir: str) -> Path:
     path_obj = Path(pdf_path)
     try:
@@ -98,28 +67,18 @@ class AutoLayoutService:
         pdf_name = path_obj.stem
         out_dir = _resolve_out_dir(self.output_base_dir, pdf_path, in_base_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
-        previews_dir = out_dir / "previews" / grid_size
-        previews_dir.mkdir(parents=True, exist_ok=True)
 
-        grid_params, layout_data, content_bounds, output_json_path = \
+        grid_params, layout_data, output_json_path = \
             self._extract_and_build_layout(pdf_path, pdf_name, out_dir, grid_size)
 
         try:
             xlsx_path = self._render_excel(layout_data, grid_params, out_dir, pdf_name, grid_size)
         except Exception as e:
-            logger.warning(f"⚠️ Excel 生成に失敗しました（プレビュー生成は続行します）: {e}")
+            logger.warning(f"⚠️ Excel 生成に失敗しました: {e}")
             xlsx_path = None
 
         shutil.copy(str(path_obj), str(out_dir / path_obj.name))
         logger.info(f"📄 元PDF コピー完了: {path_obj.name}")
-
-        try:
-            _generate_pdf_page_images(pdf_path, pdf_name, previews_dir)
-        except Exception as e:
-            logger.warning(f"PDF ページ画像の生成に失敗しました: {e}")
-
-        _generate_previews(layout_data, grid_params, pdf_name, previews_dir, content_bounds)
-        logger.info(f"  [プレビュー] previews/{grid_size}/page_N/ に出力しました")
 
         return {"xlsx_path": str(xlsx_path) if xlsx_path else None,
                 "layout_json": str(output_json_path),
@@ -141,14 +100,13 @@ class AutoLayoutService:
         layout_data = json.loads(layout_json_str)
         for page in layout_data:
             filter_short_runs(page['elements'], EDGE_MIN_H_SPAN, EDGE_MIN_V_SPAN)
-        content_bounds = _collect_content_bounds(extracted_data, grid_params)
         _cleanup_extracted_data(extracted_data)
 
         output_json_path = out_dir / f"{pdf_name}_{grid_size}_layout.json"
         with open(output_json_path, "w", encoding="utf-8") as f:
             json.dump(layout_data, f, ensure_ascii=False)
 
-        return grid_params, layout_data, content_bounds, output_json_path
+        return grid_params, layout_data, output_json_path
 
     def _render_excel(self, layout_data, grid_params, out_dir, pdf_name, grid_size):
         xlsx_suffix = f"_{grid_size}" if grid_size in ("1pt", "2pt") else ""
