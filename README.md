@@ -1,7 +1,7 @@
 # Sheetling
 
 PDFを解析し、**任意のPDFレイアウトを維持したままA4/A3方眼Excelに変換**するツールです。
-テーブルの列ズレのない高精度な方眼紙レイアウトへの変換を、LLMを最小限に抑えた完全自動パイプラインで実現します。
+テーブルの列ズレのない高精度な方眼紙レイアウトへの変換を、完全自動パイプラインで実現します。
 
 ---
 
@@ -9,8 +9,7 @@ PDFを解析し、**任意のPDFレイアウトを維持したままA4/A3方眼E
 
 | コマンド | 内容 |
 |---------|------|
-| `auto` | PDF → Excel 自動変換。`1pt`・`2pt` の2サイズを同時出力。視覚的検証素材も生成 |
-| `correct` | ビジョンLLMの修正指示（フェーズ1/2 の corrections JSON）を適用してExcelを再生成 |
+| `auto` | PDF → Excel 自動変換。`1pt`・`2pt` の2サイズを同時出力。目視確認用プレビュー画像も生成 |
 | `check` | `data/in/` 内の全PDFをスキャン画像/テキストPDFに分類し、結果CSVを出力 |
 
 ---
@@ -52,16 +51,6 @@ python -m src.main check
 > [!NOTE]
 > `auto` コマンドで変換できるのは「通常PDF（テキストあり）」のみです。スキャンPDFは事前にOCR処理が必要です。
 
-### correct：視覚的検証の修正を適用
-
-```bash
-# 特定PDFを指定（推奨）
-python -m src.main correct --pdf data/in/test1/sample.pdf
-
-# 全対象を一括処理
-python -m src.main correct
-```
-
 ---
 
 ## 出力ファイル
@@ -80,17 +69,11 @@ data/out/<relative_path>/
 ├── <pdf_name>_Python版_1pt.xlsx           # 生成されたExcelファイル（1pt）
 ├── <pdf_name>_Python版_2pt.xlsx           # 生成されたExcelファイル（2pt）
 ├── <pdf_name>.pdf                         # 元PDFのコピー（比較用）
-└── prompts/
+└── previews/
     ├── 1pt/
     │   └── page_1/
-    │       ├── <pdf_name>_page1.png                          # PDFページ画像
-    │       ├── <pdf_name>_excel_page1.png                    # 罫線プレビュー画像
-    │       ├── <pdf_name>_diff_page1.png                     # 差分オーバーレイ画像（LLMに渡す）
-    │       ├── <pdf_name>_edges_page1.json                   # ID付き罫線リスト（フェーズ1参照用）
-    │       ├── <pdf_name>_phase1_prompt_page1.txt            # フェーズ1プロンプト（削除判定）
-    │       ├── <pdf_name>_phase1_corrections_page1.json      # フェーズ1修正指示（ユーザーが記入）
-    │       ├── <pdf_name>_phase2_prompt_page1.txt            # フェーズ2プロンプト（追加判定）
-    │       └── <pdf_name>_phase2_corrections_page1.json      # フェーズ2修正指示（ユーザーが記入）
+    │       ├── <pdf_name>_page1.png           # PDFページ画像
+    │       └── <pdf_name>_excel_page1.png     # 罫線プレビュー画像
     └── 2pt/
         └── page_1/
             └── ...
@@ -104,14 +87,8 @@ data/out/<relative_path>/
 | `_Python版_1pt.xlsx` | 1ptグリッド（高密度・列幅3.48mm）のExcelファイル |
 | `_Python版_2pt.xlsx` | 2ptグリッド（中密度・列幅6.18mm）のExcelファイル |
 | `*.pdf` | 元PDFのコピー。生成ExcelとのPDF比較用 |
-| `_page{N}.png` | PDFページ画像 |
+| `_page{N}.png` | PDFページ画像。目視確認に使用 |
 | `_excel_page{N}.png` | 罫線プレビュー画像。コンテンツ範囲外はグレー表示 |
-| `_diff_page{N}.png` | PDF原本に現プレビュー罫線を半透明赤で重ねた差分画像。LLMに渡す |
-| `_edges_page{N}.json` | ID付き罫線リスト（inclusive座標）。フェーズ1の判定に使用 |
-| `_phase1_prompt_page{N}.txt` | フェーズ1プロンプト（削除すべき罫線IDの判定） |
-| `_phase1_corrections_page{N}.json` | フェーズ1修正指示。`remove_edges` アクションを記述 |
-| `_phase2_prompt_page{N}.txt` | フェーズ2プロンプト（不足している罫線の追加） |
-| `_phase2_corrections_page{N}.json` | フェーズ2修正指示。`add_edge` アクションを記述 |
 
 ---
 
@@ -137,66 +114,13 @@ data/out/<relative_path>/
 
 ---
 
-## 視覚的検証（任意）
-
-`auto` 実行後、ビジョンLLMで罫線の再現精度をさらに高めることができます。
-削除と追加を2フェーズに分離することで、LLMの判定精度を高めています。
-
-### フェーズ1: 余分な罫線の削除
-
-1. ビジョンLLM（画像入力対応）に以下を投入する：
-   - `prompts/{grid_size}/page_{N}/<pdf_name>_diff_page{N}.png`（差分オーバーレイ画像）
-   - `prompts/{grid_size}/page_{N}/<pdf_name>_edges_page{N}.json`（ID付き罫線リスト）
-   - `prompts/{grid_size}/page_{N}/<pdf_name>_phase1_prompt_page{N}.txt` の内容
-2. LLMの出力を `_phase1_corrections_page{N}.json` に保存する
-
-**フェーズ1の出力形式（`remove_edges`）：**
-
-```json
-{
-  "corrections": [
-    {"action": "remove_edges", "page": 1, "ids": [3, 17, 42]}
-  ]
-}
-```
-
-### フェーズ2: 不足している罫線の追加
-
-1. ビジョンLLMに以下を投入する：
-   - `prompts/{grid_size}/page_{N}/<pdf_name>_diff_page{N}.png`（フェーズ1と同じ画像）
-   - `prompts/{grid_size}/page_{N}/<pdf_name>_phase2_prompt_page{N}.txt` の内容
-2. LLMの出力を `_phase2_corrections_page{N}.json` に保存する
-
-**フェーズ2の出力形式（`add_edge`、座標は inclusive）：**
-
-```json
-{
-  "corrections": [
-    {"action": "add_edge", "page": 1, "type": "H", "row": 5, "col_start": 3, "col_end": 12},
-    {"action": "add_edge", "page": 1, "type": "V", "col": 3, "row_start": 1, "row_end": 8}
-  ]
-}
-```
-
-> `col_end` / `row_end` は最終セルの番号（inclusive）。col 3〜12 なら `col_end=12`（13 ではない）。
-
-### 修正の適用
-
-```bash
-python -m src.main correct --pdf data/in/test1/sample.pdf
-```
-
-`correct` コマンドが phase1・phase2 の両ファイルを読み込んでマージし、Excel を再生成します。
-
----
-
 ## テスト
 
 ```bash
 python -m pytest tests/ -v
 ```
 
-110テストケースで以下をカバーしています：
+123テストケースで以下をカバーしています：
 
 | テストファイル | 対象モジュール |
 |-------------|-------------|
@@ -207,7 +131,8 @@ python -m pytest tests/ -v
 | `test_excel.py` | Excel描画（テキスト・罫線・複数ページ・フォント色） |
 | `test_preview.py` | プレビュー画像生成、セルメトリクス計算 |
 | `test_pdf_extractor.py` | 矩形包含除去、色変換、座標丸め、エッジ統合 |
-| `test_pipeline.py` | corrections適用（add/remove/fix）、エラー処理 |
+| `test_edges.py` | エッジ分解・集約・スパンフィルタ |
+| `test_pipeline.py` | パイプライン補助関数 |
 
 ---
 
@@ -216,12 +141,11 @@ python -m pytest tests/ -v
 ```text
 Sheetling/
 ├── src/
-│   ├── main.py                # CLI エントリポイント（auto / correct / check）
+│   ├── main.py                # CLI エントリポイント（auto / check）
 │   ├── core/
 │   │   ├── pipeline.py        # パイプラインファサード（SheetlingPipeline クラス）
 │   │   ├── auto_layout_service.py  # auto パイプライン実装
-│   │   ├── correction_service.py   # correct パイプライン実装
-│   │   ├── edges.py           # エッジ単位罫線モデル（分解・集約・修正適用）
+│   │   ├── edges.py           # エッジ単位罫線モデル（分解・集約・スパンフィルタ）
 │   │   ├── grid.py            # グリッド座標計算・用紙サイズ検出
 │   │   ├── grid_config.py     # GRID_SIZES 定数（A4/A3 × 1pt/2pt のセル寸法・Excel設定）
 │   │   ├── constants.py       # 共有の数値定数（tolerance・閾値など）
@@ -230,14 +154,12 @@ Sheetling/
 │   │   └── pdf_extractor.py   # PDFデータ抽出（pdfplumber）
 │   ├── renderer/
 │   │   ├── excel.py           # Excel描画（openpyxl）
-│   │   └── preview.py         # 罫線プレビュー・差分オーバーレイ画像生成（Pillow）
-│   ├── templates/
-│   │   └── prompts.py         # フェーズ1/2の視覚的検証プロンプト
+│   │   └── preview.py         # 罫線プレビュー画像生成（Pillow）
 │   └── utils/
 │       ├── logger.py          # ログ出力管理
 │       ├── font.py            # フォント名正規化・罫線スタイルマッピング
 │       └── text.py            # テキスト結合・日本語判定・水平ギャップ分割
-├── tests/                     # pytest テストスイート（110テスト）
+├── tests/                     # pytest テストスイート（123テスト）
 ├── data/
 │   ├── in/                    # 入力PDFディレクトリ
 │   ├── out/                   # 出力ディレクトリ（解析結果・Excel）
@@ -258,7 +180,6 @@ Sheetling/
 | [アーキテクチャ](docs/architecture.md) | パイプライン全体のデータフロー・主要関数リファレンス・データ構造 |
 | [グリッドシステム](docs/grid-system.md) | コンテンツ境界ベースのグリッド計算・座標変換ロジック・GRID_SIZES 定数 |
 | [テーブル検出とテキスト配置](docs/table-detection.md) | pdfplumber パラメータ・word 優先フォールバック戦略 |
-| [correct ワークフロー](docs/correct-workflow.md) | 2フェーズ設計・corrections JSON 仕様・inclusive 座標系の詳細 |
 | [チューニングガイド](docs/tuning-guide.md) | GRID_SIZES 調整・PDF種別ごとの注意点・トラブルシューティング |
 
 ---
@@ -269,5 +190,5 @@ Sheetling/
 |-----------|-----------|------|
 | `pdfplumber` | 0.11.9 | PDF内のテキスト・表・罫線の座標情報を抽出 |
 | `openpyxl` | 3.1.5 | Excelファイルの生成・セルスタイリング・印刷範囲設定 |
-| `Pillow` | *(Dockerイメージ提供)* | 罫線プレビュー・差分オーバーレイ画像の生成 |
+| `Pillow` | *(Dockerイメージ提供)* | 罫線プレビュー画像の生成 |
 | `pytest` | 9.0.3 | テストフレームワーク |
