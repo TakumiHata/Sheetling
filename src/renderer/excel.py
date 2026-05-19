@@ -77,7 +77,7 @@ def _place_text_element(ws, elem, row_offset, col_offset, default_font_size, fon
             cell.alignment = Alignment(text_rotation=255, vertical='top', wrap_text=False)
         else:
             cell.alignment = Alignment(
-                horizontal='left', vertical='top',
+                horizontal='left', vertical='center',
                 wrap_text=bool(elem.get('multiline')),
             )
         resolved_name = elem.get('font_name') or font_name
