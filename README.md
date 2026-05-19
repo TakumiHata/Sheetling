@@ -9,7 +9,8 @@ PDFを解析し、**任意のPDFレイアウトを維持したままA4/A3方眼E
 
 | コマンド | 内容 |
 |---------|------|
-| `auto` | PDF → Excel 自動変換。`1pt`・`2pt` の2サイズを同時出力。目視確認用プレビュー画像も生成 |
+| `auto` | 通常PDF（テキストあり）→ Excel 自動変換。`1pt`・`2pt` の2サイズを同時出力 |
+| `auto --scan` | スキャンPDF（画像PDF）をOCRで処理して変換 |
 | `check` | `data/in/` 内の全PDFをスキャン画像/テキストPDFに分類し、結果CSVを出力 |
 
 ---
@@ -32,7 +33,14 @@ python -m src.main auto
 
 # 特定PDFのみ
 python -m src.main auto --pdf data/in/test1/sample.pdf
+
+# スキャンPDF（画像PDF）をOCRで処理
+python -m src.main auto --scan
+python -m src.main auto --pdf data/in/test1/scan.pdf --scan
 ```
+
+> [!NOTE]
+> `--scan` オプションには別途セットアップが必要です。詳細は [スキャンPDF対応 設計書](docs/設計書_スキャンPDF対応.md) を参照してください。
 
 ### check：PDF種別判定
 
@@ -49,7 +57,7 @@ python -m src.main check
 | エラー | ファイルが破損している等で読み取り不可 |
 
 > [!NOTE]
-> `auto` コマンドで変換できるのは「通常PDF（テキストあり）」のみです。スキャンPDFは事前にOCR処理が必要です。
+> スキャンPDFは `auto --scan` で処理できます。`check` コマンドで事前に種別を判定してから使用してください。
 
 ---
 
@@ -110,7 +118,7 @@ data/out/<relative_path>/
 python -m pytest tests/ -v
 ```
 
-118テストケースで以下をカバーしています：
+116テストケースで以下をカバーしています：
 
 | テストファイル | 対象モジュール |
 |-------------|-------------|
@@ -130,24 +138,27 @@ python -m pytest tests/ -v
 ```text
 Sheetling/
 ├── src/
-│   ├── main.py                # CLI エントリポイント（auto / check）
+│   ├── main.py                # CLI エントリポイント（auto / auto --scan / check）
 │   ├── core/
-│   │   ├── pipeline.py        # パイプラインファサード（SheetlingPipeline クラス）
 │   │   ├── auto_layout_service.py  # auto パイプライン実装
 │   │   ├── edges.py           # エッジ単位罫線モデル（分解・集約・スパンフィルタ）
 │   │   ├── grid.py            # グリッド座標計算・用紙サイズ検出
 │   │   ├── grid_config.py     # GRID_SIZES 定数（A4/A3 × 1pt/2pt のセル寸法・Excel設定）
 │   │   ├── constants.py       # 共有の数値定数（tolerance・閾値など）
-│   │   └── layout.py          # レイアウトJSON生成
+│   │   ├── layout.py          # レイアウトJSON生成（オーケストレータ）
+│   │   ├── text_layout.py     # テキスト要素生成・視覚行分割
+│   │   ├── table_layout.py    # テーブル内テキスト配置
+│   │   └── border_layout.py   # 罫線要素収集・スパンフィルタ（第1段）
 │   ├── parser/
-│   │   └── pdf_extractor.py   # PDFデータ抽出（pdfplumber）
+│   │   ├── pdf_extractor.py   # 通常PDFデータ抽出（pdfplumber）
+│   │   └── scan_extractor.py  # スキャンPDF抽出（pypdfium2 + pytesseract）
 │   ├── renderer/
 │   │   └── excel.py           # Excel描画（openpyxl）
 │   └── utils/
 │       ├── logger.py          # ログ出力管理
 │       ├── font.py            # フォント名正規化・罫線スタイルマッピング
 │       └── text.py            # テキスト結合・日本語判定・水平ギャップ分割
-├── tests/                     # pytest テストスイート（118テスト）
+├── tests/                     # pytest テストスイート（116テスト）
 ├── data/
 │   ├── in/                    # 入力PDFディレクトリ
 │   ├── out/                   # 出力ディレクトリ（解析結果・Excel）
@@ -169,13 +180,28 @@ Sheetling/
 | [グリッドシステム](docs/grid-system.md) | コンテンツ境界ベースのグリッド計算・座標変換ロジック・GRID_SIZES 定数 |
 | [テーブル検出とテキスト配置](docs/table-detection.md) | pdfplumber パラメータ・word 優先フォールバック戦略 |
 | [チューニングガイド](docs/tuning-guide.md) | GRID_SIZES 調整・PDF種別ごとの注意点・トラブルシューティング |
+| [スキャンPDF対応](docs/設計書_スキャンPDF対応.md) | --scan モードの設計・パッケージ安全性評価・セットアップ手順 |
 
 ---
 
 ## 使用パッケージ
+
+### 基本（通常PDF）
 
 | パッケージ | バージョン | 用途 |
 |-----------|-----------|------|
 | `pdfplumber` | 0.11.9 | PDF内のテキスト・表・罫線の座標情報を抽出 |
 | `openpyxl` | 3.1.5 | Excelファイルの生成・セルスタイリング・印刷範囲設定 |
 | `pytest` | 9.0.3 | テストフレームワーク |
+
+### --scan モード用（スキャンPDF）
+
+| パッケージ | バージョン | 用途 |
+|-----------|-----------|------|
+| `pypdfium2` | 5.8.0 | PDFページを画像にレンダリング（Google Chrome と同じ PDFium エンジン） |
+| `pytesseract` | 0.3.13 | Tesseract OCR の Python ラッパー |
+| `Pillow` | 12.2.0 | 画像処理（pytesseract の依存） |
+
+> [!NOTE]
+> `--scan` モードは別途 **Tesseract OCR 本体**と**日本語モデル（jpn）**のインストールが必要です。
+> Windows: [UB Mannheim インストーラー](https://github.com/UB-Mannheim/tesseract/wiki) からインストールし、Japanese を選択してください。

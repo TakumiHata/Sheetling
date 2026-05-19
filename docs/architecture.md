@@ -35,17 +35,20 @@ filter_short_runs()             ← src/core/edges.py
 
 ```
 src/
-├── main.py                # CLI エントリポイント（auto / check）
+├── main.py                # CLI エントリポイント（auto / auto --scan / check）
 ├── core/
-│   ├── pipeline.py        # パイプラインファサード（SheetlingPipeline クラス）
-│   ├── auto_layout_service.py  # auto パイプライン実装
+│   ├── auto_layout_service.py  # auto パイプライン実装（通常PDF・スキャンPDF共通）
 │   ├── edges.py           # エッジ単位罫線モデル（分解・集約・スパンフィルタ）
 │   ├── grid.py            # グリッド座標計算・コンテンツ境界検出・用紙サイズ検出
 │   ├── grid_config.py     # GRID_SIZES 定数（A4/A3 × 1pt/2pt のセル寸法・Excel設定）
 │   ├── constants.py       # 共有の数値定数（tolerance・閾値など）
-│   └── layout.py          # レイアウトJSON生成（罫線要素・テキスト要素の収集）
+│   ├── layout.py          # レイアウトJSON生成オーケストレータ
+│   ├── text_layout.py     # テキスト要素生成・視覚行分割・重複排除
+│   ├── table_layout.py    # テーブル内テキスト配置（word優先フォールバック）
+│   └── border_layout.py   # 罫線要素収集・第1段スパンフィルタ
 ├── parser/
-│   └── pdf_extractor.py   # PDF データ抽出（pdfplumber ラッパー）
+│   ├── pdf_extractor.py   # 通常PDF データ抽出（pdfplumber ラッパー）
+│   └── scan_extractor.py  # スキャンPDF データ抽出（pypdfium2 + pytesseract）
 ├── renderer/
 │   └── excel.py           # Excel 描画（openpyxl による .xlsx 生成）
 └── utils/
@@ -60,26 +63,24 @@ src/
 
 ### `auto` コマンド（`src/main.py`）
 
-`data/in/` 配下のPDFを検出し、グリッドサイズ `1pt` / `2pt` で各PDFに対して `pipeline.auto_layout()` を呼び出します。
+`data/in/` 配下のPDFを検出し、グリッドサイズ `1pt` / `2pt` で各PDFに対して `AutoLayoutService.run()` を呼び出します。`--scan` フラグ付きで実行するとスキャンPDFの OCR モードに切り替わります。
 
 ### `check` コマンド（`src/main.py`）
 
-pdfplumber の `extract_text()` でテキスト有無を判定し、結果CSVを出力します。パイプラインクラスは使用しません。
+pdfplumber の `extract_text()` でテキスト有無を判定し、結果CSVを出力します。
 
 ---
 
-## `auto_layout()` の処理ステップ
-
-`SheetlingPipeline.auto_layout()` は以下の順序で処理を実行します：
+## `AutoLayoutService.run()` の処理ステップ
 
 | ステップ | 処理 | 呼び出す関数 / モジュール |
 |---------|------|----------------------|
-| 1 | PDF からデータ抽出 | `extract_pdf_data()` ← `parser/pdf_extractor.py` |
+| 1 | PDF からデータ抽出 | `extract_pdf_data()` ← `parser/pdf_extractor.py`（通常PDF）<br>`extract_scan_pdf_data()` ← `parser/scan_extractor.py`（`--scan`） |
 | 2 | グリッドパラメータ設定 | `setup_grid_params()` ← `core/grid.py` |
 | 3 | PDF座標 → グリッド座標変換 | `compute_grid_coords()` ← `core/grid.py` |
 | 4 | 抽出データ JSON 保存 | — |
 | 5 | レイアウト JSON 生成 | `generate_layout()` ← `core/layout.py` |
-| 6 | 短スパンエッジ除去 | `filter_short_runs()` ← `core/edges.py` |
+| 6 | 短スパンエッジ除去（第2段） | `filter_short_runs()` ← `core/edges.py` |
 | 7 | Excel 描画 | `render_layout_to_xlsx()` ← `renderer/excel.py` |
 | 8 | 元 PDF を出力先にコピー | `shutil.copy()` |
 
@@ -118,9 +119,24 @@ pdfplumber の `extract_text()` でテキスト有無を判定し、結果CSVを
 | `_collect_table_border_elements(page, ...)` | テーブル罫線 → border_rect 要素 |
 | `_collect_rect_border_elements(page, ...)` | テーブル外矩形 → border_rect 要素（水平線・垂直線を含む） |
 | `_collect_edge_border_elements(page, ...)` | h_edges / v_edges → border_rect 要素 |
+
+### `src/core/text_layout.py`
+
+| 関数 | 役割 |
+|------|------|
 | `_collect_text_elements(page, ...)` | テーブル外 words → text 要素 |
-| `_table_text_elements_from_2d(page, grid_params)` | テーブル内テキストを word 優先で配置 |
 | `_make_text_element(word_group, ...)` | word グループから text 要素を生成（フォント情報付き） |
+| `_split_into_visual_lines(words)` | words を視覚行に分割 |
+| `_calc_end_col(word_group, ...)` | word グループの終端列を計算 |
+| `_dedup_words(words)` | 重複 word を除去 |
+
+### `src/core/table_layout.py`
+
+| 関数 | 役割 |
+|------|------|
+| `_table_text_elements_from_2d(page, grid_params)` | テーブル内テキストを word 優先で配置 |
+| `_find_words_in_bbox(words, bbox, tol)` | bbox 内の word を検索 |
+| `_resolve_cell_bbox(cb)` | セルの bbox を取得 |
 
 ### `src/core/edges.py`
 
@@ -155,11 +171,17 @@ pdfplumber の `extract_text()` でテキスト有無を判定し、結果CSVを
 | `join_word_texts(texts)` | 日本語判定してワードを結合（日本語: スペースなし） |
 | `split_by_horizontal_gap(words, gap_factor)` | フォントサイズベースの水平ギャップでワードを分割 |
 
-### `src/core/pipeline.py` — `SheetlingPipeline` クラス
+### `src/core/auto_layout_service.py` — `AutoLayoutService` クラス
 
-| メソッド | 役割 |
-|---------|------|
-| `auto_layout(pdf_path, grid_size)` | PDF → Excel 全自動パイプライン |
+| メソッド / 関数 | 役割 |
+|---------------|------|
+| `AutoLayoutService.run(pdf_path, grid_size, scan)` | PDF → Excel 全自動パイプライン（`scan=True` でOCRモード） |
+
+### `src/parser/scan_extractor.py`
+
+| 関数 | 役割 |
+|------|------|
+| `extract_scan_pdf_data(pdf_path, dpi, lang)` | スキャンPDFをOCRで解析し `extract_pdf_data()` と同じスキーマで返す |
 
 ### `src/core/grid_config.py`
 

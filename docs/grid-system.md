@@ -109,10 +109,10 @@ PDF座標 (x=130, y=180) の場合:
 
 | キー | 用紙 | 密度 | 縦 (cols × rows) | 横 (cols × rows) |
 |------|------|------|-------------------|-------------------|
-| `1pt` | A4 | 高密度 | 47 × 39 | 70 × 25 |
-| `2pt` | A4 | 中密度 | 29 × 39 | 44 × 25 |
-| `1pt_a3` | A3 | 高密度 | 70 × 57 | 104 × 39 |
-| `2pt_a3` | A3 | 中密度 | 44 × 57 | 65 × 39 |
+| `1pt` | A4 | 高密度 | 58 × 44 | 85 × 30 |
+| `2pt` | A4 | 中密度 | 35 × 44 | 52 × 30 |
+| `1pt_a3` | A3 | 高密度 | 88 × 64 | 125 × 45 |
+| `2pt_a3` | A3 | 中密度 | 51 × 64 | 72 × 45 |
 
 ### 各定数のフィールド
 
@@ -120,19 +120,18 @@ PDF座標 (x=130, y=180) の場合:
 {
     "col_width_mm": "3.48",        # Excel 列幅（mm）
     "row_height_mm": "6.44",       # Excel 行高（mm）
-    "max_cols": 61,                # 縦向き最大列数
-    "max_rows": 42,                # 縦向き最大行数
-    "max_cols_landscape": 89,      # 横向き最大列数
+    "max_cols": 58,                # 縦向き最大列数（1pt A4 の例）
+    "max_rows": 44,                # 縦向き最大行数
+    "max_cols_landscape": 85,      # 横向き最大列数
     "max_rows_landscape": 30,      # 横向き最大行数
-    "excel_col_width": 1.00,       # openpyxl 列幅値
+    "excel_col_width": 1.65,       # openpyxl 列幅値（表示値 + 0.65 オフセット）
     "excel_row_height": 18.25,     # openpyxl 行高値（pt）
-    "margin_left": 0.2,            # 印刷マージン（インチ）
-    "margin_right": 0.2,
-    "margin_top": 0.3,
-    "margin_bottom": 0.3,
+    "margin_left": 0.43,           # 印刷マージン（インチ）
+    "margin_right": 0.43,
+    "margin_top": 0.41,
+    "margin_bottom": 0.41,
     "default_font_size": 7,        # デフォルトフォントサイズ（pt）
-    "font_name": "MS Gothic",      # フォント名
-    "position_tolerance_cells": "1",  # 許容誤差（セル単位）
+    "font_name": "MS 明朝",        # フォント名
 }
 ```
 
@@ -144,7 +143,7 @@ PDF座標 (x=130, y=180) の場合:
 
 | 判定 | 条件 |
 |------|------|
-| A3 | `max(page_w, page_h) > 1000pt` |
+| A3 | `max(page_w, page_h) > 1122pt`（B4長辺≈1031pt・A3長辺≈1190pt の中間値） |
 | A4 | 上記以外 |
 | 横向き | `page_w > page_h` |
 | 縦向き | 上記以外 |
