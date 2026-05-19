@@ -162,33 +162,37 @@ word = {
 
 | エンジン | 精度（日本語） | コスト | 依存 | 推奨シーン |
 |---------|------------|-------|------|-----------|
+| **RapidOCR** ★採用 | ○ | 無料 | pip のみ | Python 3.13対応・環境依存なし |
 | **Tesseract + pytesseract** | △（読みやすいフォントなら実用的） | 無料 | OS パッケージ必要 | ローカル・オフライン |
-| **PaddleOCR** | ○ | 無料 | pip（ONNX モデル込み） | バランス重視 |
+| **PaddleOCR** | ○ | 無料 | paddlepaddle（重い） | Python 3.11 環境限定 |
 | **Google Vision API** | ◎ | 従量課金 | API キー | 高精度優先 |
 | **Azure Document Intelligence** | ◎ | 従量課金 | API キー | テーブル構造も取れる場合あり |
 
-**当面の推奨：PaddleOCR**
-- `pip install paddlepaddle paddleocr` のみで導入可能
-- 日本語モデルあり（`lang='japan'`）
+**採用：RapidOCR**
+- `pip install rapidocr onnxruntime` のみで導入可能
+- 日本語モデルあり（`LangRec.JAPAN`）、初回実行時に自動ダウンロード
 - 商用利用可（Apache 2.0）
-- Tesseract より高精度、外部 API 不要
+- Python 3.13 対応、Windows/Linux 共通で動作
+- PaddleOCR と同等モデルを ONNX Runtime 上で実行するため paddlepaddle 不要
 
-### OCR 出力 → words 変換（PaddleOCR 例）
+### OCR 出力 → words 変換（RapidOCR）
 
 ```python
-from paddleocr import PaddleOCR
+from rapidocr import RapidOCR
+from rapidocr.utils.typings import LangRec
 
 def _ocr_page(image: PIL.Image, dpi: int) -> list:
-    ocr = PaddleOCR(use_angle_cls=True, lang='japan')
-    result = ocr.ocr(np.array(image), cls=True)
+    ocr = RapidOCR(params={"Rec.lang_type": LangRec.JAPAN})
+    result = ocr(np.array(image))
+    if result is None or result.boxes is None:
+        return []
     scale = 72 / dpi
     words = []
-    for line in result[0]:
-        box, (text, conf) = line
+    for box, text, conf in zip(result.boxes, result.txts, result.scores):
         if conf < CONF_THRESHOLD:
             continue
-        xs = [p[0] for p in box]
-        ys = [p[1] for p in box]
+        xs = [float(p[0]) for p in box]
+        ys = [float(p[1]) for p in box]
         words.append({
             'text': text,
             'x0': min(xs) * scale,
@@ -196,7 +200,6 @@ def _ocr_page(image: PIL.Image, dpi: int) -> list:
             'x1': max(xs) * scale,
             'bottom': max(ys) * scale,
             'fontname': '',
-            'font_size': None,
         })
     return words
 ```
@@ -328,11 +331,13 @@ parser.add_argument(
 ### テキストのみモード（最小構成）
 
 ```
-pymupdf       # PDF → 画像レンダリング（poppler 不要・pip のみ）
-pytesseract   # Tesseract OCR ラッパー
-Pillow        # 画像処理（pytesseract の依存）
-# + Tesseract OCR 本体（Windows インストーラー）+ 日本語モデル（jpn）
+pypdfium2         # PDF → 画像レンダリング（pip のみ・システム依存なし）
+rapidocr          # RapidOCR 本体
+onnxruntime       # RapidOCR の推論エンジン
+Pillow            # 画像処理
 ```
+
+外部バイナリのインストールは不要。初回実行時に日本語モデル（約15MB）を自動ダウンロード。
 
 ### 罫線検出モード（追加・Phase 2）
 
@@ -351,8 +356,8 @@ opencv-python     # 画像処理・Hough 変換
 | パッケージ | メンテナー形態 | ライセンス | サプライチェーンリスク | 備考 |
 |-----------|-------------|---------|------------------|------|
 | **pypdfium2** | コミュニティ（PDFium は Google） | Apache-2.0 / BSD | 中 | pdfplumber の依存先でもある |
-| **pytesseract** | 個人（1名） | Apache 2.0 | 中 | ラッパー層のみ・監査容易 |
-| **Tesseract OCR** | コミュニティ（Google 発） | Apache 2.0 | 低 | pip 外・60年超の実績 |
+| **rapidocr** | RapidAI チーム | Apache 2.0 | 低〜中 | PaddleOCR モデルを ONNX 化したもの |
+| **onnxruntime** | Microsoft | MIT | 低 | 業界標準・採用実績多数 |
 | **Pillow** | チーム（4名） | MIT-CMU | 極低 | Trusted Publishing・OpenSSF 認定 |
 
 ---
@@ -372,33 +377,29 @@ pdfplumber がすでに pypdfium2 を使用しているため、Sheetling の依
 
 ---
 
-### pytesseract
+### rapidocr
 
-**リスク：中（薄いラッパーのため実害リスクは限定的）**
+**リスク：低〜中**
 
-- メンテナー：個人1名（Matthias Lee / madmaze）
-- スター数：6,300
-- **パッケージサイズ：14.7 KB**（ホイール）→ 全コードが目視監査可能なほど小さい
-- ライセンス：Apache 2.0
-- 実態：Tesseract OCR バイナリを subprocess で呼ぶだけのラッパー。独自の実行コードがほぼない
-- 最終リリース：v0.3.13（2023年10月）
+- メンテナー：RapidAI チーム（複数名）
+- ライセンス：Apache 2.0 ✅
+- 実態：PaddleOCR の学習済みモデルを ONNX 形式にエクスポートし、ONNX Runtime で推論するラッパー
+- モデルは初回実行時に modelscope.cn から自動ダウンロード（日本語モデル約15MB）
+- Python 3.8〜3.13 対応・Windows/Linux/macOS 共通
 
-個人メンテナーによるアカウント乗っ取りリスクは存在するが、パッケージが極めて小さいため悪意あるコードの挿入が発覚しやすい。また実際の OCR 処理は Tesseract バイナリ側で行われるため、pip 経由の攻撃ベクタが限定される。
-
-**追加対策**：バージョンを固定し、更新時にリリースノートを確認する（後述）。
+**注意**：モデルのダウンロード元が中国のクラウドサービス（modelscope.cn）であるため、エアギャップ環境では事前にモデルファイルを取得して配置する必要がある。
 
 ---
 
-### Tesseract OCR（バイナリ本体）
+### onnxruntime
 
 **リスク：低**
 
-- 起源：HP Labs（1985年開発）→ Google（2006〜2018年）→ 現在はコミュニティ維持
-- ライセンス：Apache 2.0
-- GitHub スター：63,000超
-- Windows 用インストーラー：UB Mannheim（ドイツ・マンハイム大学）が提供
-  - pip ではなく exe インストーラーのため、pip サプライチェーン攻撃の対象外
-  - 政府・金融・医療機関での採用実績多数
+- メンテナー：Microsoft（OSS）
+- ライセンス：MIT ✅
+- GitHub スター：16,000超
+- 採用実績：Azure ML・Hugging Face・PyTorch など業界標準
+- Python 3.13 対応・各 OS 向けホイール提供
 
 ---
 
@@ -422,18 +423,22 @@ pdfplumber がすでに pypdfium2 を使用しているため、Sheetling の依
 `requirements.txt` でバージョンを固定することで、意図しない更新による悪意あるバージョンの混入を防ぐ。
 
 ```
-pymupdf==1.27.2.3
-pytesseract==0.3.13
+pypdfium2==5.8.0
+rapidocr==3.8.1
+onnxruntime==1.26.0
 Pillow==12.2.0
 ```
 
-#### 2. ハッシュ検証（推奨）
+#### 2. エアギャップ環境でのモデル配布
 
-```bash
-# requirements.txt にハッシュを埋め込む形式で生成
-pip-compile --generate-hashes requirements.in
-# インストール時に検証
-pip install --require-hashes -r requirements.txt
+インターネット接続のない環境では、モデルファイルを事前に取得して配置する。
+
+```
+# モデルのデフォルト保存先
+{site-packages}/rapidocr/models/
+  ├── ch_PP-OCRv4_det_mobile.onnx   # テキスト検出
+  ├── ch_ppocr_mobile_v2.0_cls_mobile.onnx  # 向き分類
+  └── japan_PP-OCRv4_rec_mobile.onnx  # 日本語認識
 ```
 
 #### 3. 社内 PyPI ミラー（高セキュリティ現場向け）
@@ -444,12 +449,12 @@ pip install --require-hashes -r requirements.txt
 
 ### 最終判断
 
-現行の `pymupdf + pytesseract + Pillow` 構成は、高セキュリティ現場における実用的な最小構成として妥当。ただし以下を事前に確認すること。
+現行の `pypdfium2 + rapidocr + onnxruntime + Pillow` 構成は、高セキュリティ現場における実用的な構成として妥当。ただし以下を事前に確認すること。
 
 | 確認事項 | 対応 |
 |---------|------|
-| エアギャップ環境か | Yes → 社内ミラー構築 or オフラインインストール手順の整備 |
-| pytesseract の更新通知 | GitHub の Watch 設定で新リリースを監視 |
+| エアギャップ環境か | Yes → モデルファイルを事前配布・社内ミラー構築 |
+| rapidocr の更新通知 | GitHub の Watch 設定で新リリースを監視 |
 
 ---
 

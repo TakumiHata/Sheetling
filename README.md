@@ -40,7 +40,7 @@ python -m src.main auto --pdf data/in/test1/scan.pdf --scan
 ```
 
 > [!NOTE]
-> `--scan` オプションには別途セットアップが必要です。詳細は [スキャンPDF対応 設計書](docs/設計書_スキャンPDF対応.md) を参照してください。
+> `--scan` オプションは `pip install -r requirements.txt` で導入済みです。初回実行時のみ日本語OCRモデル（約15MB）が自動ダウンロードされます。詳細は [スキャンPDF対応 設計書](docs/設計書_スキャンPDF対応.md) を参照してください。
 
 ### check：PDF種別判定
 
@@ -151,7 +151,7 @@ Sheetling/
 │   │   └── border_layout.py   # 罫線要素収集・スパンフィルタ（第1段）
 │   ├── parser/
 │   │   ├── pdf_extractor.py   # 通常PDFデータ抽出（pdfplumber）
-│   │   └── scan_extractor.py  # スキャンPDF抽出（pypdfium2 + pytesseract）
+│   │   └── scan_extractor.py  # スキャンPDF抽出（pypdfium2 + RapidOCR）
 │   ├── renderer/
 │   │   └── excel.py           # Excel描画（openpyxl）
 │   └── utils/
@@ -188,20 +188,27 @@ Sheetling/
 
 ### 基本（通常PDF）
 
-| パッケージ | バージョン | 用途 |
-|-----------|-----------|------|
-| `pdfplumber` | 0.11.9 | PDF内のテキスト・表・罫線の座標情報を抽出 |
-| `openpyxl` | 3.1.5 | Excelファイルの生成・セルスタイリング・印刷範囲設定 |
-| `pytest` | 9.0.3 | テストフレームワーク |
+| パッケージ | バージョン | ライセンス | 用途 |
+|-----------|-----------|----------|------|
+| `pdfplumber` | 0.11.9 | MIT | PDF内のテキスト・表・罫線の座標情報を抽出 |
+| `openpyxl` | 3.1.5 | MIT | Excelファイルの生成・セルスタイリング・印刷範囲設定 |
+| `pytest` | 9.0.3 | MIT | テストフレームワーク |
 
 ### --scan モード用（スキャンPDF）
 
-| パッケージ | バージョン | 用途 |
-|-----------|-----------|------|
-| `pypdfium2` | 5.8.0 | PDFページを画像にレンダリング（Google Chrome と同じ PDFium エンジン） |
-| `pytesseract` | 0.3.13 | Tesseract OCR の Python ラッパー |
-| `Pillow` | 12.2.0 | 画像処理（pytesseract の依存） |
+| パッケージ | バージョン | ライセンス | 用途 |
+|-----------|-----------|----------|------|
+| `pypdfium2` | 5.8.0 | Apache 2.0 / BSD-3-Clause | PDFページを画像にレンダリング（Google Chrome と同じ PDFium エンジン） |
+| `rapidocr` | 3.8.1 | Apache 2.0 | 日本語OCR（ONNX Runtime ベース・PaddleOCR互換モデル使用） |
+| `onnxruntime` | 1.26.0 | MIT | RapidOCR の推論エンジン（Microsoft製） |
+| `Pillow` | 12.2.0 | HPND（MIT互換） | 画像処理 |
 
 > [!NOTE]
-> `--scan` モードは別途 **Tesseract OCR 本体**と**日本語モデル（jpn）**のインストールが必要です。
-> Windows: [UB Mannheim インストーラー](https://github.com/UB-Mannheim/tesseract/wiki) からインストールし、Japanese を選択してください。
+> **初回実行時のモデルダウンロードについて**
+> `--scan` の初回実行時、日本語OCRモデル（合計約15MB）が自動ダウンロードされます。
+> ダウンロード元は [ModelScope](https://modelscope.cn)（Alibaba Cloud 運営・世界1,600万人以上の開発者が利用するモデル配布プラットフォーム）です。
+> 2回目以降はキャッシュを使用します。外部バイナリのインストールは不要です。
+
+> [!NOTE]
+> **rapidocr の採用実績**
+> IBM製ドキュメント解析ライブラリ [Docling](https://github.com/DS4SD/docling) や [LangChain](https://github.com/langchain-ai/langchain) など、世界的に利用されているOSSプロジェクトで採用されています（GitHub 6,600スター・484依存プロジェクト）。

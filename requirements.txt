@@ -3,8 +3,7 @@ pdfplumber==0.11.9
 pytest==9.0.3
 
 # --scan モード用（スキャンPDF / OCR処理）
-# Tesseract OCR 本体と日本語モデル（jpn）の別途インストールも必要:
-#   Windows: https://github.com/UB-Mannheim/tesseract/wiki
 pypdfium2==5.8.0
-pytesseract==0.3.13
 Pillow==12.2.0
+rapidocr==3.8.1
+onnxruntime==1.26.0

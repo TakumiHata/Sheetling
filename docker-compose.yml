@@ -5,5 +5,9 @@ services:
       - ./src:/app/src
       - ./data:/app/data
       - ./tests:/app/tests
+      - paddlex_models:/root/.paddlex
     tty: true
     stdin_open: true
+
+volumes:
+  paddlex_models:
