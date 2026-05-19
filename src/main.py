@@ -1,7 +1,7 @@
 import argparse
 import csv
 from pathlib import Path
-from src.core.pipeline import SheetlingPipeline
+from src.core.auto_layout_service import AutoLayoutService
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -18,7 +18,7 @@ def _resolve_pdf_files(pdf_arg: str | None) -> list:
     return list(Path("data/in").rglob("*.pdf"))
 
 
-def _run_auto(args, pipeline):
+def _run_auto(args, service):
     pdf_files = _resolve_pdf_files(args.pdf)
     if not pdf_files:
         logger.warning("処理対象の PDF ファイルが見つかりません。")
@@ -26,7 +26,7 @@ def _run_auto(args, pipeline):
     for pdf_path in pdf_files:
         for gs in ("1pt", "2pt"):
             try:
-                pipeline.auto_layout(str(pdf_path), grid_size=gs)
+                service.run(str(pdf_path), grid_size=gs)
             except Exception as e:
                 logger.error(f"❌ auto ({gs}) failed for {pdf_path.name}: {e}", exc_info=True)
 
@@ -89,10 +89,10 @@ def main():
     parser.add_argument("--pdf", type=str, help="PDF名またはパス。省略時は全PDF処理。")
     args = parser.parse_args()
 
-    pipeline = SheetlingPipeline("data/out")
+    service = AutoLayoutService("data/out")
 
     if args.command == "auto":
-        _run_auto(args, pipeline)
+        _run_auto(args, service)
     elif args.command == "check":
         _run_check()
 

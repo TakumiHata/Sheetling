@@ -22,21 +22,6 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-def _collect_content_bounds(extracted_data: dict, grid_params: dict) -> dict:
-    bounds = {}
-    for page in extracted_data['pages']:
-        pn = page.get('page_number', 1)
-        bounds[pn] = {
-            'min_x': page.get('_content_min_x', 0.0),
-            'min_y': page.get('_content_min_y', 0.0),
-            'grid_w': page.get('_content_grid_w', float(page['width']) / grid_params['max_cols']),
-            'grid_h': page.get('_content_grid_h', float(page['height']) / grid_params['max_rows']),
-            'page_width': float(page['width']),
-            'page_height': float(page['height']),
-        }
-    return bounds
-
-
 def _cleanup_extracted_data(extracted_data: dict) -> None:
     for page in extracted_data['pages']:
         for key in ('table_data', 'table_data_raw', 'table_row_y_positions',
