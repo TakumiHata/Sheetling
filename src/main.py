@@ -23,10 +23,11 @@ def _run_auto(args, service):
     if not pdf_files:
         logger.warning("処理対象の PDF ファイルが見つかりません。")
         return
+    scan = getattr(args, 'scan', False)
     for pdf_path in pdf_files:
         for gs in ("1pt", "2pt"):
             try:
-                service.run(str(pdf_path), grid_size=gs)
+                service.run(str(pdf_path), grid_size=gs, scan=scan)
             except Exception as e:
                 logger.error(f"❌ auto ({gs}) failed for {pdf_path.name}: {e}", exc_info=True)
 
@@ -87,6 +88,10 @@ def main():
         help="auto: PDF→Excel自動生成, check: PDF判定CSV出力",
     )
     parser.add_argument("--pdf", type=str, help="PDF名またはパス。省略時は全PDF処理。")
+    parser.add_argument(
+        "--scan", action="store_true",
+        help="スキャンPDF（画像PDF）をOCRで処理する。pymupdf・pytesseract・Tesseract本体が必要。",
+    )
     args = parser.parse_args()
 
     service = AutoLayoutService("data/out")

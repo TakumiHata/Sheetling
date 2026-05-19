@@ -46,15 +46,16 @@ class AutoLayoutService:
         self.output_base_dir = Path(output_base_dir)
 
     def run(self, pdf_path: str, in_base_dir: str = "data/in",
-            grid_size: str = "small") -> dict:
-        logger.info(f"--- [auto] PDF → Excel 高精度自動生成: {Path(pdf_path).name} ---")
+            grid_size: str = "small", scan: bool = False) -> dict:
+        mode = "スキャンOCR" if scan else "通常"
+        logger.info(f"--- [auto/{mode}] PDF → Excel 自動生成: {Path(pdf_path).name} ---")
         path_obj = Path(pdf_path)
         pdf_name = path_obj.stem
         out_dir = _resolve_out_dir(self.output_base_dir, pdf_path, in_base_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
 
         grid_params, layout_data, output_json_path = \
-            self._extract_and_build_layout(pdf_path, pdf_name, out_dir, grid_size)
+            self._extract_and_build_layout(pdf_path, pdf_name, out_dir, grid_size, scan=scan)
 
         try:
             xlsx_path = self._render_excel(layout_data, grid_params, out_dir, pdf_name, grid_size)
@@ -69,8 +70,12 @@ class AutoLayoutService:
                 "layout_json": str(output_json_path),
                 "grid_params": grid_params}
 
-    def _extract_and_build_layout(self, pdf_path, pdf_name, out_dir, grid_size):
-        extracted_data = extract_pdf_data(pdf_path)
+    def _extract_and_build_layout(self, pdf_path, pdf_name, out_dir, grid_size, scan: bool = False):
+        if scan:
+            from src.parser.scan_extractor import extract_scan_pdf_data
+            extracted_data = extract_scan_pdf_data(pdf_path)
+        else:
+            extracted_data = extract_pdf_data(pdf_path)
         with open(out_dir / f"{pdf_name}_extracted.json", "w", encoding="utf-8") as f:
             json.dump(extracted_data, f, indent=2, ensure_ascii=False)
 
