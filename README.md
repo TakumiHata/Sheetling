@@ -68,15 +68,7 @@ data/out/<relative_path>/
 ├── <pdf_name>_2pt_grid_params.json        # グリッドパラメータ（2pt サイズ）
 ├── <pdf_name>_Python版_1pt.xlsx           # 生成されたExcelファイル（1pt）
 ├── <pdf_name>_Python版_2pt.xlsx           # 生成されたExcelファイル（2pt）
-├── <pdf_name>.pdf                         # 元PDFのコピー（比較用）
-└── previews/
-    ├── 1pt/
-    │   └── page_1/
-    │       ├── <pdf_name>_page1.png           # PDFページ画像
-    │       └── <pdf_name>_excel_page1.png     # 罫線プレビュー画像
-    └── 2pt/
-        └── page_1/
-            └── ...
+└── <pdf_name>.pdf                         # 元PDFのコピー（比較用）
 ```
 
 | ファイル | 説明 |
@@ -87,8 +79,6 @@ data/out/<relative_path>/
 | `_Python版_1pt.xlsx` | 1ptグリッド（高密度・列幅3.48mm）のExcelファイル |
 | `_Python版_2pt.xlsx` | 2ptグリッド（中密度・列幅6.18mm）のExcelファイル |
 | `*.pdf` | 元PDFのコピー。生成ExcelとのPDF比較用 |
-| `_page{N}.png` | PDFページ画像。目視確認に使用 |
-| `_excel_page{N}.png` | 罫線プレビュー画像。コンテンツ範囲外はグレー表示 |
 
 ---
 
@@ -120,7 +110,7 @@ data/out/<relative_path>/
 python -m pytest tests/ -v
 ```
 
-123テストケースで以下をカバーしています：
+118テストケースで以下をカバーしています：
 
 | テストファイル | 対象モジュール |
 |-------------|-------------|
@@ -129,7 +119,6 @@ python -m pytest tests/ -v
 | `test_grid.py` | コンテンツ境界検出、座標付与、線統合、用紙サイズ検出 |
 | `test_layout.py` | テキスト要素生成、視覚行分割、重複排除、レイアウトJSON生成 |
 | `test_excel.py` | Excel描画（テキスト・罫線・複数ページ・フォント色） |
-| `test_preview.py` | プレビュー画像生成、セルメトリクス計算 |
 | `test_pdf_extractor.py` | 矩形包含除去、色変換、座標丸め、エッジ統合 |
 | `test_edges.py` | エッジ分解・集約・スパンフィルタ |
 | `test_pipeline.py` | パイプライン補助関数 |
@@ -153,13 +142,12 @@ Sheetling/
 │   ├── parser/
 │   │   └── pdf_extractor.py   # PDFデータ抽出（pdfplumber）
 │   ├── renderer/
-│   │   ├── excel.py           # Excel描画（openpyxl）
-│   │   └── preview.py         # 罫線プレビュー画像生成（Pillow）
+│   │   └── excel.py           # Excel描画（openpyxl）
 │   └── utils/
 │       ├── logger.py          # ログ出力管理
 │       ├── font.py            # フォント名正規化・罫線スタイルマッピング
 │       └── text.py            # テキスト結合・日本語判定・水平ギャップ分割
-├── tests/                     # pytest テストスイート（123テスト）
+├── tests/                     # pytest テストスイート（118テスト）
 ├── data/
 │   ├── in/                    # 入力PDFディレクトリ
 │   ├── out/                   # 出力ディレクトリ（解析結果・Excel）
@@ -190,5 +178,4 @@ Sheetling/
 |-----------|-----------|------|
 | `pdfplumber` | 0.11.9 | PDF内のテキスト・表・罫線の座標情報を抽出 |
 | `openpyxl` | 3.1.5 | Excelファイルの生成・セルスタイリング・印刷範囲設定 |
-| `Pillow` | *(Dockerイメージ提供)* | 罫線プレビュー画像の生成 |
 | `pytest` | 9.0.3 | テストフレームワーク |

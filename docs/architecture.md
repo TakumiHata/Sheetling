@@ -26,8 +26,7 @@ generate_layout()               ← src/core/layout.py
 filter_short_runs()             ← src/core/edges.py
     │  スパンが短い装飾線・ノイズエッジを除去
     ▼
-    ├─→ render_layout_to_xlsx()     ← src/renderer/excel.py   → Excel ファイル (.xlsx)
-    └─→ generate_border_preview()   ← src/renderer/preview.py → 罫線プレビュー画像 (.png)
+    └─→ render_layout_to_xlsx()     ← src/renderer/excel.py   → Excel ファイル (.xlsx)
 ```
 
 ---
@@ -48,8 +47,7 @@ src/
 ├── parser/
 │   └── pdf_extractor.py   # PDF データ抽出（pdfplumber ラッパー）
 ├── renderer/
-│   ├── excel.py           # Excel 描画（openpyxl による .xlsx 生成）
-│   └── preview.py         # 罫線プレビュー画像生成（Pillow）
+│   └── excel.py           # Excel 描画（openpyxl による .xlsx 生成）
 └── utils/
     ├── logger.py          # ロガー設定
     ├── font.py            # フォント名正規化・罫線スタイルマッピング
@@ -84,8 +82,6 @@ pdfplumber の `extract_text()` でテキスト有無を判定し、結果CSVを
 | 6 | 短スパンエッジ除去 | `filter_short_runs()` ← `core/edges.py` |
 | 7 | Excel 描画 | `render_layout_to_xlsx()` ← `renderer/excel.py` |
 | 8 | 元 PDF を出力先にコピー | `shutil.copy()` |
-| 9 | PDF ページ画像生成 | pdfplumber `page.to_image()` |
-| 10 | 罫線プレビュー画像生成 | `generate_border_preview()` ← `renderer/preview.py` |
 
 ---
 
@@ -143,16 +139,6 @@ pdfplumber の `extract_text()` でテキスト有無を判定し、結果CSVを
 | `fix_empty_cell_type_attr(xlsx_path)` | Excel Online 互換性のための `t="n"` 属性除去 |
 | `_place_text_element(ws, elem, ...)` | テキスト要素をセルに配置（フォント・配置設定） |
 | `_place_border_element(ws, elem, ...)` | 罫線要素をセルに描画（4辺独立） |
-
-### `src/renderer/preview.py`
-
-| 関数 | 役割 |
-|------|------|
-| `generate_border_preview(page_layout, grid_params, ...)` | 罫線プレビュー PNG を生成 |
-| `_draw_grid_lines(draw, ...)` | グリッド背景線を描画 |
-| `_draw_borders(draw, ...)` | border_rect 要素を黒線で描画 |
-| `_draw_greyout(draw, ...)` | コンテンツ範囲外をグレーアウト |
-| `_draw_labels(draw, ...)` | 座標ラベル（赤、5間隔）を描画 |
 
 ### `src/utils/font.py`
 
@@ -256,7 +242,6 @@ tests/
 ├── test_grid.py            # core/grid.py のユニットテスト
 ├── test_layout.py          # core/layout.py のユニットテスト
 ├── test_excel.py           # renderer/excel.py のユニットテスト
-├── test_preview.py         # renderer/preview.py のユニットテスト
 ├── test_pdf_extractor.py   # parser/pdf_extractor.py のユニットテスト
 ├── test_edges.py           # core/edges.py のユニットテスト
 └── test_pipeline.py        # パイプライン補助関数のユニットテスト

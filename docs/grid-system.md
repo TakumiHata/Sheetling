@@ -164,7 +164,7 @@ page['_content_grid_w'] = grid_w
 page['_content_grid_h'] = grid_h
 ```
 
-これらは後段の `generate_border_preview()`（`src/renderer/preview.py`） で PDF 画像上の正しい位置に罫線を描画するために使用されます。
+これらはグリッド座標変換の基準値として layout 生成・Excel 描画に使用されます。
 
 ---
 
