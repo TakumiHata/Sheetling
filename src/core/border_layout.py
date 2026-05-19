@@ -87,6 +87,7 @@ def _collect_rect_border_elements(page, max_rows, max_cols, seen_edges: set) -> 
         bs = linewidth_to_border_style(rect.get('linewidth', 0.0))
 
         if r == er and c != ec:
+            # 第1段フィルタ: 個別セグメント単位。集約後の第2段は edges.filter_short_runs。
             if ec - c < EDGE_MIN_H_SPAN:
                 continue
             el = _emit_rect_line(r, r + 1, c, ec,

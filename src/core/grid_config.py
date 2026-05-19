@@ -34,7 +34,6 @@ GRID_SIZES = {
         "margin_bottom": 0.41,
         "default_font_size": 7,
         "font_name": "MS 明朝",
-        "position_tolerance_cells": "1〜2",
     },
     # Sheetling "2pt": 印刷総 A4縦 36列×45行 / A4横 53列×31行（列幅2.00表示）
     "2pt": {
@@ -54,7 +53,6 @@ GRID_SIZES = {
         "margin_bottom": 0.41,
         "default_font_size": 6,
         "font_name": "MS 明朝",
-        "position_tolerance_cells": "1",  # 4mm/セルと粗いため厳しく
     },
     # =========================================================================
     # A3 (842pt × 1190pt) — セルサイズは A4 と同一、用紙が大きい分だけ列数・行数が増える
@@ -79,7 +77,6 @@ GRID_SIZES = {
         "margin_bottom": 0.41,
         "default_font_size": 7,
         "font_name": "MS 明朝",
-        "position_tolerance_cells": "1〜2",
     },
     # A3 2pt: 印刷総 A3縦 52列×65行 / A3横 73列×46行（列幅2.00表示）
     # A3横は実測値。A3縦は A3横の列密度から比例換算: 73*(842/1190)=51.6→52列。
@@ -101,6 +98,5 @@ GRID_SIZES = {
         "margin_bottom": 0.41,
         "default_font_size": 6,
         "font_name": "MS 明朝",
-        "position_tolerance_cells": "1",
     },
 }

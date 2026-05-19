@@ -84,7 +84,7 @@ class AutoLayoutService:
         layout_json_str = generate_layout(extracted_data, grid_params)
         layout_data = json.loads(layout_json_str)
         for page in layout_data:
-            filter_short_runs(page['elements'], EDGE_MIN_H_SPAN, EDGE_MIN_V_SPAN)
+            page['elements'] = filter_short_runs(page['elements'], EDGE_MIN_H_SPAN, EDGE_MIN_V_SPAN)
         _cleanup_extracted_data(extracted_data)
 
         output_json_path = out_dir / f"{pdf_name}_{grid_size}_layout.json"

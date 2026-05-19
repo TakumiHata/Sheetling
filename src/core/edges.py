@@ -138,17 +138,22 @@ def runs_to_border_rects(runs: list) -> list:
     return elements
 
 
-def filter_short_runs(elements: list, min_h_span: int, min_v_span: int) -> None:
-    """短いスパンのランを layout 要素から除去する（in-place）。
+def filter_short_runs(elements: list, min_h_span: int, min_v_span: int) -> list:
+    """短いスパンのランを除去した新しい要素リストを返す。
 
     border_rect を一度セル境界に分解→ランに集約した後、
     スパンが閾値未満のランを除外して再構築する。
     rects / h_edges / v_edges の区別なく全ソースに適用される。
+    border_layout.py の個別セグメントフィルタ（第1段）より後に動作し、
+    集約後の連続ランを対象とする第2段フィルタとして機能する。
 
     Args:
         elements: layout のページ要素リスト
-        min_h_span: H ランの最小列スパン（これ未満は除去）
-        min_v_span: V ランの最小行スパン（これ未満は除去）
+        min_h_span: H ランの最小列スパン（inclusive。これ未満は除去）
+        min_v_span: V ランの最小行スパン（inclusive。これ未満は除去）
+
+    Returns:
+        フィルタ後の要素リスト（新規オブジェクト）
     """
     cell_edges, styles = decompose_to_cell_edges(elements)
     runs = group_into_runs(cell_edges, styles)
@@ -160,8 +165,5 @@ def filter_short_runs(elements: list, min_h_span: int, min_v_span: int) -> None:
         if (r['type'] == 'H' and r['col_end'] - r['col_start'] > min_h_span)
         or (r['type'] == 'V' and r['row_end'] - r['row_start'] > min_v_span)
     ]
-    new_rects = runs_to_border_rects(filtered)
     non_border = [e for e in elements if e.get('type') != 'border_rect']
-    elements.clear()
-    elements.extend(non_border)
-    elements.extend(new_rects)
+    return non_border + runs_to_border_rects(filtered)

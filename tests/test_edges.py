@@ -95,8 +95,8 @@ class TestFilterShortRuns:
             'borders': {'top': True, 'bottom': False, 'left': False, 'right': False},
         }
         elements = [elem]
-        filter_short_runs(elements, min_h_span=2, min_v_span=2)
-        assert not any(e.get('type') == 'border_rect' for e in elements)
+        result = filter_short_runs(elements, min_h_span=2, min_v_span=2)
+        assert not any(e.get('type') == 'border_rect' for e in result)
 
     def test_keeps_sufficient_h_span(self):
         # H ライン: col 3〜5 (inclusive span=3, exclusive span=4) → 保持される
@@ -105,14 +105,14 @@ class TestFilterShortRuns:
             'borders': {'top': True, 'bottom': False, 'left': False, 'right': False},
         }
         elements = [elem]
-        filter_short_runs(elements, min_h_span=2, min_v_span=2)
-        assert any(e.get('type') == 'border_rect' for e in elements)
+        result = filter_short_runs(elements, min_h_span=2, min_v_span=2)
+        assert any(e.get('type') == 'border_rect' for e in result)
 
     def test_preserves_text_elements(self):
         elements = [
             _full_rect(2, 4, 3, 6),
             {'type': 'text', 'content': 'hi', 'row': 3, 'col': 4, 'end_col': 6},
         ]
-        filter_short_runs(elements, min_h_span=2, min_v_span=2)
-        texts = [e for e in elements if e.get('type') == 'text']
+        result = filter_short_runs(elements, min_h_span=2, min_v_span=2)
+        texts = [e for e in result if e.get('type') == 'text']
         assert len(texts) == 1

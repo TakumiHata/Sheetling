@@ -225,7 +225,7 @@ def _extract_rects(page, page_area: float) -> list:
     return _remove_containing_rects(rects)
 
 
-def _r05(v: float) -> float:
+def _round_to_half(v: float) -> float:
     return round(v * 2) / 2
 
 
@@ -236,13 +236,13 @@ def _collect_raw_edges(page, page_area: float):
     v_edges: list = []
 
     def add_h(x0, x1, y, linewidth=0.0):
-        key = (_r05(min(x0, x1)), _r05(max(x0, x1)), _r05(y))
+        key = (_round_to_half(min(x0, x1)), _round_to_half(max(x0, x1)), _round_to_half(y))
         if key not in h_seen:
             h_seen.add(key)
             h_edges.append({'x0': key[0], 'x1': key[1], 'y': key[2], 'linewidth': linewidth})
 
     def add_v(x, y0, y1, linewidth=0.0):
-        key = (_r05(x), _r05(min(y0, y1)), _r05(max(y0, y1)))
+        key = (_round_to_half(x), _round_to_half(min(y0, y1)), _round_to_half(max(y0, y1)))
         if key not in v_seen:
             v_seen.add(key)
             v_edges.append({'x': key[0], 'y0': key[1], 'y1': key[2],

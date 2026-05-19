@@ -1,16 +1,14 @@
 import json
 import pytest
-from src.core.layout import (
+from src.core.layout import generate_layout
+from src.core.text_layout import (
+    _calc_end_col,
+    _dedup_words,
     _make_text_element,
     _split_into_visual_lines,
-    _calc_end_col,
-    _find_words_in_bbox,
-    _edges_of_side,
-    _filter_sides_by_seen,
-    _dedup_words,
-    _resolve_cell_bbox,
-    generate_layout,
 )
+from src.core.table_layout import _find_words_in_bbox, _resolve_cell_bbox
+from src.core.border_layout import _edges_of_side, _filter_sides_by_seen
 
 
 class TestMakeTextElement:

@@ -2,7 +2,7 @@ import pytest
 from src.parser.pdf_extractor import (
     _remove_containing_rects,
     _to_hex_color,
-    _r05,
+    _round_to_half,
     _merge_edge_segments,
 )
 
@@ -67,11 +67,11 @@ class TestToHexColor:
 
 class TestR05:
     def test_rounds_to_half(self):
-        assert _r05(1.0) == 1.0
-        assert _r05(1.25) == 1.0  # banker's rounding: round(2.5) = 2
-        assert _r05(1.3) == 1.5
-        assert _r05(1.74) == 1.5
-        assert _r05(1.75) == 2.0
+        assert _round_to_half(1.0) == 1.0
+        assert _round_to_half(1.25) == 1.0  # banker's rounding: round(2.5) = 2
+        assert _round_to_half(1.3) == 1.5
+        assert _round_to_half(1.74) == 1.5
+        assert _round_to_half(1.75) == 2.0
 
 
 class TestMergeEdgeSegments:
