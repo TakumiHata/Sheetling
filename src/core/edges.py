@@ -4,11 +4,9 @@
   - ('H', row, col) = セル(row, col) の上辺
   - ('V', row, col) = セル(row, col) の左辺
 
-LLM I/O 用には連続するセル境界を「ラン (run)」にまとめて扱う。
+連続するセル境界を「ラン (run)」にまとめて扱う。
   - H run: row=N, col_start=cs, col_end=ce  (col_end は排他的境界 = 最終列+1)
   - V run: col=N, row_start=rs, row_end=re  (row_end は排他的境界 = 最終行+1)
-
-apply ロジックは flatten → set 演算 → 再集約 の3段で実装する。
 """
 
 from typing import Iterable
@@ -51,13 +49,6 @@ def decompose_to_cell_edges(elements: list) -> tuple[set, dict]:
                 cell_edges.add(edge)
                 styles.setdefault(edge, bs)
     return cell_edges, styles
-
-
-def run_to_cell_edges(run: dict) -> list:
-    """ラン dict をセル境界タプルのリストに展開する。"""
-    if run['type'] == 'H':
-        return [('H', run['row'], c) for c in range(run['col_start'], run['col_end'])]
-    return [('V', r, run['col']) for r in range(run['row_start'], run['row_end'])]
 
 
 def _group_h_runs(h_by_row: dict, styles: dict) -> list:
@@ -174,58 +165,3 @@ def filter_short_runs(elements: list, min_h_span: int, min_v_span: int) -> None:
     elements.clear()
     elements.extend(non_border)
     elements.extend(new_rects)
-
-
-def enumerate_runs_with_ids(elements: list) -> list:
-    """layout の border_rect 群を ID 付きランリストに変換する。
-
-    LLM プロンプトに渡す比較対象の正本となる。
-    ID は 1 から連番で振る (出力順は H→V、行/列昇順)。
-    """
-    cell_edges, styles = decompose_to_cell_edges(elements)
-    runs = group_into_runs(cell_edges, styles)
-    return [{'id': i + 1, **run} for i, run in enumerate(runs)]
-
-
-def apply_edge_corrections(elements: list, removed_ids: list, added_runs: list,
-                            id_map: dict) -> int:
-    """エッジ単位の修正を elements に適用する。
-
-    Args:
-        elements: layout のページ要素リスト (in-place で書き換え)
-        removed_ids: 削除対象のラン ID リスト
-        added_runs: 追加するラン dict のリスト
-        id_map: ID → ラン dict のマップ (auto 時生成)
-
-    Returns:
-        適用されたセル境界の総数 (削除 + 追加)
-    """
-    cell_edges, styles = decompose_to_cell_edges(elements)
-
-    removed = 0
-    for rid in removed_ids:
-        run = id_map.get(rid) if isinstance(rid, int) else id_map.get(int(rid))
-        if run is None:
-            continue
-        for edge in run_to_cell_edges(run):
-            if edge in cell_edges:
-                cell_edges.discard(edge)
-                removed += 1
-
-    added = 0
-    for run in added_runs:
-        bs = run.get('border_style', 'thin')
-        for edge in run_to_cell_edges(run):
-            if edge not in cell_edges:
-                cell_edges.add(edge)
-                styles[edge] = bs
-                added += 1
-
-    new_runs = group_into_runs(cell_edges, styles)
-    new_rects = runs_to_border_rects(new_runs)
-
-    non_border = [e for e in elements if e.get('type') != 'border_rect']
-    elements.clear()
-    elements.extend(non_border)
-    elements.extend(new_rects)
-    return removed + added

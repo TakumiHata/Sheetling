@@ -1,9 +1,8 @@
 import pytest
 
 from src.core.edges import (
-    apply_edge_corrections,
     decompose_to_cell_edges,
-    enumerate_runs_with_ids,
+    filter_short_runs,
     group_into_runs,
     runs_to_border_rects,
 )
@@ -20,10 +19,6 @@ class TestDecomposeToCellEdges:
     def test_full_rect_yields_perimeter_edges(self):
         elements = [_full_rect(2, 4, 3, 6)]
         edges, _ = decompose_to_cell_edges(elements)
-        # top: H,2,3 / 2,4 / 2,5
-        # bottom: H,4,3 / 4,4 / 4,5
-        # left: V,2,3 / 3,3
-        # right: V,2,6 / 3,6
         assert ('H', 2, 3) in edges
         assert ('H', 4, 5) in edges
         assert ('V', 2, 3) in edges
@@ -92,60 +87,32 @@ class TestRunsToBorderRects:
         assert r['borders']['left'] is True
 
 
-class TestEnumerateRunsWithIds:
-    def test_full_rect_yields_4_runs(self):
-        runs = enumerate_runs_with_ids([_full_rect(2, 4, 3, 6)])
-        # top H, bottom H, left V, right V
-        assert len(runs) == 4
-        assert all('id' in r for r in runs)
-        assert {r['id'] for r in runs} == {1, 2, 3, 4}
+class TestFilterShortRuns:
+    def test_removes_single_cell_h_span(self):
+        # H ライン: col 3〜3 (inclusive span=1, exclusive span=2) → 除去される
+        elem = {
+            'type': 'border_rect', 'row': 5, 'end_row': 5, 'col': 3, 'end_col': 4,
+            'borders': {'top': True, 'bottom': False, 'left': False, 'right': False},
+        }
+        elements = [elem]
+        filter_short_runs(elements, min_h_span=2, min_v_span=2)
+        assert not any(e.get('type') == 'border_rect' for e in elements)
 
-    def test_round_trip_preserves_edge_set(self):
-        original = [_full_rect(2, 4, 3, 6), _full_rect(10, 12, 5, 8)]
-        runs = enumerate_runs_with_ids(original)
-        reconstructed = runs_to_border_rects(
-            [{k: v for k, v in r.items() if k != 'id'} for r in runs])
-        orig_edges, _ = decompose_to_cell_edges(original)
-        new_edges, _ = decompose_to_cell_edges(reconstructed)
-        assert orig_edges == new_edges
-
-
-class TestApplyEdgeCorrections:
-    def test_remove_by_id_drops_only_that_edge(self):
-        elements = [_full_rect(2, 4, 3, 6)]
-        runs = enumerate_runs_with_ids(elements)
-        id_map = {r['id']: r for r in runs}
-        # remove the top edge (which run has it depends on enumeration order)
-        top_id = next(r['id'] for r in runs
-                      if r['type'] == 'H' and r['row'] == 2)
-        apply_edge_corrections(elements, [top_id], [], id_map)
-
-        edges, _ = decompose_to_cell_edges(elements)
-        # top edges (H, 2, *) gone, others remain
-        assert not any(e[0] == 'H' and e[1] == 2 for e in edges)
-        assert ('H', 4, 3) in edges
-        assert ('V', 2, 3) in edges
-
-    def test_add_h_edge_appears_in_layout(self):
-        elements = []
-        apply_edge_corrections(elements, [], [
-            {'type': 'H', 'row': 7, 'col_start': 2, 'col_end': 9}
-        ], {})
-        edges, _ = decompose_to_cell_edges(elements)
-        assert edges == {('H', 7, c) for c in range(2, 9)}
-
-    def test_add_v_edge_appears_in_layout(self):
-        elements = []
-        apply_edge_corrections(elements, [], [
-            {'type': 'V', 'col': 5, 'row_start': 1, 'row_end': 4}
-        ], {})
-        edges, _ = decompose_to_cell_edges(elements)
-        assert edges == {('V', r, 5) for r in range(1, 4)}
+    def test_keeps_sufficient_h_span(self):
+        # H ライン: col 3〜5 (inclusive span=3, exclusive span=4) → 保持される
+        elem = {
+            'type': 'border_rect', 'row': 5, 'end_row': 5, 'col': 3, 'end_col': 6,
+            'borders': {'top': True, 'bottom': False, 'left': False, 'right': False},
+        }
+        elements = [elem]
+        filter_short_runs(elements, min_h_span=2, min_v_span=2)
+        assert any(e.get('type') == 'border_rect' for e in elements)
 
     def test_preserves_text_elements(self):
-        elements = [_full_rect(2, 4, 3, 6),
-                    {'type': 'text', 'content': 'hi', 'row': 3, 'col': 4, 'end_col': 6}]
-        apply_edge_corrections(elements, [], [], {})
+        elements = [
+            _full_rect(2, 4, 3, 6),
+            {'type': 'text', 'content': 'hi', 'row': 3, 'col': 4, 'end_col': 6},
+        ]
+        filter_short_runs(elements, min_h_span=2, min_v_span=2)
         texts = [e for e in elements if e.get('type') == 'text']
         assert len(texts) == 1
-        assert texts[0]['content'] == 'hi'

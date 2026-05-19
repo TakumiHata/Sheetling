@@ -1,0 +1,52 @@
+{
+    "corrections": [
+        {
+            "action": "add_edge",
+            "page": 1,
+            "type": "H",
+            "row": 8,
+            "col_start": 10,
+            "col_end": 14
+        },
+        {
+            "action": "add_edge",
+            "page": 1,
+            "type": "H",
+            "row": 9,
+            "col_start": 10,
+            "col_end": 14
+        },
+        {
+            "action": "add_edge",
+            "page": 1,
+            "type": "V",
+            "col": 10,
+            "row_start": 9,
+            "row_end": 13
+        },
+        {
+            "action": "add_edge",
+            "page": 1,
+            "type": "V",
+            "col": 14,
+            "row_start": 22,
+            "row_end": 27
+        },
+        {
+            "action": "add_edge",
+            "page": 1,
+            "type": "H",
+            "row": 13,
+            "col_start": 10,
+            "col_end": 14
+        },
+        {
+            "action": "add_edge",
+            "page": 1,
+            "type": "H",
+            "row": 27,
+            "col_start": 10,
+            "col_end": 54
+        }
+    ]
+}

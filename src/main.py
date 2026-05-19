@@ -1,6 +1,5 @@
 import argparse
 import csv
-import json
 from pathlib import Path
 from src.core.pipeline import SheetlingPipeline
 from src.utils.logger import get_logger
@@ -30,107 +29,6 @@ def _run_auto(args, pipeline):
                 pipeline.auto_layout(str(pdf_path), grid_size=gs)
             except Exception as e:
                 logger.error(f"❌ auto ({gs}) failed for {pdf_path.name}: {e}", exc_info=True)
-
-
-def _find_correction_out_dirs(args):
-    from src.core.grid_config import GRID_SIZES
-    output_base_dir = Path("data/out")
-    in_base_dir = Path("data/in")
-
-    if args.pdf:
-        pdf_path_obj = Path(args.pdf)
-        pdf_stem = pdf_path_obj.stem
-        try:
-            rel = pdf_path_obj.parent.relative_to(in_base_dir)
-            return [output_base_dir / rel]
-        except ValueError:
-            candidate_dirs = [
-                d for d in output_base_dir.rglob("*")
-                if d.is_dir() and any(d.glob(f"{pdf_stem}_*_layout.json"))
-            ]
-            return candidate_dirs if candidate_dirs else [output_base_dir / pdf_stem]
-
-    out_dir_set = set()
-    for p in output_base_dir.rglob("*_visual_corrections*.json"):
-        if p.parent.name.startswith("page_"):
-            if p.parent.parent.name == "prompts":
-                out_dir_set.add(p.parent.parent.parent)
-            else:
-                out_dir_set.add(p.parent.parent.parent.parent)
-        else:
-            out_dir_set.add(p.parent.parent)
-    return sorted(out_dir_set)
-
-
-def _detect_layout_pairs(out_dir):
-    from src.core.grid_config import GRID_SIZES
-    all_grid_sizes = list(GRID_SIZES.keys())
-    pairs = []
-    for lf in out_dir.glob("*_layout.json"):
-        stem = lf.stem
-        if stem.endswith("_layout"):
-            stem = stem[: -len("_layout")]
-        for gs in all_grid_sizes:
-            if stem.endswith(f"_{gs}"):
-                pairs.append((stem[: -len(f"_{gs}")], gs))
-                break
-    return pairs
-
-
-def _collect_phase_files(prompts_dir):
-    """phase1/phase2 ファイルを優先して収集し、なければ旧 visual_corrections にフォールバック。"""
-    phase1 = sorted(prompts_dir.glob("page_*/*_phase1_corrections_page*.json"))
-    phase2 = sorted(prompts_dir.glob("page_*/*_phase2_corrections_page*.json"))
-    if phase1 or phase2:
-        return phase1 + phase2
-    # フラット配置（page_* サブディレクトリなし）
-    phase1 = sorted(prompts_dir.glob("*_phase1_corrections_page*.json"))
-    phase2 = sorted(prompts_dir.glob("*_phase2_corrections_page*.json"))
-    if phase1 or phase2:
-        return phase1 + phase2
-    # 旧フォーマットへのフォールバック
-    legacy = sorted(prompts_dir.glob("page_*/*_visual_corrections_page*.json"))
-    return legacy or sorted(prompts_dir.glob("*_visual_corrections_page*.json"))
-
-
-def _apply_corrections_for_pair(pipeline, out_dir, pdf_name, grid_size):
-    layout_json_name = f"{pdf_name}_{grid_size}_layout.json"
-    prompts_dir = out_dir / "prompts" / grid_size
-    page_files = _collect_phase_files(prompts_dir)
-
-    if not page_files:
-        logger.warning(f"⚠️ {pdf_name} ({grid_size}): 修正ファイルが見つかりません: {prompts_dir}")
-        return
-
-    merged = []
-    for pf in page_files:
-        data = json.loads(pf.read_text(encoding="utf-8"))
-        merged.extend(data.get("corrections", []))
-
-    corrections_json = json.dumps({"corrections": merged}, ensure_ascii=False)
-    pipeline.apply_corrections(
-        pdf_name, corrections_json,
-        specific_out_dir=str(out_dir), layout_json_name=layout_json_name)
-    pipeline.rerender_after_corrections(
-        pdf_name, grid_size=grid_size, specific_out_dir=str(out_dir))
-    logger.info(f"✅ correct 完了: {pdf_name} ({out_dir.name}, {grid_size})")
-
-
-def _run_correct(args, pipeline):
-    out_dirs = _find_correction_out_dirs(args)
-    if not out_dirs:
-        logger.warning("修正ファイル (*_visual_corrections*.json) が見つかりませんでした。")
-        return
-
-    for out_dir in out_dirs:
-        if not out_dir.exists():
-            continue
-        pairs = _detect_layout_pairs(out_dir)
-        for pdf_name, grid_size in pairs:
-            try:
-                _apply_corrections_for_pair(pipeline, out_dir, pdf_name, grid_size)
-            except Exception as e:
-                logger.error(f"❌ correct failed for {pdf_name} ({grid_size}): {e}", exc_info=True)
 
 
 def _run_check():
@@ -185,8 +83,8 @@ def _write_check_results(results, output_csv):
 def main():
     parser = argparse.ArgumentParser(description="Sheetling: PDF to Excel conversion")
     parser.add_argument(
-        "command", choices=["auto", "correct", "check"],
-        help="auto: PDF→Excel自動生成, correct: LLM修正適用, check: PDF判定CSV出力",
+        "command", choices=["auto", "check"],
+        help="auto: PDF→Excel自動生成, check: PDF判定CSV出力",
     )
     parser.add_argument("--pdf", type=str, help="PDF名またはパス。省略時は全PDF処理。")
     args = parser.parse_args()
@@ -195,8 +93,6 @@ def main():
 
     if args.command == "auto":
         _run_auto(args, pipeline)
-    elif args.command == "correct":
-        _run_correct(args, pipeline)
     elif args.command == "check":
         _run_check()
 
